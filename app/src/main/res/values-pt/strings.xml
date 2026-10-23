@@ -2053,6 +2053,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Uma massa em %1$s, como proporção da coluna do peso</string>
     <string name="settings_csv_import_mass_share_hint">O Health Connect guarda a massa gorda como percentagem, pelo que este valor é calculado a partir do peso medido na mesma linha.</string>
     <string name="settings_csv_import_nutrient_hint">Todas as colunas de nutrientes de uma linha formam um único registo de alimento.</string>
+    <string name="settings_csv_import_bp_pressure_hint">Em mmHg. A sistólica e a diastólica de uma linha formam uma única medição da pressão arterial; uma linha com apenas uma delas é rejeitada.</string>
+    <string name="settings_csv_import_bp_label_hint">Reconhecido: %1$s. Maiúsculas e espaços não importam. Qualquer outro valor, ou uma célula vazia, fica com o valor predefinido abaixo.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Não reconhecido, é usado o valor predefinido: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Valores predefinidos da pressão arterial</string>
+    <string name="settings_csv_import_bp_defaults_body">Para medições em que o ficheiro omite a posição do corpo ou da braçadeira, ou as indica com uma palavra não reconhecida. Guardados para a próxima importação.</string>
     <string name="settings_csv_import_date_time_title">Data e hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detetar automaticamente</string>
@@ -2080,6 +2085,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Nenhuma das linhas amostradas corresponde a este formato de data.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Só uma coluna pode conter a data e hora de fim.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Só uma coluna pode conter o nome do alimento.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">A pressão arterial precisa de uma coluna sistólica e de uma diastólica.</string>
     <string name="settings_csv_import_confirm_title">Pronto a importar</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d medições por linha</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s a %3$s</string>
@@ -2138,6 +2144,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Excluído na app de origem</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Data de fim não compreendida</string>
     <string name="settings_csv_import_reason_end_not_after_start">O fim não é posterior ao início</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Falta a sistólica ou a diastólica</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Sistólica não superior à diastólica</string>
     <string name="settings_csv_import_save_report">Guardar relatório</string>
     <string name="settings_csv_import_report_saved">Relatório guardado.</string>
     <string name="settings_csv_import_report_save_failed">Não foi possível guardar o relatório.</string>

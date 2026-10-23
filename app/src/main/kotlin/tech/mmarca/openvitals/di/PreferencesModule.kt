@@ -4,11 +4,13 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import tech.mmarca.openvitals.data.repository.CsvImportPreferencesRepository
 import tech.mmarca.openvitals.data.repository.CyclePreferencesRepository
 import tech.mmarca.openvitals.data.repository.MedicalRecordsPreferencesRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SessionDistancePreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivitySplitPreferences
+import tech.mmarca.openvitals.data.repository.contract.CsvImportPreferences
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsPreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthConnectPreferences
@@ -103,4 +105,8 @@ abstract class PreferencesModule {
     /** Its own store, for the same reason. */
     @Binds
     abstract fun bindSessionDistancePreferences(impl: SessionDistancePreferencesRepository): SessionDistancePreferences
+
+    /** Its own store, for the same reason. */
+    @Binds
+    abstract fun bindCsvImportPreferences(impl: CsvImportPreferencesRepository): CsvImportPreferences
 }

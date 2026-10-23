@@ -2175,6 +2175,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Une masse en %1$s, rapportée à la colonne de poids</string>
     <string name="settings_csv_import_mass_share_hint">Santé Connect enregistre la masse grasse en pourcentage ; elle est donc calculée à partir du poids mesuré sur la même ligne.</string>
     <string name="settings_csv_import_nutrient_hint">Toutes les colonnes de nutriments d\'une ligne forment une seule entrée d\'aliment.</string>
+    <string name="settings_csv_import_bp_pressure_hint">En mmHg. La systolique et la diastolique d\'une ligne forment une seule mesure de tension ; une ligne qui n\'en a qu\'une est rejetée.</string>
+    <string name="settings_csv_import_bp_label_hint">Reconnu : %1$s. La casse et les espaces n\'ont pas d\'importance. Toute autre valeur, ou une cellule vide, prend la valeur par défaut ci-dessous.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Non reconnu, la valeur par défaut est utilisée : %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Valeurs par défaut de la tension</string>
+    <string name="settings_csv_import_bp_defaults_body">Pour les mesures dont le fichier omet la position du corps ou l\'emplacement du brassard, ou les indique par un mot non reconnu. Conservées pour la prochaine importation.</string>
     <string name="settings_csv_import_date_time_title">Date et heure</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Détecter automatiquement</string>
@@ -2202,6 +2207,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Aucune des lignes échantillonnées ne correspond à ce format de date.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Une seule colonne peut contenir la date et l\'heure de fin.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Une seule colonne peut contenir le nom de l\'aliment.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">La tension artérielle nécessite une colonne systolique et une colonne diastolique.</string>
     <string name="settings_csv_import_confirm_title">Prêt à importer</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mesures par ligne</string>
     <string name="settings_csv_import_confirm_range">%1$s : de %2$s à %3$s</string>
@@ -2260,6 +2266,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Exclu dans l\'application source</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Date de fin non reconnue</string>
     <string name="settings_csv_import_reason_end_not_after_start">La fin n\'est pas postérieure au début</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Systolique ou diastolique manquante</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Systolique pas supérieure à la diastolique</string>
     <string name="settings_csv_import_save_report">Enregistrer le rapport</string>
     <string name="settings_csv_import_report_saved">Rapport enregistré.</string>
     <string name="settings_csv_import_report_save_failed">Impossible d\'enregistrer le rapport.</string>

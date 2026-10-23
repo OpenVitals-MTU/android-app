@@ -225,16 +225,32 @@ internal fun CsvMappingStep(
                 Spacer(Modifier.height(Spacing.sm))
             }
             items(count = sample.columnCount) { index ->
+                val column = mapping.columns.firstOrNull { it.columnIndex == index }
+                    ?: CsvColumnMapping(columnIndex = index)
+                val labelHint = remember(sample, column, mapping.bloodPressure.labels) {
+                    csvBloodPressureLabelHint(column, sample.columnValues(index), mapping.bloodPressure.labels)
+                }
                 CsvColumnMappingTile(
                     header = sample.headerRow[index],
                     samples = sample.columnValues(index).take(3),
-                    mapping = mapping.columns.firstOrNull { it.columnIndex == index }
-                        ?: CsvColumnMapping(columnIndex = index),
+                    mapping = column,
                     onSetRole = { role, metric -> viewModel.setColumnRole(index, role, metric) },
                     onSetNutrient = { nutrient -> viewModel.setColumnNutrient(index, nutrient) },
+                    onSetBloodPressurePart = { part -> viewModel.setColumnBloodPressurePart(index, part) },
                     onSetInterpretation = { viewModel.setColumnInterpretation(index, it) },
                     modifier = Modifier.padding(bottom = Spacing.sm),
+                    labelHint = labelHint,
                 )
+            }
+            if (mapping.bloodPressureColumns.isNotEmpty()) {
+                item {
+                    CsvBloodPressureDefaultsCard(
+                        settings = mapping.bloodPressure,
+                        onBodyPositionChange = viewModel::setDefaultBodyPosition,
+                        onCuffLocationChange = viewModel::setDefaultCuffLocation,
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                }
             }
             if (state.issues.isNotEmpty()) {
                 item {
@@ -312,7 +328,7 @@ internal fun CsvConfirmStep(
                             text = stringResource(
                                 R.string.settings_csv_import_confirm_summary,
                                 state.fileName.orEmpty(),
-                                mapping.metricColumns.size + mapping.nutrientColumns.size,
+                                mapping.recordsPerRow,
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = Spacing.sm),
@@ -329,6 +345,8 @@ internal fun CsvConfirmStep(
                             val nutrient = column.nutrient ?: return@forEach
                             CsvNutrientRangeLine(nutrient = nutrient, values = nutrientValues[nutrient].orEmpty())
                         }
+                        // Readings that will be written: a swapped pair is rejected, so it shows no range.
+                        CsvBloodPressureRangeLines(sample = sample, mapping = mapping)
                     }
                 }
                 if (missing.isNotEmpty()) {

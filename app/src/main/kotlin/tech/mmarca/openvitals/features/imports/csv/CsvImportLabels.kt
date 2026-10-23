@@ -30,6 +30,16 @@ internal fun csvMetricLabel(metric: CsvImportMetric): String = stringResource(
 )
 
 @Composable
+internal fun csvBloodPressurePartLabel(part: CsvBloodPressurePart): String = stringResource(
+    when (part) {
+        CsvBloodPressurePart.SYSTOLIC -> R.string.vitals_entry_systolic_label
+        CsvBloodPressurePart.DIASTOLIC -> R.string.vitals_entry_diastolic_label
+        CsvBloodPressurePart.BODY_POSITION -> R.string.vitals_entry_bp_position_label
+        CsvBloodPressurePart.CUFF_LOCATION -> R.string.vitals_entry_bp_location_label
+    },
+)
+
+@Composable
 internal fun csvUnitLabel(unit: CsvUnit): String = stringResource(
     when (unit) {
         CsvUnit.KILOGRAMS -> R.string.settings_csv_import_unit_kilograms
@@ -117,6 +127,7 @@ internal fun csvIssueLabel(issue: CsvMappingIssue): String = stringResource(
         CsvMappingIssue.AMBIGUOUS_DAY_MONTH_ORDER -> R.string.settings_csv_import_date_format_ambiguous
         CsvMappingIssue.MULTIPLE_END_TIMESTAMP_COLUMNS -> R.string.settings_csv_import_issue_multiple_end_timestamps
         CsvMappingIssue.MULTIPLE_FOOD_NAME_COLUMNS -> R.string.settings_csv_import_issue_multiple_food_names
+        CsvMappingIssue.BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC -> R.string.settings_csv_import_issue_bp_needs_both
     },
 )
 
@@ -131,6 +142,8 @@ internal fun csvDiagnosticReasonLabel(reason: CsvImportDiagnosticReason): String
         CsvImportDiagnosticReason.DERIVATION_MISSING_WEIGHT -> R.string.settings_csv_import_reason_derivation_missing_weight
         CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> R.string.settings_csv_import_reason_unparsable_end_timestamp
         CsvImportDiagnosticReason.END_NOT_AFTER_START -> R.string.settings_csv_import_reason_end_not_after_start
+        CsvImportDiagnosticReason.MISSING_BLOOD_PRESSURE_VALUE -> R.string.settings_csv_import_reason_missing_blood_pressure_value
+        CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC -> R.string.settings_csv_import_reason_systolic_not_above_diastolic
         CsvImportDiagnosticReason.WRITE_FAILED -> R.string.settings_csv_import_reason_write_failed
         CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> R.string.settings_csv_import_reason_excluded_in_source
     },

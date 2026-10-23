@@ -2171,6 +2171,11 @@
     <string name="settings_csv_import_interpretation_mass_share">以 %1$s 为单位的重量，作为体重列的占比</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect 以百分比存储体脂，因此从同一行的体重测量中计算。</string>
     <string name="settings_csv_import_nutrient_hint">一行中的所有营养素列会合成一条食物记录。</string>
+    <string name="settings_csv_import_bp_pressure_hint">单位为 mmHg。一行中的收缩压和舒张压组成一次血压测量；只有其中一项的行会被拒绝。</string>
+    <string name="settings_csv_import_bp_label_hint">可识别：%1$s。不区分大小写和空格。其他值或空单元格使用下方的默认值。</string>
+    <string name="settings_csv_import_bp_label_unrecognised">无法识别，使用默认值：%1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">血压默认值</string>
+    <string name="settings_csv_import_bp_defaults_body">用于文件未提供身体姿势或袖带位置，或用无法识别的词书写的测量。下次导入时仍会保留。</string>
     <string name="settings_csv_import_date_time_title">日期和时间</string>
     <string name="settings_csv_import_date_format_label">格式</string>
     <string name="settings_csv_import_date_format_auto">自动检测</string>
@@ -2198,6 +2203,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">采样行中没有匹配此日期格式的。</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">只能有一列持有结束日期和时间。</string>
     <string name="settings_csv_import_issue_multiple_food_names">只能有一列持有食物名称。</string>
+    <string name="settings_csv_import_issue_bp_needs_both">血压需要收缩压列和舒张压列。</string>
     <string name="settings_csv_import_confirm_title">准备导入</string>
     <string name="settings_csv_import_confirm_summary">%1$s · 每行 %2$d 项测量</string>
     <string name="settings_csv_import_confirm_range">%1$s：%2$s 到 %3$s</string>
@@ -2256,6 +2262,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">已在来源应用中排除</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">结束日期无法识别</string>
     <string name="settings_csv_import_reason_end_not_after_start">结束不晚于开始</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">缺少收缩压或舒张压</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">收缩压不高于舒张压</string>
     <string name="settings_csv_import_save_report">保存报告</string>
     <string name="settings_csv_import_report_saved">报告已保存。</string>
     <string name="settings_csv_import_report_save_failed">无法保存报告。</string>

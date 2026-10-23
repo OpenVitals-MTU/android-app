@@ -2537,6 +2537,11 @@
     <string name="settings_csv_import_interpretation_mass_share">A mass in %1$s, as a share of the weight column</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect stores body fat as a percentage, so this is worked out from the weight measured in the same row.</string>
     <string name="settings_csv_import_nutrient_hint">All the nutrient columns of a row become one food entry.</string>
+    <string name="settings_csv_import_bp_pressure_hint">In mmHg. A row\'s systolic and diastolic make one blood pressure reading; a row with only one of them is rejected.</string>
+    <string name="settings_csv_import_bp_label_hint">Recognised: %1$s. Case and spacing do not matter. Any other value, or a blank cell, takes the default below.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Not recognised, so the default is used: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Blood pressure defaults</string>
+    <string name="settings_csv_import_bp_defaults_body">For readings whose body position or cuff location the file leaves out, or names in a word not recognised. Kept for the next import.</string>
     <string name="settings_csv_import_date_time_title">Date and time</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Detect automatically</string>
@@ -2564,6 +2569,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">None of the sampled rows match this date format.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Only one column can hold the end date and time.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Only one column can hold the food name.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Blood pressure needs both a systolic and a diastolic column.</string>
     <string name="settings_csv_import_confirm_title">Ready to import</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d measurements per row</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s to %3$s</string>
@@ -2622,6 +2628,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Excluded in the source app</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">End date not understood</string>
     <string name="settings_csv_import_reason_end_not_after_start">End is not after the start</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Systolic or diastolic missing</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Systolic not above diastolic</string>
     <string name="settings_csv_import_save_report">Save report</string>
     <string name="settings_csv_import_report_saved">Report saved.</string>
     <string name="settings_csv_import_report_save_failed">The report could not be saved.</string>

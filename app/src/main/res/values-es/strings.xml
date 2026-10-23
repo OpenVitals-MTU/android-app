@@ -2520,6 +2520,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Una masa en %1$s, como proporción de la columna de peso</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect almacena la grasa corporal como porcentaje, así que se calcula a partir del peso medido en la misma fila.</string>
     <string name="settings_csv_import_nutrient_hint">Todas las columnas de nutrientes de una fila forman una sola entrada de comida.</string>
+    <string name="settings_csv_import_bp_pressure_hint">En mmHg. La sistólica y la diastólica de una fila forman una medición de presión arterial; una fila con solo una de ellas se rechaza.</string>
+    <string name="settings_csv_import_bp_label_hint">Se reconoce: %1$s. No importan las mayúsculas ni los espacios. Cualquier otro valor, o una celda vacía, toma el valor predeterminado de abajo.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">No reconocido, se usa el valor predeterminado: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Valores predeterminados de presión arterial</string>
+    <string name="settings_csv_import_bp_defaults_body">Para mediciones cuya posición del cuerpo o del manguito el archivo omite, o indica con una palabra no reconocida. Se guardan para la próxima importación.</string>
     <string name="settings_csv_import_date_time_title">Fecha y hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detectar automáticamente</string>
@@ -3261,8 +3266,11 @@
     <string name="settings_csv_import_unit_micrograms">Microgramos (µg)</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Solo una columna puede contener la fecha y hora de finalización.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Solo una columna puede contener el nombre del alimento.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">La presión arterial necesita una columna sistólica y otra diastólica.</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Fecha de finalización no válida</string>
     <string name="settings_csv_import_reason_end_not_after_start">El fin debe ser posterior al inicio</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Falta la sistólica o la diastólica</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">La sistólica no es mayor que la diastólica</string>
     <string name="settings_derived_metrics_reset_title">Reinicia la energía y la recuperación del cuerpo</string>
     <string name="settings_derived_metrics_reset_body">Borra todo lo que OpenVitals ha calculado por su cuenta para estas métricas (el historial de energía del cuerpo, el ajuste aprendido de tu reloj y los valores de referencia) y lo vuelve a generar desde Health Connect, como si fuera una instalación nueva. Tus datos de Health Connect, perfil corporal, zonas de frecuencia cardíaca y objetivos se conservan.</string>
     <string name="settings_derived_metrics_reset_action">Empezar de nuevo</string>

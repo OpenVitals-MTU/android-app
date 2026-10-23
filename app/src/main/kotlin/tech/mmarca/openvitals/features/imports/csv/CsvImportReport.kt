@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
 import java.util.Locale
+import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 /**
@@ -63,6 +64,11 @@ fun buildCsvImportReport(
         appendLine("Time zone:   ${zoneLabel(mapping.dateTime)}")
         mapping.dateTime.customPattern?.takeIf { it.isNotEmpty() }?.let {
             appendLine("Custom pattern: $it")
+        }
+        // What a reading took when its file gave no position or location, or an unrecognised one.
+        if (mapping.bloodPressureColumns.isNotEmpty()) {
+            appendLine("Default body position: ${bodyPositionReportLabel(mapping.bloodPressure.defaultBodyPosition)}")
+            appendLine("Default cuff location: ${cuffLocationReportLabel(mapping.bloodPressure.defaultCuffLocation)}")
         }
     }
     if (drip != null) {
@@ -258,6 +264,30 @@ private fun roleLabel(column: CsvColumnMapping): String = when (column.role) {
             "${metric.reportName} (${interpretationLabel(column.effectiveInterpretation)})"
         }
     }
+    CsvColumnRole.BLOOD_PRESSURE -> when (column.bloodPressurePart) {
+        CsvBloodPressurePart.SYSTOLIC -> "blood pressure systolic (millimetersOfMercury)"
+        CsvBloodPressurePart.DIASTOLIC -> "blood pressure diastolic (millimetersOfMercury)"
+        CsvBloodPressurePart.BODY_POSITION -> "blood pressure body position"
+        CsvBloodPressurePart.CUFF_LOCATION -> "blood pressure cuff location"
+        null -> "not imported"
+    }
+}
+
+/** A default as the report names it: Health Connect's constant names, in words. */
+private fun bodyPositionReportLabel(position: Int): String = when (position) {
+    BpRecordValues.BODY_POSITION_STANDING_UP -> "standing up"
+    BpRecordValues.BODY_POSITION_SITTING_DOWN -> "sitting down"
+    BpRecordValues.BODY_POSITION_LYING_DOWN -> "lying down"
+    BpRecordValues.BODY_POSITION_RECLINING -> "reclining"
+    else -> "not specified"
+}
+
+private fun cuffLocationReportLabel(location: Int): String = when (location) {
+    BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST -> "left wrist"
+    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST -> "right wrist"
+    BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM -> "left upper arm"
+    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM -> "right upper arm"
+    else -> "not specified"
 }
 
 private fun interpretationLabel(interpretation: CsvValueInterpretation?): String =
@@ -276,6 +306,8 @@ private fun reasonLabel(reason: CsvImportDiagnosticReason): String = when (reaso
     CsvImportDiagnosticReason.DERIVATION_MISSING_WEIGHT -> "no weight to derive the percentage from"
     CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> "end date not understood"
     CsvImportDiagnosticReason.END_NOT_AFTER_START -> "end is not after the start"
+    CsvImportDiagnosticReason.MISSING_BLOOD_PRESSURE_VALUE -> "systolic or diastolic missing"
+    CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC -> "systolic not above diastolic"
     CsvImportDiagnosticReason.WRITE_FAILED -> "Health Connect refused the record"
     CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> "Excluded in the source app"
 }

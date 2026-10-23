@@ -30,7 +30,11 @@ import tech.mmarca.openvitals.domain.model.NutritionNutrientGroup
 import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
-/** One CSV column's role and value-interpretation editor. */
+/**
+ * One CSV column's role and value-interpretation editor. [labelHint] is set
+ * for a body position or cuff location column: the words it accepts, and the
+ * sampled ones it does not.
+ */
 @Composable
 internal fun CsvColumnMappingTile(
     header: String,
@@ -38,8 +42,10 @@ internal fun CsvColumnMappingTile(
     mapping: CsvColumnMapping,
     onSetRole: (CsvColumnRole, CsvImportMetric?) -> Unit,
     onSetNutrient: (NutritionNutrient) -> Unit,
+    onSetBloodPressurePart: (CsvBloodPressurePart) -> Unit,
     onSetInterpretation: (CsvValueInterpretation) -> Unit,
     modifier: Modifier = Modifier,
+    labelHint: CsvBloodPressureLabelHint? = null,
 ) {
     val spec = mapping.metric?.takeIf { mapping.isMetric }?.let { CsvMetricCatalog[it] }
     val nutrient = mapping.nutrient?.takeIf { mapping.isNutrient }
@@ -61,7 +67,14 @@ internal fun CsvColumnMappingTile(
                 mapping = mapping,
                 onSetRole = onSetRole,
                 onSetNutrient = onSetNutrient,
+                onSetBloodPressurePart = onSetBloodPressurePart,
             )
+            if (mapping.isBloodPressure && mapping.bloodPressurePart?.isPressure == true) {
+                CsvColumnHint(R.string.settings_csv_import_bp_pressure_hint)
+            }
+            if (labelHint != null) {
+                CsvBloodPressureLabelHintText(labelHint)
+            }
 
             if (interpretations != null) {
                 Spacer(Modifier.height(8.dp))
@@ -84,13 +97,14 @@ internal fun CsvColumnMappingTile(
     }
 }
 
-/** The column's role: not imported, a timestamp, a metric, or a nutrient under its section. */
+/** The column's role: not imported, a timestamp, a metric, a blood pressure part, or a nutrient under its section. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CsvColumnRoleField(
     mapping: CsvColumnMapping,
     onSetRole: (CsvColumnRole, CsvImportMetric?) -> Unit,
     onSetNutrient: (NutritionNutrient) -> Unit,
+    onSetBloodPressurePart: (CsvBloodPressurePart) -> Unit,
 ) {
     var roleExpanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -143,6 +157,19 @@ private fun CsvColumnRoleField(
                     onClick = {
                         roleExpanded = false
                         onSetRole(CsvColumnRole.METRIC, metric)
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+            HorizontalDivider()
+            // The parts of one reading, which the row's columns make together.
+            CsvRoleMenuHeader(stringResource(R.string.metric_blood_pressure))
+            CsvBloodPressurePart.entries.forEach { part ->
+                DropdownMenuItem(
+                    text = { Text(csvBloodPressurePartLabel(part)) },
+                    onClick = {
+                        roleExpanded = false
+                        onSetBloodPressurePart(part)
                     },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
@@ -230,6 +257,28 @@ private fun CsvColumnHint(@StringRes textRes: Int) {
     )
 }
 
+/** The words a body position or cuff location column accepts, then the sampled ones it does not. */
+@Composable
+private fun CsvBloodPressureLabelHintText(hint: CsvBloodPressureLabelHint) {
+    Text(
+        text = stringResource(R.string.settings_csv_import_bp_label_hint, hint.accepted.joinToString(", ")),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 6.dp),
+    )
+    if (hint.unrecognised.isNotEmpty()) {
+        Text(
+            text = stringResource(
+                R.string.settings_csv_import_bp_label_unrecognised,
+                hint.unrecognised.joinToString(", "),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+    }
+}
+
 /** A section title in the role menu. Not a choice. */
 @Composable
 private fun CsvRoleMenuHeader(text: String) {
@@ -251,5 +300,7 @@ private fun roleValueLabel(mapping: CsvColumnMapping): String = when (mapping.ro
         mapping.nutrient?.titleRes() ?: R.string.settings_csv_import_role_ignore,
     )
     CsvColumnRole.FOOD_NAME -> stringResource(R.string.settings_csv_import_role_food_name)
+    CsvColumnRole.BLOOD_PRESSURE -> mapping.bloodPressurePart?.let { csvBloodPressurePartLabel(it) }
+        ?: stringResource(R.string.settings_csv_import_role_ignore)
     CsvColumnRole.IGNORE -> stringResource(R.string.settings_csv_import_role_ignore)
 }

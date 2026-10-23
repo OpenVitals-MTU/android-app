@@ -6,7 +6,7 @@
 > **Navigation:** `Screen.SettingsDataImport`, then `Screen.SettingsCsvImport`.
 > **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Body metrics](body-metrics.md), [Apple Health import](apple-health-import.md).
 
-CSV import brings body measurements, vitals, steps and nutrition from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a temperature log, a glucose export, a pedometer's step history, or a spreadsheet of meals copied from nutrition labels.
+CSV import brings body measurements, vitals, blood pressure, steps and nutrition from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a blood pressure monitor's log, a temperature log, a glucose export, a pedometer's step history, or a spreadsheet of meals copied from nutrition labels.
 
 There is one vendor preset, the drip cycle tracker's export, recognised by its header; see [drip Export](#drip-export). Every other file is read through the column mapping: the user says what each column means, which is why a file OpenVitals has never seen still imports.
 
@@ -15,8 +15,8 @@ There is one vendor preset, the drip cycle tracker's export, recognised by its h
 CSV import lives in Settings, Data Importers, CSV Importer, and opens its own five-step screen.
 
 1. **Choose a file.** The file picker accepts CSV and plain-text documents. Only the head of the file is read at this point, so a large export opens immediately and nothing is written yet.
-2. **Map the columns.** OpenVitals shows the detected column separator, a "first row contains column names" switch, a short preview table, the date and time settings, and one row per column. Each column is set to not imported, date and time, an optional end date and time, a supported measurement, a nutrient, or a food name. A measurement or nutrient column also picks what its numbers are.
-3. **Confirm.** The confirm step shows the date range the file covers and the value range each measurement and nutrient will actually be written with, so a mis-mapped column is visible before anything lands. Missing Health Connect write permissions are requested here.
+2. **Map the columns.** OpenVitals shows the detected column separator, a "first row contains column names" switch, a short preview table, the date and time settings, and one row per column. Each column is set to not imported, date and time, an optional end date and time, a supported measurement, a part of a blood pressure reading, a nutrient, or a food name. A measurement or nutrient column also picks what its numbers are.
+3. **Confirm.** The confirm step shows the date range the file covers and the value range each measurement, nutrient, and blood pressure's systolic and diastolic will actually be written with, so a mis-mapped column is visible before anything lands. The count of measurements per row counts records: a blood pressure reading is one, however many of its columns are mapped, and so is a food. Missing Health Connect write permissions are requested here.
 4. **Import.** Progress shows the current row with running written, already-present, and rejected counts. The import can be cancelled; what was already written is kept.
 5. **Read the result.** The result step keeps three tallies apart, because they do not add up to each other: the rows of the file (read, imported, rejected, nothing to import, which do add up to the rows read), the Health Connect records (written, and how many of those replaced an earlier import), and, for a drip export, the cycle journal days. A row can produce several records or none. Rejections are grouped by reason below the tallies, and the full report can be copied or saved.
 
@@ -43,6 +43,7 @@ Heart and vitals:
 - Basal body temperature.
 - Blood glucose.
 - VO2 max.
+- Blood pressure, from a systolic and a diastolic column. See [Blood Pressure](#blood-pressure) below.
 
 Activity:
 
@@ -54,7 +55,6 @@ Most supported measurements are a single value at a single instant, because that
 
 ## What Is Not Supported
 
-- **Blood pressure is deliberately unsupported.** Systolic and diastolic have to become one Health Connect record, which needs a two-columns-to-one-record rule the mapping model does not have.
 - **Interval records beyond steps and nutrition are not supported.** Sleep and workouts need stages or sub-records as well as a start and an end, so they are out of scope for the current mapping model. Steps and nutrition are the exceptions, carried by the single optional "End date and time" column.
 - **Meal type is not mapped.** An imported food has no breakfast, lunch, dinner or snack label.
 
@@ -90,6 +90,19 @@ A blank nutrient cell is a gap, and so is a zero: a label's "0 g" adds nothing, 
 
 Imported foods appear on the nutrition screen and its charts like any other entry. They can be deleted there but not edited, like a logged food from the catalog: correct the spreadsheet and import it again instead. They never appear among the drinks on the hydration screen, even when one carries caffeine.
 
+## Blood Pressure
+
+A blood pressure reading is one Health Connect record made from several columns, so its columns are mapped under their own "Blood pressure" section of the column menu rather than as measurements:
+
+- **Systolic** and **Diastolic**, in mmHg. Both are needed: a mapping with only one of them, or with a body position or cuff location column but no pressures, cannot continue.
+- **Body position** and **Cuff location**, optional, written as words.
+
+A word is matched against the labels the app itself shows for the options, in the app's language and then in English, ignoring case, spacing and punctuation: "Sitting", "sitting", "SITTING" and, in Finnish, "Istuen" all read as sitting; "Left arm", "left_arm" and "LEFT ARM" as the left upper arm. The body positions are sitting, standing, lying down and reclining; the cuff locations are the left and right arm and the left and right wrist. A column mapped to one of them lists the words it accepts, and names any value in the sampled rows that matches none.
+
+A blood pressure section on the mapping step chooses a default body position and cuff location, both "Not specified" until set. A reading takes the default when the file has no such column, or when its cell is blank or holds a word that matches nothing, such as "seated" or a number. The position or location never costs the reading. The defaults are remembered for the next import.
+
+A row whose systolic and diastolic cells are both blank has no reading, which is not an error. A reading is rejected when only one of them is filled, when one is not a number, when either is outside what Health Connect accepts (systolic 20 to 200 mmHg, diastolic 10 to 180 mmHg), or when the systolic is not above the diastolic, which usually means the two columns are swapped. A rejected reading counts as one rejection, under its first fault in column order, and costs nothing else in the row: a weight in the same row still imports. A reading is identified by its instant, like any measurement, so re-importing replaces it.
+
 ## Units Come From The File
 
 The unit chosen for a column describes the file, not the app's display unit system. A file in pounds imports correctly while the app displays kilograms, and neither setting affects the other. Values are converted once, on import, and stored in the units Health Connect uses.
@@ -124,12 +137,12 @@ Every column starts as not imported, so a column is only ever included on purpos
 
 The first column whose sampled values all parse as a date is pre-selected as the timestamp column. Measurements are never guessed from header text; the date guess is safe only because it is checked against the data.
 
-The step will not continue until the mapping is valid. It reports a missing or duplicated timestamp column, a duplicated end date and time column, a duplicated food-name column, no measurement or nutrient columns at all, two columns mapped to the same measurement or nutrient, a body-fat mass column with no weight column to derive from, and a date format that matches none of the sampled rows.
+The step will not continue until the mapping is valid. It reports a missing or duplicated timestamp column, a duplicated end date and time column, a duplicated food-name column, no measurement, nutrient or blood pressure columns at all, two columns mapped to the same measurement, nutrient or part of a blood pressure reading, a blood pressure column without both a systolic and a diastolic one, a body-fat mass column with no weight column to derive from, and a date format that matches none of the sampled rows.
 
 ## What Gets Rejected
 
-- A bad timestamp, or a row with fewer columns than the mapping needs, costs the whole row.
-- A bad value costs only that measurement or nutrient, so one unreadable body-fat cell does not throw away a good weight in the same row, and one unreadable sodium cell does not throw away the rest of the food.
+- A bad timestamp, or a row with fewer columns than the mapping needs, costs the whole row. The end date and time, food name, body position and cuff location columns are not counted, so a row that stops before an empty trailing cell of theirs still imports.
+- A bad value costs only that measurement, nutrient or blood pressure reading, so one unreadable body-fat cell does not throw away a good weight in the same row, and one unreadable sodium cell does not throw away the rest of the food.
 - A blank cell is a gap in the data, not an error. Scales routinely skip measurements.
 - Values outside a plausible human range are rejected rather than stored. This is the guard against a mis-mapped column.
 
@@ -151,7 +164,7 @@ If Health Connect refuses a batch because the app's write quota is spent, the im
 
 ## Reports
 
-The result step can copy the report or save it as a text file. The report contains the file name and outcome, the totals, the parsing settings actually used, the full column mapping including the unit each column was given, rejection counts by reason, and a per-row rejection log. The per-row log is capped so that re-importing a large file cannot make the report unbounded; the grouped counts above it stay complete.
+The result step can copy the report or save it as a text file. The report contains the file name and outcome, the totals, the parsing settings actually used, including the blood pressure defaults when a blood pressure column was mapped, the full column mapping including the unit each column was given, rejection counts by reason, and a per-row rejection log. The per-row log is capped so that re-importing a large file cannot make the report unbounded; the grouped counts above it stay complete.
 
 Like the Apple Health import report, this report is an explicit user export and is not sanitized. It names the file, its columns, and the values that were rejected. It contains no health data the user's own CSV did not already contain.
 

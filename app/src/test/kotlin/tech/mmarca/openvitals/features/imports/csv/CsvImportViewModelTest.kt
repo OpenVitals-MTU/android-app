@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
@@ -24,7 +25,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.contract.CsvImportPreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -32,6 +35,7 @@ import tech.mmarca.openvitals.util.MainDispatcherRule
 private const val WriteWeight = "android.permission.health.WRITE_WEIGHT"
 private const val WriteBodyWaterMass = "android.permission.health.WRITE_BODY_WATER_MASS"
 private const val WriteNutrition = "android.permission.health.WRITE_NUTRITION"
+private const val WriteBloodPressure = "android.permission.health.WRITE_BLOOD_PRESSURE"
 
 /** The Withings shape, three rows. */
 private const val WithingsCsv =
@@ -39,6 +43,18 @@ private const val WithingsCsv =
         "2026-07-01 08:12:00,78.4,15.2,3.1\n" +
         "2026-07-02 08:14:00,78.6,15.3,3.1\n" +
         "2026-07-03 08:11:00,78.2,15.1,3.1\n"
+
+/** A home monitor's log: the position in words, the cuff never written down. */
+private const val MonitorCsv =
+    "timestamp,systolic,diastolic,position\n" +
+        "2026-10-03 00:03,123,88,Sitting\n" +
+        "2026-10-03 10:40,149,97,seated\n"
+
+/** The two preferences in memory, as the store would keep them between imports. */
+private class InMemoryCsvImportPreferences : CsvImportPreferences {
+    override var defaultBodyPosition: Int = BpRecordValues.BODY_POSITION_UNKNOWN
+    override var defaultCuffLocation: Int = BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN
+}
 
 /** A food log kept in a spreadsheet: energy in kJ, as some labels print it. */
 private const val FoodLogCsv =
@@ -57,12 +73,16 @@ class CsvImportViewModelTest {
     private val importRepository = mockk<AppleHealthImportRepository>()
     private val healthRepository = mockk<HealthRepository>()
     private val inserted = mutableListOf<Record>()
+    private val preferences = InMemoryCsvImportPreferences()
+    private val bloodPressureLabels = mockk<CsvBloodPressureLabelSource>()
 
     /** What Health Connect currently reports as granted; mutable so a test can grant mid-flight. */
     private var granted: Set<String> = emptySet()
 
     private val allWritePermissions: Set<String> =
-        CsvMetricCatalog.values.mapTo(mutableSetOf()) { it.writePermission } + CsvNutritionWritePermission
+        CsvMetricCatalog.values.mapTo(mutableSetOf()) { it.writePermission } +
+            CsvNutritionWritePermission +
+            CsvBloodPressureWritePermission
 
     @Before
     fun setUp() {
@@ -74,6 +94,9 @@ class CsvImportViewModelTest {
         coEvery { importRepository.insertImportedRecords(any()) } answers {
             inserted.addAll(arg<List<Record>>(0))
         }
+        every { bloodPressureLabels.labels() } returns CsvBloodPressureLabels(
+            bodyPositions = listOf(mapOf(BpRecordValues.BODY_POSITION_SITTING_DOWN to "Sitting")),
+        )
     }
 
     /** [unsupported] is what the installed provider does not define; the supported set is the catalog minus those. */
@@ -88,6 +111,8 @@ class CsvImportViewModelTest {
             context = context,
             importService = CsvImportService(importRepository, mockk(relaxed = true)),
             healthRepository = healthRepository,
+            preferences = preferences,
+            bloodPressureLabels = bloodPressureLabels,
             healthConnectManager = manager,
         )
     }
@@ -280,6 +305,38 @@ class CsvImportViewModelTest {
         assertEquals(listOf("Oatmeal", "Soup"), foods.map { it.name })
         assertEquals(349.9, foods.first().energy!!.inKilocalories, 0.1)
         assertEquals(0.8, foods.last().sodium!!.inGrams, 1e-9)
+    }
+
+    @Test
+    fun `a monitor log maps to readings that take the chosen default, which the next file starts with`() = runTest {
+        val vm = viewModel()
+        vm.pickFile(documentUri("monitor.csv", MonitorCsv))
+        vm.awaitLoaded()
+
+        vm.setColumnBloodPressurePart(1, CsvBloodPressurePart.SYSTOLIC)
+        vm.setColumnBloodPressurePart(2, CsvBloodPressurePart.DIASTOLIC)
+        vm.setColumnBloodPressurePart(3, CsvBloodPressurePart.BODY_POSITION)
+        vm.setDefaultBodyPosition(BpRecordValues.BODY_POSITION_RECLINING)
+        assertEquals(setOf(WriteBloodPressure), vm.uiState.value.missingPermissions)
+        assertEquals(1, vm.uiState.value.mapping?.recordsPerRow)
+
+        vm.startImport()
+        vm.awaitDone()
+
+        // "seated" is no word the app knows, so its reading takes the default rather than being lost.
+        val readings = inserted.filterIsInstance<BloodPressureRecord>()
+        assertEquals(
+            listOf(BpRecordValues.BODY_POSITION_SITTING_DOWN, BpRecordValues.BODY_POSITION_RECLINING),
+            readings.map { it.bodyPosition },
+        )
+        assertEquals(BpRecordValues.BODY_POSITION_RECLINING, preferences.defaultBodyPosition)
+
+        vm.reset()
+        vm.pickFile(documentUri("monitor.csv", MonitorCsv))
+        assertEquals(
+            BpRecordValues.BODY_POSITION_RECLINING,
+            vm.awaitLoaded().mapping?.bloodPressure?.defaultBodyPosition,
+        )
     }
 
     /** Picks the Withings file and maps its weight column, ready to import. */

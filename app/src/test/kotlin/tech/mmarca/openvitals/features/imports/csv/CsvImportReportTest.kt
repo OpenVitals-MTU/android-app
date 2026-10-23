@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.imports.csv
 import com.google.common.truth.Truth.assertThat
 import java.time.ZoneOffset
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 private val HeaderRow = listOf("Date", "Weight (kg)", "Fat mass (kg)", "Comments")
@@ -162,6 +163,34 @@ class CsvImportReportTest {
 
         assertThat(report).contains("[1] Food -> food name")
         assertThat(report).contains("[2] B12 -> nutrient vitaminB12 (micrograms)")
+    }
+
+    @Test
+    fun `blood pressure columns name their part, and the defaults a reading fell back to are recorded`() {
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(1, CsvColumnRole.BLOOD_PRESSURE, bloodPressurePart = CsvBloodPressurePart.SYSTOLIC),
+                CsvColumnMapping(2, CsvColumnRole.BLOOD_PRESSURE, bloodPressurePart = CsvBloodPressurePart.DIASTOLIC),
+                CsvColumnMapping(3, CsvColumnRole.BLOOD_PRESSURE, bloodPressurePart = CsvBloodPressurePart.CUFF_LOCATION),
+            ),
+            bloodPressure = CsvBloodPressureSettings(
+                defaultBodyPosition = BpRecordValues.BODY_POSITION_SITTING_DOWN,
+            ),
+        )
+
+        val report = buildCsvImportReport(
+            fileName = "monitor.csv",
+            mapping = mapping,
+            result = runResult(counts = mapOf(CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC to 1)),
+            headerRow = listOf("Date", "SYS", "DIA", "Cuff"),
+        )
+
+        assertThat(report).contains("[1] SYS -> blood pressure systolic (millimetersOfMercury)")
+        assertThat(report).contains("[3] Cuff -> blood pressure cuff location")
+        assertThat(report).contains("Default body position: sitting down")
+        assertThat(report).contains("Default cuff location: not specified")
+        assertThat(report).contains("systolic not above diastolic: 1")
     }
 
     @Test
