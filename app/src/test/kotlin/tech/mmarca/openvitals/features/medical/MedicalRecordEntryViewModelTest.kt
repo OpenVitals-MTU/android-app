@@ -9,6 +9,8 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.contract.FakeMedicalRecordsRepository
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsPreferences
 import tech.mmarca.openvitals.domain.medical.ManualRecordKind
+import tech.mmarca.openvitals.domain.medical.ObservationMeasure
+import tech.mmarca.openvitals.domain.model.MedicalCategory
 import tech.mmarca.openvitals.domain.usecase.SaveManualMedicalRecordUseCase
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -17,7 +19,10 @@ class MedicalRecordEntryViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private class FakePreferences(override var firstPermissionRequestDone: Boolean = true) : MedicalRecordsPreferences
+    private class FakePreferences(
+        override var firstPermissionRequestDone: Boolean = true,
+        override var betaNoticeSeen: Boolean = true,
+    ) : MedicalRecordsPreferences
 
     private val repository = FakeMedicalRecordsRepository()
     private val preferences = FakePreferences()
@@ -41,6 +46,39 @@ class MedicalRecordEntryViewModelTest {
 
         assertThat(vm.uiState.value.saved).isTrue()
         assertThat(repository.records.map { it.ref.resourceType }).containsAtLeast("Patient", "Immunization")
+    }
+
+    @Test
+    fun `a new lab result starts dated today and saves once it has a result`() = runTest {
+        repository.addSource("clinic", "Clinic", packageName = "com.example.clinic")
+        repository.add("clinic", "Patient", "p1", """{"resourceType":"Patient","id":"p1","name":[{"family":"Lee"}]}""")
+        val vm = viewModel(ManualRecordKind.LAB_RESULT)
+
+        assertThat(vm.uiState.value.draft?.date).isEqualTo(today)
+        vm.update { it.copy(name = "Glucose") }
+        assertThat(vm.uiState.value.canSave(today)).isFalse()
+
+        vm.update { it.copy(result = "5.4", unit = "mmol/L") }
+        vm.save("Entered in OpenVitals")
+
+        assertThat(vm.uiState.value.saved).isTrue()
+        assertThat(repository.records.map { it.ref.resourceType }).contains("Observation")
+    }
+
+    @Test
+    fun `a vital sign is saved where Health Connect files vital signs`() = runTest {
+        repository.addSource("clinic", "Clinic", packageName = "com.example.clinic")
+        repository.add("clinic", "Patient", "p1", """{"resourceType":"Patient","id":"p1","name":[{"family":"Lee"}]}""")
+        val vm = viewModel(ManualRecordKind.VITAL_SIGN)
+
+        vm.update { it.copy(measure = ObservationMeasure.HEART_RATE, name = "Heart rate") }
+        assertThat(vm.uiState.value.canSave(today)).isFalse()
+        vm.update { it.copy(result = "64") }
+        vm.save("Entered in OpenVitals")
+
+        assertThat(vm.uiState.value.saved).isTrue()
+        assertThat(repository.records.single { it.ref.resourceType == "Observation" }.category).isEqualTo(MedicalCategory.VITAL_SIGNS)
+        assertThat(ManualRecordKind.of("Observation", MedicalCategory.VITAL_SIGNS)).isEqualTo(ManualRecordKind.VITAL_SIGN)
     }
 
     @Test

@@ -3,10 +3,10 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | a command at rest is idle | PORTED | BodyMeasurementEntryViewModelTest.kt `a command at rest is idle` | Idle asserted out of the constructor and after the permission probe settles |
-| a successful save settles on success, and is consumed once | PORTED | BodyMeasurementEntryViewModelTest.kt `weight entry writes canonical kg value` | Write captured, input cleared, saveCompleted true, consumed via onSaveCompletedHandled |
+| a successful save settles on success, and is consumed once | PORTED | BodyMeasurementEntryViewModelTest.kt `a weigh-in writes every filled value in one call, at one time` | Write captured, inputs cleared, saveCompleted true, consumed via onSaveCompletedHandled |
 | a failed save carries the failure to the form, not an exception | PORTED | BodyMeasurementEntryViewModelTest.kt `a failed save carries the failure to the form, not an exception` | Thrown write surfaces on the state, saving cleared, no exception escapes; Kotlin additionally sets entryError=WRITE_FAILED |
 | editing a field clears the failure the last attempt left behind | PORTED | BodyMeasurementEntryViewModelTest.kt `editing a field clears the failure the last attempt left behind` | No Kotlin test that updateInput clears a prior write failure |
-| validation refuses before the command ever runs | PORTED | BodyMeasurementEntryViewModelTest.kt `invalid body measurement value does not write` | INVALID_VALUE + zero writes; equivalent given Kotlin's boolean state model |
+| validation refuses before the command ever runs | PORTED | BodyMeasurementEntryViewModelTest.kt `a value out of range marks its field and writes nothing` | INVALID_VALUE, the rejected fields marked, zero writes; equivalent given Kotlin's boolean state model |
 
 ## /home/manu/Documentos/repos/mobile-app/test/features/manualentry/carbs_entry_command_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/nutrition/NutritionEntryViewModelTest.kt
@@ -135,8 +135,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/body/BodyMeasurementEntryViewModelTest.kt, .../vitals/VitalsMeasurementEntryViewModelTest.kt, /home/manu/Documentos/repos/openvitals-android/app/src/androidTest/kotlin/tech/mmarca/openvitals/features/manualentry/hydration/HydrationEntryFormTest.kt
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| Body weight form writes the expected request on save | PORTED | BodyMeasurementEntryViewModelTest.kt `weight entry writes canonical kg value` | Same type/value write request asserted at VM level |
-| Body weight form blocks the write on invalid input | PORTED | BodyMeasurementEntryViewModelTest.kt `invalid body measurement value does not write` | Error + zero writes; the localized error copy itself is rendering-only |
+| Body weight form writes the expected request on save | PORTED | BodyMeasurementEntryViewModelTest.kt `a weigh-in writes every filled value in one call, at one time` | Type, value and time of every request asserted at VM level; the weight form is now the body composition weigh-in |
+| Body weight form blocks the write on invalid input | PORTED | BodyMeasurementEntryViewModelTest.kt `a value out of range marks its field and writes nothing` | Error + zero writes; the localized error copy itself is rendering-only |
 | Blood pressure form writes systolic + diastolic on save | PORTED | VitalsMeasurementEntryViewModelTest.kt `blood pressure entry writes systolic and diastolic values` | |
 | Blood pressure form blocks the write when systolic <= diastolic | PORTED | VitalsMeasurementEntryViewModelTest.kt `invalid vitals value does not write` | Uses 70/90 (systolic < diastolic), same guard |
 | Hydration form shows the tracker card, not container presets | DIVERGED | HydrationEntryFormTest.kt `hydrationEntryForm_rendersTrackerCard` | Only asserts the tracker tag exists; absence of container chips/custom-amount field and presence of catalog search unasserted |

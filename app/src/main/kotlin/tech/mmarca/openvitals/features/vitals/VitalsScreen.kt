@@ -45,12 +45,14 @@ fun Vo2MaxScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.VO2_MAX,
+        onEditVitalsMeasurement = onEditVitalsMeasurement,
     )
 }
 
@@ -91,12 +93,14 @@ fun BloodGlucoseScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BLOOD_GLUCOSE,
+        onEditVitalsMeasurement = onEditVitalsMeasurement,
     )
 }
 

@@ -27,6 +27,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.BpMealContext
+import tech.mmarca.openvitals.domain.model.GlucoseContext
+import tech.mmarca.openvitals.domain.model.GlucoseMgPerDlPerMmolPerL
+import tech.mmarca.openvitals.domain.model.GlucoseRecordValues
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.core.presentation.ScreenError
@@ -45,6 +48,8 @@ private const val MinHrvMillis = 1.0
 private const val MaxHrvMillis = 200.0
 private const val MinPulseBpm = 20
 private const val MaxPulseBpm = 300
+private const val MaxGlucoseMmolPerL = 50.0
+private const val MaxVo2Max = 100.0
 
 enum class VitalsMeasurementEntryError {
     INVALID_VALUE,
@@ -64,6 +69,10 @@ data class VitalsMeasurementEntryUiState(
     val bpMealContext: BpMealContext? = null,
     val bpBodyPosition: Int? = null,
     val bpMeasurementLocation: Int? = null,
+    /** Blood glucose only: the unit the level is typed in, mmol/L as METRIC and mg/dL as IMPERIAL. */
+    val glucoseUnit: UnitSystem = UnitSystem.METRIC,
+    val glucose: GlucoseContext = GlucoseContext(),
+    val vo2MaxMeasurementMethod: Int? = null,
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
     /** Blood pressure only: what saving a pulse needs on top of [writePermissions]. */
@@ -104,6 +113,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
         _uiState.value = VitalsMeasurementEntryUiState(
             type = type,
             editRecordId = editRecordId,
+            glucoseUnit = unitSystem,
         )
         refreshPermission()
         loadEditEntry(type, unitSystem)
@@ -198,6 +208,24 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
         )
     }
 
+    /** Switches the unit the level is typed in. A typed level is converted, so the reading stays the same. */
+    fun selectGlucoseUnit(unit: UnitSystem) {
+        val current = _uiState.value
+        if (current.glucoseUnit == unit) return
+        val converted = canonicalVitalsValue(current.inputText, VitalsMeasurementType.BLOOD_GLUCOSE, current.glucoseUnit)
+            ?.toDisplayInput(VitalsMeasurementType.BLOOD_GLUCOSE, unit)
+        updateForm { copy(glucoseUnit = unit, inputText = converted ?: inputText) }
+    }
+
+    /** A meal only goes with a reading taken before or after one. */
+    fun updateGlucose(context: GlucoseContext) = updateForm {
+        val aroundMeal = context.relationToMeal == GlucoseRecordValues.RELATION_TO_MEAL_BEFORE_MEAL ||
+            context.relationToMeal == GlucoseRecordValues.RELATION_TO_MEAL_AFTER_MEAL
+        copy(glucose = if (aroundMeal) context else context.copy(mealType = null))
+    }
+
+    fun selectVo2MaxMeasurementMethod(method: Int?) = updateForm { copy(vo2MaxMeasurementMethod = method) }
+
     fun updateEntryTime(time: Instant) {
         _uiState.value = _uiState.value.copy(
             editTime = time.coerceAtMost(Instant.now()),
@@ -261,6 +289,10 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     bpMeasurementLocation = current.bpMeasurementLocation
                         .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE },
                     bpPulseBpm = pulseBpm,
+                    glucose = current.glucose
+                        .takeIf { current.type == VitalsMeasurementType.BLOOD_GLUCOSE } ?: GlucoseContext(),
+                    vo2MaxMeasurementMethod = current.vo2MaxMeasurementMethod
+                        .takeIf { current.type == VitalsMeasurementType.VO2_MAX },
                 )
                 if (current.editRecordId == null) {
                     repository.writeVitalsMeasurementEntry(request)
@@ -293,6 +325,10 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(saveCompleted = false)
     }
 
+    private inline fun updateForm(transform: VitalsMeasurementEntryUiState.() -> VitalsMeasurementEntryUiState) {
+        _uiState.value = _uiState.value.transform().copy(saveCompleted = false, entryError = null, writeError = null)
+    }
+
     private fun loadEditEntry(type: VitalsMeasurementType, unitSystem: UnitSystem) {
         val recordId = editRecordId ?: return
         viewModelScope.launch {
@@ -313,6 +349,8 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     bpMealContext = entry.bpMealContext,
                     bpBodyPosition = entry.bpBodyPosition,
                     bpMeasurementLocation = entry.bpMeasurementLocation,
+                    glucose = entry.glucose,
+                    vo2MaxMeasurementMethod = entry.vo2MaxMeasurementMethod,
                     editTime = entry.time.coerceAtMost(Instant.now()),
                     entryError = null,
                     writeError = null,
@@ -347,6 +385,9 @@ private fun isValidVitalsValue(
         VitalsMeasurementType.BODY_TEMPERATURE -> value > 0.0 && value <= MaxBodyTemperatureCelsius
         // Health Connect's own validation range for RMSSD.
         VitalsMeasurementType.HRV -> value >= MinHrvMillis && value <= MaxHrvMillis
+        // Health Connect's own limits.
+        VitalsMeasurementType.BLOOD_GLUCOSE -> value > 0.0 && value <= MaxGlucoseMmolPerL
+        VitalsMeasurementType.VO2_MAX -> value > 0.0 && value <= MaxVo2Max
     }
 }
 
@@ -354,6 +395,11 @@ private fun Double.toDisplayInput(type: VitalsMeasurementType, unitSystem: UnitS
     val displayValue = when (type) {
         VitalsMeasurementType.BODY_TEMPERATURE -> if (unitSystem == UnitSystem.IMPERIAL) {
             TemperatureUnits.celsiusToFahrenheit(this)
+        } else {
+            this
+        }
+        VitalsMeasurementType.BLOOD_GLUCOSE -> if (unitSystem == UnitSystem.IMPERIAL) {
+            this * GlucoseMgPerDlPerMmolPerL
         } else {
             this
         }

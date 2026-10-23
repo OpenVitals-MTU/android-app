@@ -135,7 +135,8 @@ internal fun MedicalRecordDetailContent(
                     }
                     state.value?.let { value ->
                         // The flag is the one the source set. Nothing is computed here.
-                        DetailRow(stringResource(R.string.medical_record_value), listOfNotNull(value, state.flag).joinToString(" · "))
+                        val flag = state.flag?.let { fhirCodeLabelRes(SummaryField.INTERPRETATION, it)?.let { res -> stringResource(res) } ?: it }
+                        DetailRow(stringResource(R.string.medical_record_value), listOfNotNull(value, flag).joinToString(" · "))
                     }
                 }
             }
@@ -205,7 +206,7 @@ private fun DetailAppBar(
     val ref = state.ref.takeIf { !state.isLoading && state.error == null }
     val document = state.document.takeIf { ref != null }
     val manualKind = ref?.takeIf { state.writtenByThisApp && state.sourceUri == ManualFhirWriter.SourceBaseUri }
-        ?.let { ManualRecordKind.ofResourceType(it.resourceType) }
+        ?.let { ManualRecordKind.of(it.resourceType, state.category) }
     DeclareAppBar(
         remember(ref, state.writtenByThisApp, manualKind, document) {
             ScreenAppBar(
@@ -254,6 +255,7 @@ private fun DeleteRecordDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 private fun valueText(field: SummaryField, value: MedicalValue, formatters: DateTimeFormatterProvider): String {
     value.needsAccess?.let { return stringResource(R.string.medical_record_needs_access, stringResource(it.titleRes)) }
     val text = value.text.orEmpty()
-    val label = fhirCodeLabelRes(field, text)?.let { stringResource(it) } ?: dateFieldText(field, text, formatters)
-    return listOfNotNull(label, value.caption?.let(::codeSystemLabel)).joinToString(" · ")
+    // A code with a word of its own needs no code system beside it.
+    fhirCodeLabelRes(field, text)?.let { return stringResource(it) }
+    return listOfNotNull(dateFieldText(field, text, formatters), value.caption?.let(::codeSystemLabel)).joinToString(" · ")
 }

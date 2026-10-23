@@ -10,7 +10,7 @@ enum class FhirRejection {
     INVALID_ID,
     CONTAINED,
 
-    /** An Observation with none of the three category codes and no LOINC code to classify it by. */
+    /** An Observation that matches none of Health Connect's category codes or LOINC lists. */
     UNCLASSIFIABLE_OBSERVATION,
 
     /** An empty object or array. [FhirPreflightProblem.field] names where. */
@@ -33,15 +33,11 @@ object FhirPreflight {
             resource.type !in FhirResourceTypes.supported -> FhirPreflightProblem(FhirRejection.UNSUPPORTED_TYPE)
             !isValidFhirId(json.fhirId) -> FhirPreflightProblem(FhirRejection.INVALID_ID)
             "contained" in json -> FhirPreflightProblem(FhirRejection.CONTAINED)
-            resource.type == "Observation" && !isClassifiable(json) ->
+            resource.type == "Observation" && FhirResourceTypes.likelyCategory(json) == null ->
                 FhirPreflightProblem(FhirRejection.UNCLASSIFIABLE_OBSERVATION)
             else -> firstEmpty(json, path = "")?.let { FhirPreflightProblem(FhirRejection.EMPTY_VALUE, it) }
         }
     }
-
-    private fun isClassifiable(observation: JsonObject): Boolean =
-        FhirResourceTypes.likelyCategory(observation) != null ||
-            observation.obj("code")?.objects("coding").orEmpty().any { it.string("system") == LoincSystem }
 
     /** The path of the first empty object or array, such as `reaction.manifestation`. */
     private fun firstEmpty(element: JsonElement, path: String): String? = when (element) {

@@ -11,7 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -45,19 +48,33 @@ fun MedicalCategoryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val category = state.category
+    var choosingKind by rememberSaveable { mutableStateOf(false) }
     // A record deleted on its detail screen, or in Health Connect, must not linger here.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     MedicalExportDialog(exportViewModel)
     if (category != null) {
         val title = stringResource(category.titleRes)
-        // Vaccines, allergies, medications and conditions can also be typed in.
-        val kind = ManualRecordKind.ofCategory(category)
+        // A category with manual kinds can be typed into: one opens its form, several are a choice.
+        val kinds = ManualRecordKind.entries.filter { it.category == category && it.canAdd }
+        if (choosingKind) {
+            AddRecordChooser(
+                kinds = kinds,
+                onChoose = { kind ->
+                    choosingKind = false
+                    onAddRecord(kind)
+                },
+                onDismiss = { choosingKind = false },
+            )
+        }
         DeclareAppBar(
             remember(title) {
                 ScreenAppBar(
                     title = title,
                     actions = listOfNotNull(
-                        kind?.let { AppBarAction(Icons.Outlined.Add, entryTitleRes(it, edit = false)) { onAddRecord(it) } },
+                        kinds.singleOrNull()?.let { AppBarAction(Icons.Outlined.Add, entryTitleRes(it, edit = false)) { onAddRecord(it) } }
+                            ?: kinds.takeIf { it.isNotEmpty() }?.let {
+                                AppBarAction(Icons.Outlined.Add, R.string.medical_entry_add_action) { choosingKind = true }
+                            },
                         AppBarAction(Icons.Outlined.Share, R.string.medical_export_action) {
                             exportViewModel.export(MedicalExportScope.Category(category))
                         },

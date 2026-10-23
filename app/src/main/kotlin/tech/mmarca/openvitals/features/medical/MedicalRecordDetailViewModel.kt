@@ -57,6 +57,8 @@ data class MedicalRecordDetailUiState(
     val isLoading: Boolean = true,
     val error: ScreenError? = null,
     val resourceType: String = "",
+    /** Where Health Connect filed the record. An Observation's kind of entry depends on it. */
+    val category: MedicalCategory? = null,
     val title: MedicalValue? = null,
     val status: String? = null,
     val date: FhirDate? = null,
@@ -178,6 +180,7 @@ class MedicalRecordDetailViewModel(
             ref = ref,
             isLoading = false,
             resourceType = ref.resourceType,
+            category = record.category,
             title = summary.title?.let(::value),
             status = summary.status,
             date = summary.date,

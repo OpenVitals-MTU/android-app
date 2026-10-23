@@ -368,7 +368,12 @@ private fun HeartMetricRouteScreen(
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
         )
-        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.VO2_MAX -> Vo2MaxScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditVitalsMeasurement,
+        )
         HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(
             viewModel,
             unitFormatter,
@@ -385,6 +390,7 @@ private fun HeartMetricRouteScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditVitalsMeasurement,
         )
         HeartMetric.SKIN_TEMPERATURE -> SkinTemperatureScreen(
             viewModel,
@@ -473,17 +479,25 @@ private fun BodyMetricRouteScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditBodyMeasurement,
         )
-        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.BMR -> BmrScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditBodyMeasurement,
+        )
         BodyMetric.BONE_MASS -> BoneMassScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditBodyMeasurement,
         )
         BodyMetric.BODY_WATER_MASS -> BodyWaterMassScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditBodyMeasurement,
         )
     }
 }

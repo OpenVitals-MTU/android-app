@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.core.presentation
 
+import tech.mmarca.openvitals.domain.model.GlucoseMgPerDlPerMmolPerL
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.text.NumberFormat
@@ -89,7 +90,7 @@ class UnitFormatter(
     fun bloodGlucose(millimolesPerLiter: Double): DisplayValue =
         when (unitSystem(UnitQuantity.BLOOD_GLUCOSE)) {
             UnitSystem.METRIC -> DisplayValue(decimal(millimolesPerLiter, 1), "mmol/L")
-            UnitSystem.IMPERIAL -> DisplayValue(decimal(millimolesPerLiter * 18.0, 0), "mg/dL")
+            UnitSystem.IMPERIAL -> DisplayValue(decimal(millimolesPerLiter * GlucoseMgPerDlPerMmolPerL, 0), "mg/dL")
         }
 
     fun percent(value: Double, decimals: Int = 1): DisplayValue =

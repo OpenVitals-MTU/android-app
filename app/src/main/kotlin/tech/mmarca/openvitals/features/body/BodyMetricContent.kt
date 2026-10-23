@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,7 +48,6 @@ import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
-import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import java.time.Instant
 import java.time.LocalDate
@@ -979,285 +977,20 @@ when (metric) {
         onEditBodyMeasurement,
         onDeleteBodyMeasurement,
     )
-    BodyMetric.LEAN_MASS -> {
-        val metricData = state.metricDataFor(BodyMetric.LEAN_MASS, unitFormatter)
-        singleBodyMetricContent(
-            state = state,
-            period = period,
-            selectedDate = chartDaySelection.selectedDate,
-            sectionContext = sectionContext,
-            titleRes = R.string.metric_lean_mass,
-            value = state.summary.latestLeanMassKg?.let(unitFormatter::bodyMass),
-            comparison = state.summary.previousLatestLeanMassKg?.let { previous ->
-                periodComparison(currentValue = state.summary.latestLeanMassKg ?: 0.0, previousValue = previous)
-            },
-            comparisonValueFormatter = { unitFormatter.bodyMass(it) },
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            unitFormatter = unitFormatter,
-            selectedRange = state.selectedRange,
-            entryCount = state.leanMassEntries.size,
-            baselineCurrentValue = state.summary.latestLeanMassKg,
-            baselineValues = state.baselineLeanMassEntries.map { it.leanMassBaselineValue() },
-            periodChart = if (metricData.hasTrackedValues) {
-                {
-                    BodyPeriodMetricChart(
-                        metricData = metricData,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        selectedDate = chartDaySelection.selectedDate,
-                        onDateSelected = chartDaySelection.onDateSelected,
-                        modifier = metricModifier(),
-                    )
-                }
-            } else {
-                null
-            },
-            dataConfidence = {
-                BodyEntryDataConfidenceContent(
-                    period = period,
-                    entries = state.leanMassEntries,
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                )
-            },
-            selectedDayEntries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.leanMassEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.bodyMass(it.massKg).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = true,
-                )
-            },
-            entries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.leanMassEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.bodyMass(it.massKg).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = false,
-                )
-            },
-        )
-    }
-    BodyMetric.BMR -> {
-        val metricData = state.metricDataFor(BodyMetric.BMR, unitFormatter)
-        singleBodyMetricContent(
-            state = state,
-            period = period,
-            selectedDate = chartDaySelection.selectedDate,
-            sectionContext = sectionContext,
-            titleRes = R.string.metric_bmr,
-            value = state.summary.latestBmrKcal?.let(unitFormatter::energy),
-            comparison = state.summary.previousLatestBmrKcal?.let { previous ->
-                periodComparison(currentValue = state.summary.latestBmrKcal ?: 0.0, previousValue = previous)
-            },
-            comparisonValueFormatter = { unitFormatter.energy(it) },
-            icon = Icons.Outlined.LocalFireDepartment,
-            accentColor = CaloriesColor,
-            unitFormatter = unitFormatter,
-            selectedRange = state.selectedRange,
-            entryCount = state.bmrEntries.size,
-            baselineCurrentValue = state.summary.latestBmrKcal,
-            baselineValues = state.baselineBmrEntries.map { it.bmrBaselineValue() },
-            periodChart = if (metricData.hasTrackedValues) {
-                {
-                    BodyPeriodMetricChart(
-                        metricData = metricData,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        selectedDate = chartDaySelection.selectedDate,
-                        onDateSelected = chartDaySelection.onDateSelected,
-                        modifier = metricModifier(),
-                    )
-                }
-            } else {
-                null
-            },
-            dataConfidence = {
-                BodyEntryDataConfidenceContent(
-                    period = period,
-                    entries = state.bmrEntries,
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = CaloriesColor,
-                )
-            },
-            selectedDayEntries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.bmrEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.energy(it.kcalPerDay).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = CaloriesColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = true,
-                )
-            },
-            entries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.bmrEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.energy(it.kcalPerDay).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = CaloriesColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = false,
-                )
-            },
-        )
-    }
-    BodyMetric.BONE_MASS -> {
-        val metricData = state.metricDataFor(BodyMetric.BONE_MASS, unitFormatter)
-        singleBodyMetricContent(
-            state = state,
-            period = period,
-            selectedDate = chartDaySelection.selectedDate,
-            sectionContext = sectionContext,
-            titleRes = R.string.metric_bone_mass,
-            value = state.summary.latestBoneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
-            comparison = state.summary.previousLatestBoneMassKg?.let { previous ->
-                periodComparison(currentValue = state.summary.latestBoneMassKg ?: 0.0, previousValue = previous)
-            },
-            comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            unitFormatter = unitFormatter,
-            selectedRange = state.selectedRange,
-            entryCount = state.boneMassEntries.size,
-            baselineCurrentValue = state.summary.latestBoneMassKg,
-            baselineValues = state.baselineBoneMassEntries.map { it.boneMassBaselineValue() },
-            periodChart = if (metricData.hasTrackedValues) {
-                {
-                    BodyPeriodMetricChart(
-                        metricData = metricData,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        selectedDate = chartDaySelection.selectedDate,
-                        onDateSelected = chartDaySelection.onDateSelected,
-                        modifier = metricModifier(),
-                    )
-                }
-            } else {
-                null
-            },
-            dataConfidence = {
-                BodyEntryDataConfidenceContent(
-                    period = period,
-                    entries = state.boneMassEntries,
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                )
-            },
-            selectedDayEntries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.boneMassEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = true,
-                )
-            },
-            entries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.boneMassEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = false,
-                )
-            },
-        )
-    }
-    BodyMetric.BODY_WATER_MASS -> {
-        val metricData = state.metricDataFor(BodyMetric.BODY_WATER_MASS, unitFormatter)
-        singleBodyMetricContent(
-            state = state,
-            period = period,
-            selectedDate = chartDaySelection.selectedDate,
-            sectionContext = sectionContext,
-            titleRes = R.string.metric_body_water_mass,
-            value = state.summary.latestBodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
-            comparison = state.summary.previousLatestBodyWaterMassKg?.let { previous ->
-                periodComparison(currentValue = state.summary.latestBodyWaterMassKg ?: 0.0, previousValue = previous)
-            },
-            comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            unitFormatter = unitFormatter,
-            selectedRange = state.selectedRange,
-            entryCount = state.bodyWaterMassEntries.size,
-            baselineCurrentValue = state.summary.latestBodyWaterMassKg,
-            baselineValues = state.baselineBodyWaterMassEntries.map { it.bodyWaterMassBaselineValue() },
-            periodChart = if (metricData.hasTrackedValues) {
-                {
-                    BodyPeriodMetricChart(
-                        metricData = metricData,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        selectedDate = chartDaySelection.selectedDate,
-                        onDateSelected = chartDaySelection.onDateSelected,
-                        modifier = metricModifier(),
-                    )
-                }
-            } else {
-                null
-            },
-            dataConfidence = {
-                BodyEntryDataConfidenceContent(
-                    period = period,
-                    entries = state.bodyWaterMassEntries,
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                )
-            },
-            selectedDayEntries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.bodyWaterMassEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = true,
-                )
-            },
-            entries = {
-                bodyMetricReadingEntriesContent(
-                    entries = state.bodyWaterMassEntries,
-                    selectedDate = chartDaySelection.selectedDate,
-                    value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = WeightColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    selectedOnly = false,
-                )
-            },
-        )
-    }
+    BodyMetric.LEAN_MASS,
+    BodyMetric.BMR,
+    BodyMetric.BONE_MASS,
+    BodyMetric.BODY_WATER_MASS,
+    -> bodyCompositionMetricContent(
+        metric,
+        state,
+        period,
+        unitFormatter,
+        dateTimeFormatterProvider,
+        chartDaySelection,
+        sectionContext,
+        onEditBodyMeasurement,
+        onDeleteBodyMeasurement,
+    )
 }
 }

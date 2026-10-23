@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsPreferences
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
+import tech.mmarca.openvitals.domain.medical.ManualDirectory
 import tech.mmarca.openvitals.domain.medical.ManualFhirWriter
 import tech.mmarca.openvitals.domain.medical.ManualRecordDraft
 import tech.mmarca.openvitals.domain.medical.ManualRecordKind
@@ -43,6 +44,8 @@ data class MedicalRecordEntryUiState(
     val isEdit: Boolean = false,
     val isLoading: Boolean = true,
     val draft: ManualRecordDraft? = null,
+    /** The doctors and clinics already saved, offered before a new name is typed. */
+    val directory: ManualDirectory = ManualDirectory(),
     val needsIdentity: Boolean = false,
     val owner: MedicalOwnerFields = MedicalOwnerFields(),
     val canWrite: Boolean = true,
@@ -55,7 +58,7 @@ data class MedicalRecordEntryUiState(
         !isLoading && !isSaving && canWrite && draft?.isComplete(today) == true && (!needsIdentity || owner.hasName)
 }
 
-/** Adds or edits one manual record: a vaccine, an allergy, a medication or a condition. */
+/** Adds or edits one manual record of any [ManualRecordKind]. */
 @HiltViewModel
 class MedicalRecordEntryViewModel(
     private val repository: MedicalRecordsRepository,
@@ -101,11 +104,21 @@ class MedicalRecordEntryViewModel(
                 val canWrite = repository.canWrite()
                 val needsIdentity = canWrite && saveRecord.needsIdentity()
                 val draft = _uiState.value.draft ?: editId?.let { id -> saveRecord.stored(kind, id)?.let { ManualFhirWriter.draftOf(kind, it) } }
-                    ?: ManualRecordDraft(kind, date = today().takeIf { kind == ManualRecordKind.VACCINE })
-                Triple(canWrite, needsIdentity, draft)
-            }.onSuccess { (canWrite, needsIdentity, draft) ->
+                    ?: ManualRecordDraft(kind, date = today().takeIf { kind.needsDate })
+                val directory = saveRecord.directory()
+                Loaded(canWrite, needsIdentity, draft, directory)
+            }.onSuccess { loaded ->
                 if (!isCurrent) return@load
-                _uiState.update { it.copy(isLoading = false, canWrite = canWrite, needsIdentity = needsIdentity, draft = draft, error = null) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        canWrite = loaded.canWrite,
+                        needsIdentity = loaded.needsIdentity,
+                        draft = loaded.draft,
+                        directory = loaded.directory,
+                        error = null,
+                    )
+                }
             }.onFailure { failure ->
                 if (failure is CancellationException) throw failure
                 if (!isCurrent) return@load
@@ -135,7 +148,16 @@ class MedicalRecordEntryViewModel(
     /** [sourceName] names the manual source the first time it is made, in the user's language. */
     fun save(sourceName: String) {
         val state = _uiState.value
-        val draft = state.draft ?: return
+        // A typed name that matches a saved doctor or clinic points at it rather than making a twin.
+        val draft = state.draft
+            ?.let {
+                it.copy(
+                    doctor = state.directory.resolve(it.doctor),
+                    organization = state.directory.resolve(it.organization),
+                    place = state.directory.resolve(it.place),
+                )
+            }
+            ?: return
         if (!state.canSave(today())) return
         _uiState.update { it.copy(isSaving = true, error = null) }
         viewModelScope.launch {
@@ -154,6 +176,13 @@ class MedicalRecordEntryViewModel(
             }
         }
     }
+
+    private data class Loaded(
+        val canWrite: Boolean,
+        val needsIdentity: Boolean,
+        val draft: ManualRecordDraft,
+        val directory: ManualDirectory,
+    )
 
     private companion object {
         const val TAG = "MedicalRecordEntry"

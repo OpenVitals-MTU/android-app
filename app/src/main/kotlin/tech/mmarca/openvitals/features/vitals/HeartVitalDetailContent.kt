@@ -150,6 +150,8 @@ internal fun LazyListScope.vo2MaxContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     sectionContext: MetricDetailSectionContext,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     val display = state.display.metric
     val latest = state.latestVo2Max
@@ -219,6 +221,9 @@ internal fun LazyListScope.vo2MaxContent(
                     source = { it.source },
                     time = { it.time },
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                    onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.VO2_MAX, it.id) },
+                    onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.VO2_MAX, it.id) },
                 )
             },
         )
@@ -472,6 +477,8 @@ internal fun LazyListScope.bloodGlucoseContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     sectionContext: MetricDetailSectionContext,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     val display = state.display.metric
     if (display.hasVitalsEntries) {
@@ -514,6 +521,9 @@ internal fun LazyListScope.bloodGlucoseContent(
                         time = { it.time },
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         titleDate = selectedDate,
+                        editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                        onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.BLOOD_GLUCOSE, it.id) },
+                        onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.BLOOD_GLUCOSE, it.id) },
                     )
                 }
             },
@@ -543,6 +553,9 @@ internal fun LazyListScope.bloodGlucoseContent(
                     source = { it.source },
                     time = { it.time },
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                    onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.BLOOD_GLUCOSE, it.id) },
+                    onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.BLOOD_GLUCOSE, it.id) },
                 )
             },
         )

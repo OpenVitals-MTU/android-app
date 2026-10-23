@@ -151,16 +151,16 @@ class BodyViewModel @Inject constructor(
 
     fun deleteBodyMeasurementEntry(type: BodyMeasurementType, entryId: String) {
         if (entryId.isBlank()) return
+        val state = _uiState.value
         val entryIsOpenVitals = when (type) {
-            BodyMeasurementType.WEIGHT -> _uiState.value.weightEntries
-                .firstOrNull { it.id == entryId }
-                ?.isOpenVitalsEntry
-            BodyMeasurementType.HEIGHT -> _uiState.value.heightEntries
-                .firstOrNull { it.id == entryId }
-                ?.isOpenVitalsEntry
-            BodyMeasurementType.BODY_FAT -> _uiState.value.bodyFatEntries
-                .firstOrNull { it.id == entryId }
-                ?.isOpenVitalsEntry
+            BodyMeasurementType.WEIGHT -> state.weightEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
+            BodyMeasurementType.HEIGHT -> state.heightEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
+            BodyMeasurementType.BODY_FAT -> state.bodyFatEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
+            BodyMeasurementType.LEAN_MASS -> state.leanMassEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
+            BodyMeasurementType.BODY_WATER_MASS ->
+                state.bodyWaterMassEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
+            BodyMeasurementType.BONE_MASS -> state.boneMassEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
+            BodyMeasurementType.BMR -> state.bmrEntries.firstOrNull { it.id == entryId }?.isOpenVitalsEntry
         } ?: return
         if (!entryIsOpenVitals) return
 
@@ -265,6 +265,22 @@ private fun BodyUiState.withDeletedBodyMeasurementEntry(
         )
         BodyMeasurementType.BODY_FAT -> copy(
             bodyFatEntries = bodyFatEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+        BodyMeasurementType.LEAN_MASS -> copy(
+            leanMassEntries = leanMassEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+        BodyMeasurementType.BODY_WATER_MASS -> copy(
+            bodyWaterMassEntries = bodyWaterMassEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+        BodyMeasurementType.BONE_MASS -> copy(
+            boneMassEntries = boneMassEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+        BodyMeasurementType.BMR -> copy(
+            bmrEntries = bmrEntries.filterNot { it.id == entryId },
             error = null,
         )
     }.withDisplay()

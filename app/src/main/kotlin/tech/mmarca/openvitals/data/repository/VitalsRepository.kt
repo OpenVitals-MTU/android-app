@@ -36,6 +36,7 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.domain.query.VitalsPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.recordType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -69,23 +70,11 @@ class VitalsRepositoryImpl @Inject constructor(
     private val readVo2MaxPermission = HealthPermission.getReadPermission(Vo2MaxRecord::class)
     private val readBloodGlucosePermission = HealthPermission.getReadPermission(BloodGlucoseRecord::class)
     private val readSkinTemperaturePermission = HealthPermission.getReadPermission(SkinTemperatureRecord::class)
-    private val writeBloodPressurePermission = HealthPermission.getWritePermission(BloodPressureRecord::class)
-    private val writeSpO2Permission = HealthPermission.getWritePermission(OxygenSaturationRecord::class)
-    private val writeRespiratoryRatePermission = HealthPermission.getWritePermission(RespiratoryRateRecord::class)
-    private val writeBodyTemperaturePermission = HealthPermission.getWritePermission(BodyTemperatureRecord::class)
     private val readHrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
-    private val writeHrvPermission = HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class)
     private val writeHeartRatePermission = HealthPermission.getWritePermission(HeartRateRecord::class)
 
-    override fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> = setOf(
-        when (type) {
-            VitalsMeasurementType.BLOOD_PRESSURE -> writeBloodPressurePermission
-            VitalsMeasurementType.SPO2 -> writeSpO2Permission
-            VitalsMeasurementType.RESPIRATORY_RATE -> writeRespiratoryRatePermission
-            VitalsMeasurementType.BODY_TEMPERATURE -> writeBodyTemperaturePermission
-            VitalsMeasurementType.HRV -> writeHrvPermission
-        }
-    )
+    override fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> =
+        setOf(HealthPermission.getWritePermission(type.recordType))
 
     override val bpPulseWritePermissions: Set<String> get() = setOf(writeHeartRatePermission)
 
@@ -433,6 +422,8 @@ class VitalsRepositoryImpl @Inject constructor(
         VitalsMeasurementType.BODY_TEMPERATURE -> VitalsCacheKeys.BODY_TEMPERATURE
         // HRV has no daily cache; patchDays is a no-op for a spec-less key.
         VitalsMeasurementType.HRV -> VitalsCacheKeys.HRV
+        VitalsMeasurementType.BLOOD_GLUCOSE -> VitalsCacheKeys.BLOOD_GLUCOSE
+        VitalsMeasurementType.VO2_MAX -> VitalsCacheKeys.VO2_MAX
     }
 
     /** The entry's local day, read only when a cache exists to patch. */
@@ -604,13 +595,7 @@ class VitalsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun loadVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? {
-        val readPermission = when (type) {
-            VitalsMeasurementType.BLOOD_PRESSURE -> readBloodPressurePermission
-            VitalsMeasurementType.SPO2 -> readSpO2Permission
-            VitalsMeasurementType.RESPIRATORY_RATE -> readRespiratoryRatePermission
-            VitalsMeasurementType.BODY_TEMPERATURE -> readBodyTemperaturePermission
-            VitalsMeasurementType.HRV -> readHrvPermission
-        }
+        val readPermission = HealthPermission.getReadPermission(type.recordType)
         val granted = grantedPermissionsIfAvailable()
         if (readPermission !in granted) {
             Log.w(TAG, "Skipping loadVitalsMeasurementEntry type=$type missingCount=1")

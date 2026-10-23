@@ -678,108 +678,55 @@ internal fun bodyReadingItems(
     onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ): List<BodyReadingItem> =
     buildList {
-        state.weightEntries.forEach { entry ->
-            val editable = entry.isOpenVitalsEntry && entry.id.isNotBlank()
+        // Only what OpenVitals wrote can be changed; another app's reading is shown as it is.
+        fun reading(
+            type: BodyMeasurementType,
+            id: String,
+            ownEntry: Boolean,
+            value: String,
+            source: String,
+            time: Instant,
+            accentColor: Color,
+        ) {
+            val editable = ownEntry && id.isNotBlank()
             add(
                 BodyReadingItem(
-                    value = "$weightLabel · ${unitFormatter.weight(entry.weightKg).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = WeightColor,
-                    onEdit = if (editable) {
-                        { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, entry.id) }
-                    } else {
-                        null
-                    },
-                    onDelete = if (editable) {
-                        { onDeleteBodyMeasurement(BodyMeasurementType.WEIGHT, entry.id) }
-                    } else {
-                        null
-                    },
+                    value = value,
+                    source = source,
+                    time = time,
+                    accentColor = accentColor,
+                    onEdit = if (editable) ({ onEditBodyMeasurement(type, id) }) else null,
+                    onDelete = if (editable) ({ onDeleteBodyMeasurement(type, id) }) else null,
                 )
             )
         }
-        state.heightEntries.forEach { entry ->
-            val editable = entry.isOpenVitalsEntry && entry.id.isNotBlank()
-            add(
-                BodyReadingItem(
-                    value = "$heightLabel · ${unitFormatter.height(entry.heightCm).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = WeightColor,
-                    onEdit = if (editable) {
-                        { onEditBodyMeasurement(BodyMeasurementType.HEIGHT, entry.id) }
-                    } else {
-                        null
-                    },
-                    onDelete = if (editable) {
-                        { onDeleteBodyMeasurement(BodyMeasurementType.HEIGHT, entry.id) }
-                    } else {
-                        null
-                    },
-                )
-            )
+        state.weightEntries.forEach {
+            val value = "$weightLabel · ${unitFormatter.weight(it.weightKg).text}"
+            reading(BodyMeasurementType.WEIGHT, it.id, it.isOpenVitalsEntry, value, it.source, it.time, WeightColor)
         }
-        state.bodyFatEntries.forEach { entry ->
-            val editable = entry.isOpenVitalsEntry && entry.id.isNotBlank()
-            add(
-                BodyReadingItem(
-                    value = "$bodyFatLabel · ${unitFormatter.percent(entry.percent).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = BodyFatColor,
-                    onEdit = if (editable) {
-                        { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, entry.id) }
-                    } else {
-                        null
-                    },
-                    onDelete = if (editable) {
-                        { onDeleteBodyMeasurement(BodyMeasurementType.BODY_FAT, entry.id) }
-                    } else {
-                        null
-                    },
-                )
-            )
+        state.heightEntries.forEach {
+            val value = "$heightLabel · ${unitFormatter.height(it.heightCm).text}"
+            reading(BodyMeasurementType.HEIGHT, it.id, it.isOpenVitalsEntry, value, it.source, it.time, WeightColor)
         }
-        state.leanMassEntries.forEach { entry ->
-            add(
-                BodyReadingItem(
-                    value = "$leanMassLabel · ${unitFormatter.bodyMass(entry.massKg).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = WeightColor,
-                )
-            )
+        state.bodyFatEntries.forEach {
+            val value = "$bodyFatLabel · ${unitFormatter.percent(it.percent).text}"
+            reading(BodyMeasurementType.BODY_FAT, it.id, it.isOpenVitalsEntry, value, it.source, it.time, BodyFatColor)
         }
-        state.bmrEntries.forEach { entry ->
-            add(
-                BodyReadingItem(
-                    value = "$bmrLabel · ${unitFormatter.energy(entry.kcalPerDay).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = CaloriesColor,
-                )
-            )
+        state.leanMassEntries.forEach {
+            val value = "$leanMassLabel · ${unitFormatter.bodyMass(it.massKg).text}"
+            reading(BodyMeasurementType.LEAN_MASS, it.id, it.isOpenVitalsEntry, value, it.source, it.time, WeightColor)
         }
-        state.boneMassEntries.forEach { entry ->
-            add(
-                BodyReadingItem(
-                    value = "$boneMassLabel · ${unitFormatter.bodyMass(entry.massKg, decimals = 2).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = WeightColor,
-                )
-            )
+        state.bmrEntries.forEach {
+            val value = "$bmrLabel · ${unitFormatter.energy(it.kcalPerDay).text}"
+            reading(BodyMeasurementType.BMR, it.id, it.isOpenVitalsEntry, value, it.source, it.time, CaloriesColor)
         }
-        state.bodyWaterMassEntries.forEach { entry ->
-            add(
-                BodyReadingItem(
-                    value = "$bodyWaterMassLabel · ${unitFormatter.bodyMass(entry.massKg, decimals = 2).text}",
-                    source = entry.source,
-                    time = entry.time,
-                    accentColor = WeightColor,
-                )
-            )
+        state.boneMassEntries.forEach {
+            val value = "$boneMassLabel · ${unitFormatter.bodyMass(it.massKg, decimals = 2).text}"
+            reading(BodyMeasurementType.BONE_MASS, it.id, it.isOpenVitalsEntry, value, it.source, it.time, WeightColor)
+        }
+        state.bodyWaterMassEntries.forEach {
+            val value = "$bodyWaterMassLabel · ${unitFormatter.bodyMass(it.massKg, decimals = 2).text}"
+            reading(BodyMeasurementType.BODY_WATER_MASS, it.id, it.isOpenVitalsEntry, value, it.source, it.time, WeightColor)
         }
     }
 

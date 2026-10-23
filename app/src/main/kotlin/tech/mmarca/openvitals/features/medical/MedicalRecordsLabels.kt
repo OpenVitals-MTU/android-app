@@ -158,6 +158,14 @@ internal fun fhirCodeLabelRes(field: SummaryField, code: String): Int? = when (f
         "unknown" -> R.string.medical_status_unknown
         else -> null
     }
+    // Lab reports often send the bare code.
+    SummaryField.INTERPRETATION -> when (code) {
+        "H" -> R.string.medical_interpretation_high
+        "L" -> R.string.medical_interpretation_low
+        "N" -> R.string.medical_interpretation_normal
+        "A" -> R.string.medical_interpretation_abnormal
+        else -> null
+    }
     SummaryField.CATEGORY -> when (code) {
         "food" -> R.string.medical_code_food
         "medication" -> R.string.medical_code_medication
@@ -180,6 +188,7 @@ private val KnownCodeSystems = mapOf(
     "http://hl7.org/fhir/sid/icd-10" to "ICD-10",
     "http://hl7.org/fhir/sid/icd-10-cm" to "ICD-10-CM",
     "http://www.whocc.no/atc" to "ATC",
+    "http://www.ama-assn.org/go/cpt" to "CPT",
     "http://unitsofmeasure.org" to "UCUM",
 )
 

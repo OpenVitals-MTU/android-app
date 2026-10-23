@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.recordType
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -49,17 +50,12 @@ class BodyRepositoryImpl @Inject constructor(
     private val readBMRPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readBoneMassPermission = HealthPermission.getReadPermission(BoneMassRecord::class)
     private val readBodyWaterMassPermission = HealthPermission.getReadPermission(BodyWaterMassRecord::class)
-    private val writeWeightPermission = HealthPermission.getWritePermission(WeightRecord::class)
-    private val writeHeightPermission = HealthPermission.getWritePermission(HeightRecord::class)
-    private val writeBodyFatPermission = HealthPermission.getWritePermission(BodyFatRecord::class)
 
-    override fun bodyWritePermissions(type: BodyMeasurementType): Set<String> = setOf(
-        when (type) {
-            BodyMeasurementType.WEIGHT -> writeWeightPermission
-            BodyMeasurementType.HEIGHT -> writeHeightPermission
-            BodyMeasurementType.BODY_FAT -> writeBodyFatPermission
-        }
-    )
+    override fun bodyWritePermissions(type: BodyMeasurementType): Set<String> =
+        setOf(HealthPermission.getWritePermission(type.recordType))
+
+    private fun bodyReadPermission(type: BodyMeasurementType): String =
+        HealthPermission.getReadPermission(type.recordType)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -425,14 +421,20 @@ class BodyRepositoryImpl @Inject constructor(
         return hc.writeBodyMeasurementEntry(request)
     }
 
-    override suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
-        val readPermission = when (type) {
-            BodyMeasurementType.WEIGHT -> readWeightPermission
-            BodyMeasurementType.HEIGHT -> readHeightPermission
-            BodyMeasurementType.BODY_FAT -> readBodyFatPermission
+    override suspend fun writeBodyMeasurementEntries(requests: List<BodyMeasurementWriteRequest>): List<String> {
+        if (requests.isEmpty()) return emptyList()
+        val types = requests.mapTo(linkedSetOf()) { it.type }
+        val missingPermissions = types.flatMapTo(mutableSetOf(), ::bodyWritePermissions) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping writeBodyMeasurementEntries types=$types missingCount=${missingPermissions.size}")
+            throw SecurityException("Missing Health Connect body write permission.")
         }
+        return hc.writeBodyMeasurementEntries(requests)
+    }
+
+    override suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
         val granted = grantedPermissionsIfAvailable()
-        if (readPermission !in granted) {
+        if (bodyReadPermission(type) !in granted) {
             Log.w(TAG, "Skipping loadBodyMeasurementEntry type=$type missingCount=1")
             return null
         }

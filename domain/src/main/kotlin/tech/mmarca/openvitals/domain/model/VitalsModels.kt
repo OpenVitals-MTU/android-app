@@ -66,7 +66,12 @@ data class BloodGlucoseEntry(
     val mealType: Int,
     val relationToMeal: Int,
     val source: String,
+    val id: String = "",
+    val isOpenVitalsEntry: Boolean = false,
 )
+
+/** The app's mg/dL factor. What the screens show in mg/dL is what the entry form reads back. */
+const val GlucoseMgPerDlPerMmolPerL = 18.0
 
 /** One timed variation inside a skin temperature record. */
 data class SkinTemperatureDeltaSample(
@@ -98,7 +103,19 @@ data class Vo2MaxEntry(
     val time: Instant,
     val vo2MaxMlPerKgPerMin: Double,
     val source: String,
+    val id: String = "",
+    val isOpenVitalsEntry: Boolean = false,
 )
+
+/** Health Connect's Vo2MaxRecord MEASUREMENT_METHOD_* constants, mirrored so the domain stays library-free. */
+object Vo2MaxRecordValues {
+    const val MEASUREMENT_METHOD_OTHER = 0
+    const val MEASUREMENT_METHOD_METABOLIC_CART = 1
+    const val MEASUREMENT_METHOD_HEART_RATE_RATIO = 2
+    const val MEASUREMENT_METHOD_COOPER_TEST = 3
+    const val MEASUREMENT_METHOD_MULTISTAGE_FITNESS_TEST = 4
+    const val MEASUREMENT_METHOD_ROCKPORT_FITNESS_TEST = 5
+}
 
 enum class VitalsMeasurementType {
     BLOOD_PRESSURE,
@@ -106,6 +123,8 @@ enum class VitalsMeasurementType {
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
     HRV,
+    BLOOD_GLUCOSE,
+    VO2_MAX,
 }
 
 data class VitalsMeasurementWriteRequest(
@@ -125,6 +144,20 @@ data class VitalsMeasurementWriteRequest(
      * none and, on an edit, removes the one a previous save left.
      */
     val bpPulseBpm: Int? = null,
+    /** Blood glucose only: the reading's [GlucoseRecordValues] fields; null writes UNKNOWN. */
+    val glucose: GlucoseContext = GlucoseContext(),
+    /** VO2 max only: [Vo2MaxRecordValues] MEASUREMENT_METHOD_*; null writes OTHER. */
+    val vo2MaxMeasurementMethod: Int? = null,
+)
+
+/** What a glucose reading says about itself besides the level. Null is Health Connect's UNKNOWN. */
+data class GlucoseContext(
+    /** RELATION_TO_MEAL_*. */
+    val relationToMeal: Int? = null,
+    /** MEAL_TYPE_*, the meal [relationToMeal] is before or after. */
+    val mealType: Int? = null,
+    /** SPECIMEN_SOURCE_*. */
+    val specimenSource: Int? = null,
 )
 
 data class VitalsMeasurementEntry(
@@ -143,6 +176,10 @@ data class VitalsMeasurementEntry(
     val bpMeasurementLocation: Int? = null,
     /** Blood pressure only: the pulse saved with the reading, null when none was. */
     val bpPulseBpm: Int? = null,
+    /** Blood glucose only. */
+    val glucose: GlucoseContext = GlucoseContext(),
+    /** VO2 max only: MEASUREMENT_METHOD_* value, null when other. */
+    val vo2MaxMeasurementMethod: Int? = null,
 )
 
 /** One chart point per local day. [count] keeps period averages count-weighted. */
