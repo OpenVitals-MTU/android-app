@@ -2213,7 +2213,7 @@
     <string name="privacy_reconsent_action">Tarkista käytäntö</string>
     <string name="privacy_reconsent_no_browser">Mikään tämän puhelimen sovellus ei voi avata linkkiä. Käytäntö on osoitteessa %1$s</string>
     <string name="settings_debug_logs_title">Diagnostiikkalokit</string>
-    <string name="settings_debug_logs_body">Jaa tai tallenna OpenVitalsin prosessilokit tekstitiedostona. Vienti on raakaa (ei peittoa), jotta Health Connect- ja synkronointiongelmat voidaan selvittää koko lokista.</string>
+    <string name="settings_debug_logs_body">Jaa tai tallenna OpenVitalsin lokit tekstitiedostona. Jokainen rivi säilyy, jotta Health Connect- ja synkronointiongelmat voidaan jäljittää; laitteiden osoitteet, tunnisteet, tiedostojen sijainnit, päivämäärät ja virheiden yksityiskohdat peitetään. Lue se ennen kuin jaat sen.</string>
     <string name="settings_debug_logs_share">Jaa lokit</string>
     <string name="settings_debug_logs_share_chooser_title">Jaa diagnostiikkalokit</string>
     <string name="settings_debug_logs_share_failed">Diagnostiikkalokeja ei voitu jakaa</string>

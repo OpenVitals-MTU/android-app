@@ -1126,24 +1126,24 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/sync/VitalsH
 ## test/core/diagnostics/debug_log_sanitizer_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/diagnostics/PrivacySafeDebugLogExporterTest.kt
 
-Diagnostics export is now raw process logcat (no redaction / tag allow-list). The Flutter sanitizer cases below are obsolete on Kotlin; keep the matrix rows as REMOVED until Flutter parity is dropped.
+The diagnostics export keeps every line and tag (no allow-list, no keyword drops) and masks addresses, identifiers, file locations and dates through `core/privacy/PrivacyRedactor`, an exception's message whole. Rows about dropping lines or tags stay REMOVED: no line is dropped on purpose.
 
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| DebugLogSanitizer.sanitizeLogLine > redacts MAC, email and UUID in an allowed-tag line | REMOVED | PrivacySafeDebugLogExporterTest.kt: `export keeps identifiers dates and unrelated tags` | raw export on purpose |
-| DebugLogSanitizer.sanitizeLogLine > redacts key=value identifiers keeping the key | REMOVED | — | raw export on purpose |
-| DebugLogSanitizer.sanitizeLogLine > drops a line containing a location keyword | REMOVED | — | raw export on purpose |
-| DebugLogSanitizer.sanitizeLogLine > drops a line containing a token keyword | REMOVED | — | raw export on purpose |
-| DebugLogSanitizer.sanitizeLogLine > keeps AppleHealthImporter E/W/A/F lines verbatim (unsanitized) | REMOVED | PrivacySafeDebugLogExporterTest.kt: `export keeps Apple Health importer lines unchanged` | all lines kept |
-| DebugLogSanitizer.sanitizeLogLine > sanitizes AppleHealthImporter non-W/E/A/F lines normally | REMOVED | — | raw export on purpose |
+| DebugLogSanitizer.sanitizeLogLine > redacts MAC, email and UUID in an allowed-tag line | PORTED | PrivacySafeDebugLogExporterTest.kt: `export masks identifiers, addresses and dates and keeps the tag and the numbers` | every tag, not an allowed one |
+| DebugLogSanitizer.sanitizeLogLine > redacts key=value identifiers keeping the key | DIVERGED | PrivacyRedactorTest.kt (`:domain`): `each identifier kind is masked on its own` | masking asserted, the kept key is not |
+| DebugLogSanitizer.sanitizeLogLine > drops a line containing a location keyword | REMOVED | — | line kept; coordinates masked instead |
+| DebugLogSanitizer.sanitizeLogLine > drops a line containing a token keyword | REMOVED | PrivacySafeDebugLogExporterTest.kt: `exportLogcat keeps every line and tag` | line kept; a keyed token is masked instead |
+| DebugLogSanitizer.sanitizeLogLine > keeps AppleHealthImporter E/W/A/F lines verbatim (unsanitized) | REMOVED | — | no tag is left unmasked |
+| DebugLogSanitizer.sanitizeLogLine > sanitizes AppleHealthImporter non-W/E/A/F lines normally | REMOVED | — | no per-tag rule; every line is masked alike |
 | DebugLogSanitizer.sanitizeLogLine > passes an allowed tag through | REMOVED | — | all tags kept |
-| DebugLogSanitizer.sanitizeLogLine > drops a non-allowed tag | REMOVED | PrivacySafeDebugLogExporterTest.kt: `exportLogcat keeps every raw line` | OkHttp kept |
-| DebugLogSanitizer.sanitizeLogLine > drops a non-log-format line | REMOVED | — | non-format lines kept |
-| DebugLogSanitizer.sanitizeLogLine > drops a blank message | PORTED | PrivacySafeDebugLogExporterTest.kt: `sanitizeLogLine drops only blank lines` | blank trim only |
-| DebugLogSanitizer.sanitizeLogLine > redacts ISO instants and dates | REMOVED | — | raw export on purpose |
+| DebugLogSanitizer.sanitizeLogLine > drops a non-allowed tag | REMOVED | PrivacySafeDebugLogExporterTest.kt: `exportLogcat keeps every line and tag` | all tags kept |
+| DebugLogSanitizer.sanitizeLogLine > drops a non-log-format line | REMOVED | LogcatMaskingTest.kt (`:domain`): `lines outside the threadtime format are masked and none is dropped` | non-format lines kept, masked |
+| DebugLogSanitizer.sanitizeLogLine > drops a blank message | REMOVED | LogcatMaskingTest.kt (`:domain`): `lines outside the threadtime format are masked and none is dropped` | a blank message is kept |
+| DebugLogSanitizer.sanitizeLogLine > redacts ISO instants and dates | PORTED | PrivacySafeDebugLogExporterTest.kt: `export masks identifiers, addresses and dates and keeps the tag and the numbers` | — |
 | DebugLogSanitizer.sanitizeLogcat > caps output at maxLines keeping the most recent lines | PORTED | PrivacySafeDebugLogExporterTest.kt: `exportLogcat caps output at maxLines keeping the most recent lines` | MaxLines raised to 20_000 |
 | DebugLogSanitizer.sanitizeLogcat > counts dropped lines across the whole input | REMOVED | — | droppedLines is now only the maxLines cap |
-| DebugLogSanitizer.buildExportText > emits the header block then the sanitized lines | MISSING | — | header still built in `currentProcessLogcatPayload`; now says raw process logcat |
+| DebugLogSanitizer.buildExportText > emits the header block then the sanitized lines | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `the export header says what is masked` | the privacy line is asserted; the package=/version= block is built against BuildConfig and unasserted |
 
 ## test/core/diagnostics/diagnostics_build_config_test.dart
 Kotlin counterpart: none
@@ -1710,4 +1710,4 @@ needs does not exist in the Kotlin port. The Kotlin behavior was left alone.
   - loadHeartRateSamplesInstant > asks for exactly the window it was given [DIVERGED]
   - loadHeartRateSamplesInstant > returns the samples the native reader found [DIVERGED]
 - **test/core/diagnostics/debug_log_sanitizer_test.dart**
-  - DebugLogSanitizer.buildExportText > emits the header block then the sanitized lines [MISSING]
+  - DebugLogSanitizer.buildExportText > emits the header block then the sanitized lines [DIVERGED]

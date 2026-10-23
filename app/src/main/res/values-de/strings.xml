@@ -1798,7 +1798,7 @@
     <string name="settings_privacy_on_device">Daten bleiben auf deinem Gerät</string>
     <string name="settings_privacy_read_only">Schreibgeschützt, außer bei Einträgen, die du ausdrücklich protokollierst</string>
     <string name="settings_debug_logs_title">Bereinigte Diagnoseprotokolle</string>
-    <string name="settings_debug_logs_body">Teile oder speichere OpenVitals-Diagnoseprotokolle als Textdatei. Der Export entfernt oder maskiert Kennungen, Orte, Daten, URIs, rohe Sensordaten und fremde App-Protokolle vor dem Schreiben.</string>
+    <string name="settings_debug_logs_body">Teile oder speichere OpenVitals-Protokolle als Textdatei. Jede Zeile bleibt erhalten, damit sich Probleme mit Health Connect und der Synchronisierung nachvollziehen lassen; Geräteadressen, Kennungen, Dateipfade, Datumsangaben und Fehlerdetails werden maskiert. Lies sie, bevor du sie teilst.</string>
     <string name="settings_debug_logs_share">Protokolle teilen</string>
     <string name="settings_debug_logs_share_chooser_title">Diagnoseprotokolle teilen</string>
     <string name="settings_debug_logs_share_failed">Diagnoseprotokolle konnten nicht geteilt werden</string>

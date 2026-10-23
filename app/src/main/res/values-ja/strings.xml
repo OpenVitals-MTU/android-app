@@ -2209,7 +2209,7 @@
     <string name="privacy_reconsent_action">ポリシーを確認</string>
     <string name="dashboard_summary_today">今日</string>
     <string name="settings_debug_logs_title">診断ログ</string>
-    <string name="settings_debug_logs_body">OpenVitals のプロセスログをテキストファイルとして共有または保存します。エクスポートは生のまま（マスキングなし）なので、Health Connect や同期の問題を完全な記録から診断できます。</string>
+    <string name="settings_debug_logs_body">OpenVitals のログをテキストファイルとして共有または保存します。Health Connect や同期の問題を追えるようすべての行を残し、デバイスのアドレス、識別子、ファイルの場所、日付、エラーの詳細はマスクします。共有する前に内容を確認してください。</string>
     <string name="settings_debug_logs_share">ログを共有</string>
     <string name="settings_debug_logs_share_chooser_title">診断ログを共有</string>
     <string name="settings_debug_logs_share_failed">診断ログを共有できませんでした</string>

@@ -2212,7 +2212,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="privacy_reconsent_action">Revisar a política</string>
     <string name="dashboard_summary_today">Hoxe</string>
     <string name="settings_debug_logs_title">Rexistros de diagnóstico</string>
-    <string name="settings_debug_logs_body">Comparte ou garda os rexistros do proceso de OpenVitals como ficheiro de texto. A exportación é en bruto (sen censurar) para poder diagnosticar problemas de Health Connect e sincronización a partir do rastro completo.</string>
+    <string name="settings_debug_logs_body">Comparte ou garda os rexistros de OpenVitals como ficheiro de texto. Consérvanse todas as liñas para poder seguir os problemas de Health Connect e de sincronización; os enderezos de dispositivos, identificadores, localizacións de ficheiros, datas e detalles de erros ocúltanse. Revísao antes de compartilo.</string>
     <string name="settings_debug_logs_share">Compartir rexistros</string>
     <string name="settings_debug_logs_share_chooser_title">Compartir rexistros de diagnóstico</string>
     <string name="settings_debug_logs_share_failed">Non se puideron compartir os rexistros de diagnóstico</string>

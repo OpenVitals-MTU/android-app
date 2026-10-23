@@ -1862,7 +1862,7 @@
     <string name="privacy_reconsent_action">Zobrazit zásady</string>
     <string name="dashboard_summary_today">Dnes</string>
     <string name="settings_debug_logs_title">Diagnostické protokoly</string>
-    <string name="settings_debug_logs_body">Sdílejte nebo uložte protokoly procesů OpenVitals jako textový soubor. Export je surový (bez začernění), aby šlo potíže s Health Connect a synchronizací diagnostikovat z úplného záznamu.</string>
+    <string name="settings_debug_logs_body">Sdílejte nebo uložte protokoly OpenVitals jako textový soubor. Zůstává každý řádek, aby šlo dohledat potíže s Health Connect a synchronizací; adresy zařízení, identifikátory, umístění souborů, data a podrobnosti chyb jsou skryté. Před sdílením si ho přečtěte.</string>
     <string name="settings_debug_logs_share">Sdílet protokoly</string>
     <string name="settings_debug_logs_share_chooser_title">Sdílet diagnostické protokoly</string>
     <string name="settings_debug_logs_share_failed">Diagnostické protokoly se nepodařilo sdílet</string>

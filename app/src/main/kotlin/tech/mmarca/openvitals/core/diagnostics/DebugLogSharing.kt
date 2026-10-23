@@ -8,15 +8,13 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.export.stageSoleExport
 
 suspend fun Context.shareDebugDiagnosticsLog() {
     val shareIntent = withContext(Dispatchers.IO) {
-        val exportDirectory = File(cacheDir, DiagnosticsExportCacheDirectory).apply {
-            check(mkdirs() || isDirectory) { "Unable to create diagnostics export directory." }
-        }
-        val exportFile = File(exportDirectory, DiagnosticsExportFileName)
-        exportFile.outputStream().use { output ->
-            PrivacySafeDebugLogExporter.writeCurrentProcessLogcat(this@shareDebugDiagnosticsLog, output)
+        // One export at a time: an earlier one goes, and app start sweeps a day-old one.
+        val exportFile = File(cacheDir, DiagnosticsExportCacheDirectory).stageSoleExport(DiagnosticsExportFileName) { output ->
+            PrivacySafeDebugLogExporter.writeCurrentProcessLogcatBlocking(this@shareDebugDiagnosticsLog, output)
         }
         val uri = FileProvider.getUriForFile(
             this@shareDebugDiagnosticsLog,

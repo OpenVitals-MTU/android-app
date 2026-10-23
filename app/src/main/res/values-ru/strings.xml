@@ -2158,7 +2158,7 @@
     <string name="privacy_reconsent_action">Ознакомиться с политикой</string>
     <string name="dashboard_summary_today">Сегодня</string>
     <string name="settings_debug_logs_title">Журналы диагностики</string>
-    <string name="settings_debug_logs_body">Поделитесь журналами работы OpenVitals или сохраните их в виде текстового файла. Экспорт выполняется без удаления данных, чтобы можно было диагностировать проблемы Health Connect и синхронизации по полной истории операций.</string>
+    <string name="settings_debug_logs_body">Поделитесь журналами OpenVitals или сохраните их в виде текстового файла. Каждая строка сохраняется, чтобы можно было отследить проблемы Health Connect и синхронизации; адреса устройств, идентификаторы, расположения файлов, даты и подробности ошибок скрываются. Прочитайте его, прежде чем делиться.</string>
     <string name="settings_debug_logs_share">Поделиться журналами</string>
     <string name="settings_debug_logs_share_chooser_title">Поделиться журналами диагностики</string>
     <string name="settings_debug_logs_share_failed">Не удалось поделиться журналами диагностики</string>

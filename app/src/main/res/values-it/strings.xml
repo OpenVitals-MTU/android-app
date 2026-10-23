@@ -1607,7 +1607,7 @@
     <string name="privacy_reconsent_action">Politica di revisione</string>
     <string name="dashboard_summary_today">Oggi</string>
     <string name="settings_debug_logs_title">Log diagnostici igienizzati</string>
-    <string name="settings_debug_logs_body">Condividi o salva le voci diagnostiche di OpenVitals come file di testo. L\'esportazione rimuove o oscura identificatori, posizioni, date, URI, dati grezzi dei sensori e log di app non correlate prima di scrivere.</string>
+    <string name="settings_debug_logs_body">Condividi o salva i log di OpenVitals come file di testo. Ogni riga viene mantenuta per poter seguire i problemi di Health Connect e di sincronizzazione; indirizzi dei dispositivi, identificatori, percorsi dei file, date e dettagli degli errori vengono oscurati. Leggilo prima di condividerlo.</string>
     <string name="settings_debug_logs_share">Condividi log</string>
     <string name="settings_debug_logs_share_chooser_title">Condividi log diagnostici</string>
     <string name="settings_debug_logs_share_failed">Impossibile condividere i log diagnostici</string>

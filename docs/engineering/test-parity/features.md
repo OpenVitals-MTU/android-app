@@ -496,9 +496,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/diagnostics/
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | renders the title, body and the share + save actions | PORTED | SettingsSmallCardsTest: `debugDiagnosticsCard_rendersTheTitleBodyAndBothActions` | Compose instrumentation; runs on a device, not in CI |
-| save flow sanitizes the logcat and reports success | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `sanitize excludes unrelated tags` (+ `sanitize keeps OpenVitals operational lines`) | tag filtering covered; package=/version= header and file name unasserted |
+| save flow sanitizes the logcat and reports success | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `export masks identifiers, addresses and dates and keeps the tag and the numbers` (+ `an exception's message is masked whole and its frames stay`) | masking covered, every tag kept; package=/version= header and file name unasserted |
 | degrades gracefully when the native channel is unavailable | N/A-FRAMEWORK | — | Flutter platform-channel absence; Kotlin reads logcat natively |
-| share flow sanitizes the logcat and reaches the share seam | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `sanitize excludes unrelated tags` | sanitize covered; Android chooser seam untested |
+| share flow sanitizes the logcat and reaches the share seam | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `export masks identifiers, addresses and dates and keeps the tag and the numbers` | masking covered; Android chooser seam untested |
 | share failure surfaces the failure snackbar | N/A-WIDGET | — | |
 | share degrades gracefully when the native channel is missing | N/A-FRAMEWORK | — | |
 

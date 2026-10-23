@@ -1740,7 +1740,7 @@
     <string name="privacy_reconsent_action">Rever política</string>
     <string name="dashboard_summary_today">Hoje</string>
     <string name="settings_debug_logs_title">Registos de diagnóstico anonimizados</string>
-    <string name="settings_debug_logs_body">Partilhe ou guarde entradas do registo de diagnóstico do OpenVitals como ficheiro de texto. Antes de escrever, a exportação remove ou oculta identificadores, localizações, datas, URIs, dados brutos de sensores e registos de outras aplicações.</string>
+    <string name="settings_debug_logs_body">Partilhe ou guarde os registos do OpenVitals como ficheiro de texto. Todas as linhas são mantidas para que os problemas do Health Connect e da sincronização possam ser seguidos; endereços de dispositivos, identificadores, localizações de ficheiros, datas e detalhes de erros são ocultados. Leia-o antes de o partilhar.</string>
     <string name="settings_debug_logs_share">Partilhar registos</string>
     <string name="settings_debug_logs_share_chooser_title">Partilhar registos de diagnóstico</string>
     <string name="settings_debug_logs_share_failed">Não foi possível partilhar os registos de diagnóstico</string>

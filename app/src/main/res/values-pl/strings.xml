@@ -2201,7 +2201,7 @@
     <string name="privacy_reconsent_action">Przejrzyj politykę</string>
     <string name="privacy_reconsent_no_browser">Żadna aplikacja na tym telefonie nie może otworzyć linku. Polityka znajduje się pod adresem %1$s</string>
     <string name="settings_debug_logs_title">Logi diagnostyczne</string>
-    <string name="settings_debug_logs_body">Udostępnij lub zapisz logi procesu OpenVitals jako plik tekstowy. Eksport jest surowy (bez redakcji), aby problemy z Health Connect i synchronizacją można było zdiagnozować z pełnego zapisu.</string>
+    <string name="settings_debug_logs_body">Udostępnij lub zapisz logi OpenVitals jako plik tekstowy. Każdy wiersz zostaje zachowany, aby można było prześledzić problemy z Health Connect i synchronizacją; adresy urządzeń, identyfikatory, lokalizacje plików, daty i szczegóły błędów są maskowane. Przeczytaj go przed udostępnieniem.</string>
     <string name="settings_debug_logs_share">Udostępnij logi</string>
     <string name="settings_debug_logs_share_chooser_title">Udostępnij logi diagnostyczne</string>
     <string name="settings_debug_logs_share_failed">Nie udało się udostępnić logów diagnostycznych</string>

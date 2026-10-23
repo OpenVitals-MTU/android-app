@@ -1862,7 +1862,7 @@
     <string name="privacy_reconsent_action">Consulter la politique</string>
     <string name="dashboard_summary_today">Aujourd\'hui</string>
     <string name="settings_debug_logs_title">Journaux de diagnostic</string>
-    <string name="settings_debug_logs_body">Partagez ou enregistrez les journaux du processus OpenVitals sous forme de fichier texte. L\'export est brut (sans anonymisation) afin que les problèmes de Santé Connect et de synchronisation puissent être diagnostiqués à partir de la trace complète.</string>
+    <string name="settings_debug_logs_body">Partagez ou enregistrez les journaux d\'OpenVitals sous forme de fichier texte. Chaque ligne est conservée pour pouvoir suivre les problèmes de Santé Connect et de synchronisation ; les adresses d\'appareils, identifiants, emplacements de fichiers, dates et détails d\'erreurs sont masqués. Relisez-le avant de le partager.</string>
     <string name="settings_debug_logs_share">Partager les journaux</string>
     <string name="settings_debug_logs_share_chooser_title">Partager les journaux de diagnostic</string>
     <string name="settings_debug_logs_share_failed">Impossible de partager les journaux de diagnostic</string>

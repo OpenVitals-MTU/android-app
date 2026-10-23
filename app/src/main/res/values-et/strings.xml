@@ -1596,7 +1596,7 @@
     <string name="privacy_reconsent_action">Vaata poliitika üle</string>
     <string name="dashboard_summary_today">Täna</string>
     <string name="settings_debug_logs_title">Anonümiseeritud diagnostikalogid</string>
-    <string name="settings_debug_logs_body">Jaga või salvesta OpenVitalsi diagnostikalogi kirjed tekstifailina. Eksport eemaldab või varjab identifikaatorid, asukohad, kuupäevad, URI-d, toored anduriandmed ja mitteseotud rakenduslogid enne kirjutamist.</string>
+    <string name="settings_debug_logs_body">Jaga või salvesta OpenVitalsi logid tekstifailina. Iga rida jääb alles, et Health Connecti ja sünkroonimise probleeme saaks jälgida; seadmete aadressid, identifikaatorid, failide asukohad, kuupäevad ja vigade üksikasjad on varjatud. Loe see enne jagamist läbi.</string>
     <string name="settings_debug_logs_share">Jaga logisid</string>
     <string name="settings_debug_logs_share_chooser_title">Jaga diagnostikalogisid</string>
     <string name="settings_debug_logs_share_failed">Diagnostikalogide jagamine ebaõnnestus</string>

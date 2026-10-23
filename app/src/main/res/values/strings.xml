@@ -2209,7 +2209,7 @@
     <string name="privacy_reconsent_no_browser">No app on this phone can open the link. The policy is at %1$s</string>
     <string name="dashboard_summary_today">Today</string>
     <string name="settings_debug_logs_title">Diagnostics logs</string>
-    <string name="settings_debug_logs_body">Share or save OpenVitals process logs as a text file. The export is raw (no redaction) so Health Connect and sync issues can be diagnosed from the full trail.</string>
+    <string name="settings_debug_logs_body">Share or save OpenVitals logs as a text file. Every line is kept so Health Connect and sync issues can be traced; device addresses, identifiers, file locations, dates and error details are masked. Read it before you share it.</string>
     <string name="settings_debug_logs_share">Share logs</string>
     <string name="settings_debug_logs_share_chooser_title">Share diagnostics logs</string>
     <string name="settings_debug_logs_share_failed">Could not share diagnostics logs</string>

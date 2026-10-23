@@ -1858,7 +1858,7 @@
     <string name="privacy_reconsent_action">查看政策</string>
     <string name="dashboard_summary_today">今天</string>
     <string name="settings_debug_logs_title">诊断日志</string>
-    <string name="settings_debug_logs_body">分享或保存 OpenVitals 进程日志为文本文件。导出为原始内容（无脱敏），以便从完整轨迹诊断 Health Connect 和同步问题。</string>
+    <string name="settings_debug_logs_body">将 OpenVitals 日志分享或保存为文本文件。保留每一行，以便追踪 Health Connect 和同步问题；设备地址、标识符、文件位置、日期和错误详情会被遮盖。分享前请先查看。</string>
     <string name="settings_debug_logs_share">分享日志</string>
     <string name="settings_debug_logs_share_chooser_title">分享诊断日志</string>
     <string name="settings_debug_logs_share_failed">无法分享诊断日志</string>
