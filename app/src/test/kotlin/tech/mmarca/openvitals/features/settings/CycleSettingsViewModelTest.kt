@@ -19,6 +19,8 @@ import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
@@ -68,6 +70,71 @@ class CycleSettingsViewModelTest {
         assertEquals(today, preferences.pillPlan().packStart)
         assertEquals(PillPlan.PauseDaysRange.last, vm.uiState.value.pill.pauseDays)
         assertEquals(2, reminders.applied)
+    }
+
+    @Test
+    fun `a hormonal method is stored, and none clears the stop date`() {
+        val preferences = FakePreferences()
+        val vm = viewModel(preferences = preferences)
+
+        vm.setHormonalKind(HormonalContraceptionKind.IMPLANT)
+        vm.setHormonalStoppedOn(today.minusDays(10))
+
+        val expected = HormonalContraception(HormonalContraceptionKind.IMPLANT, today.minusDays(10))
+        assertEquals(expected, preferences.cycleTrackingProfile().hormonalContraception)
+        assertEquals(expected, vm.uiState.value.profile.hormonalContraception)
+
+        vm.setHormonalKind(HormonalContraceptionKind.NONE)
+
+        assertEquals(HormonalContraception(), preferences.cycleTrackingProfile().hormonalContraception)
+    }
+
+    @Test
+    fun `a stop date needs a declared method`() {
+        val preferences = FakePreferences()
+        viewModel(preferences = preferences).setHormonalStoppedOn(today)
+
+        assertEquals(HormonalContraception(), preferences.cycleTrackingProfile().hormonalContraception)
+    }
+
+    @Test
+    fun `an active pill scheme sets the pill, replacing another method and its stop date`() {
+        val preferences = FakePreferences()
+        val vm = viewModel(preferences = preferences)
+        vm.setHormonalKind(HormonalContraceptionKind.INJECTION)
+        vm.setHormonalStoppedOn(today.minusDays(5))
+
+        vm.setPillEnabled(true)
+
+        assertEquals(HormonalContraception(HormonalContraceptionKind.PILL), preferences.cycleTrackingProfile().hormonalContraception)
+        assertTrue(vm.uiState.value.pill.enabled)
+        assertTrue(vm.uiState.value.profile.hormonalContraception.isInfluencing(today))
+    }
+
+    @Test
+    fun `an edit to a pill scheme that is off leaves the declared method alone`() {
+        val preferences = FakePreferences()
+        val vm = viewModel(preferences = preferences)
+        vm.setHormonalKind(HormonalContraceptionKind.IMPLANT)
+
+        vm.setPillActiveDays(24)
+
+        assertEquals(HormonalContraceptionKind.IMPLANT, preferences.cycleTrackingProfile().hormonalContraception.kind)
+    }
+
+    @Test
+    fun `deleting the journal erases the hormonal method`() = runTest {
+        val preferences = FakePreferences()
+        preferences.setCycleTrackingProfile(
+            CycleTrackingProfile(hormonalContraception = HormonalContraception(HormonalContraceptionKind.PILL, today)),
+        )
+        val vm = viewModel(preferences = preferences)
+
+        vm.deleteCycleJournal()
+        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(HormonalContraception(), preferences.cycleTrackingProfile().hormonalContraception)
+        assertEquals(HormonalContraception(), vm.uiState.value.profile.hormonalContraception)
     }
 
     @Test

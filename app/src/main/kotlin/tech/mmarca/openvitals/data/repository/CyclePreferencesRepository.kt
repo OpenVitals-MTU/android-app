@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
 import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.model.PillPlan
@@ -39,8 +41,16 @@ class CyclePreferencesRepository @Inject constructor(
             putString(KEY_CONTEXTS, profile.contexts.map { it.id }.sorted().joinToString(SEPARATOR))
             val ageBand = profile.ageBand
             if (ageBand == null) remove(KEY_AGE_BAND) else putString(KEY_AGE_BAND, ageBand.id)
+            val hormonal = profile.hormonalContraception
+            if (hormonal.isDeclared) putString(KEY_HORMONAL_KIND, hormonal.kind.id) else remove(KEY_HORMONAL_KIND)
+            val stopped = hormonal.stoppedOn
+            if (hormonal.isDeclared && stopped != null) {
+                putString(KEY_HORMONAL_STOPPED, stopped.toString())
+            } else {
+                remove(KEY_HORMONAL_STOPPED)
+            }
         }
-        this.profile.value = profile
+        this.profile.value = readProfile()
     }
 
     override fun cycleReminderConfig(): CycleReminderConfig = CycleReminderConfig(
@@ -102,6 +112,8 @@ class CyclePreferencesRepository @Inject constructor(
             putString(KEY_PILL_REMINDER_TIME, normalized.reminderTime.toString())
             putLong(KEY_PILL_UPDATED_AT, normalized.updatedAt.toEpochMilli())
         }
+        // An enabled scheme means the pill, so the effective profile follows the plan.
+        profile.value = readProfile()
     }
 
     override fun clearCyclePreferences() {
@@ -109,11 +121,21 @@ class CyclePreferencesRepository @Inject constructor(
         profile.value = CycleTrackingProfile()
     }
 
-    private fun readProfile(): CycleTrackingProfile = CycleTrackingProfile(
+    /** The stored profile, with the pill as the method whenever the pill scheme is enabled (also for schemes set before this field existed). */
+    private fun readProfile(): CycleTrackingProfile = readStoredProfile().let {
+        if (prefs.getBoolean(KEY_PILL_ENABLED, false)) it.withPillScheme() else it
+    }
+
+    private fun readStoredProfile(): CycleTrackingProfile = CycleTrackingProfile(
         contexts = prefs.getString(KEY_CONTEXTS, null).orEmpty()
             .split(SEPARATOR)
             .mapNotNullTo(mutableSetOf()) { TrackingContext.fromId(it.trim()) },
         ageBand = AgeBand.fromId(prefs.getString(KEY_AGE_BAND, null)),
+        hormonalContraception = HormonalContraception(
+            kind = HormonalContraceptionKind.fromId(prefs.getString(KEY_HORMONAL_KIND, null))
+                ?: HormonalContraceptionKind.NONE,
+            stoppedOn = prefs.getString(KEY_HORMONAL_STOPPED, null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+        ),
     )
 
     private companion object {
@@ -121,6 +143,8 @@ class CyclePreferencesRepository @Inject constructor(
         const val SEPARATOR = ","
         const val KEY_CONTEXTS = "tracking_contexts"
         const val KEY_AGE_BAND = "age_band"
+        const val KEY_HORMONAL_KIND = "hormonal_contraception_kind"
+        const val KEY_HORMONAL_STOPPED = "hormonal_contraception_stopped_on"
         const val KEY_REMINDERS_ENABLED = "reminders_enabled"
         const val KEY_DAILY_ENABLED = "daily_check_in_enabled"
         const val KEY_DAILY_TIME = "daily_check_in_time"
