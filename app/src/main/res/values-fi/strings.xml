@@ -2522,6 +2522,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Massa yksikössä %1$s, osuutena painosarakkeesta</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect tallentaa rasvaprosentin prosentteina, joten se lasketaan samalla rivillä mitatusta painosta.</string>
     <string name="settings_csv_import_nutrient_hint">Rivin kaikki ravintoainesarakkeet muodostavat yhden ruokamerkinnän.</string>
+    <string name="settings_csv_import_bp_pressure_hint">Yksikkönä mmHg. Rivin systolinen ja diastolinen paine muodostavat yhden verenpainemittauksen; rivi, jolla on vain toinen niistä, hylätään.</string>
+    <string name="settings_csv_import_bp_label_hint">Tunnistetaan: %1$s. Kirjainkoolla ja välilyönneillä ei ole väliä. Muu arvo tai tyhjä solu saa alla valitun oletuksen.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Ei tunnistettu, joten käytetään oletusta: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Verenpaineen oletukset</string>
+    <string name="settings_csv_import_bp_defaults_body">Mittauksille, joiden kehon asentoa tai mansetin paikkaa tiedosto ei kerro tai kertoo tuntemattomalla sanalla. Säilyy seuraavaa tuontia varten.</string>
     <string name="settings_csv_import_date_time_title">Päivä ja aika</string>
     <string name="settings_csv_import_date_format_label">Muoto</string>
     <string name="settings_csv_import_date_format_auto">Tunnista automaattisesti</string>
@@ -2549,6 +2554,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Yksikään otantarivi ei vastaa tätä päivämäärämuotoa.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Vain yksi sarake voi sisältää loppupäivän ja -ajan.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Vain yksi sarake voi sisältää ruoan nimen.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Verenpaine tarvitsee sekä systolisen että diastolisen sarakkeen.</string>
     <string name="settings_csv_import_confirm_title">Valmis tuotavaksi</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mittausta riviä kohden</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s – %3$s</string>
@@ -2607,6 +2613,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Jätetty pois lähdesovelluksessa</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Loppupäivää ei ymmärretty</string>
     <string name="settings_csv_import_reason_end_not_after_start">Loppu ei ole alun jälkeen</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Systolinen tai diastolinen puuttuu</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Systolinen ei ole diastolista suurempi</string>
     <string name="settings_csv_import_save_report">Tallenna raportti</string>
     <string name="settings_csv_import_report_saved">Raportti tallennettu.</string>
     <string name="settings_csv_import_report_save_failed">Raporttia ei voitu tallentaa.</string>

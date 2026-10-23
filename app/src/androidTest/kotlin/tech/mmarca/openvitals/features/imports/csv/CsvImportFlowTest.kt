@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.CsvImportPreferencesRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
@@ -276,6 +277,8 @@ class CsvImportFlowTest {
                 InMemoryCycleJournal(),
             ),
             healthRepository = NothingGrantedHealthRepository,
+            preferences = CsvImportPreferencesRepository(context),
+            bloodPressureLabels = CsvBloodPressureLabelSource(context),
             healthConnectManager = manager,
         )
     }

@@ -2558,6 +2558,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Mass ühikus %1$s, osakaaluna kaaluveerust</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect salvestab keharasva protsendina, seega arvutatakse see sama rea kaalumõõtmise põhjal.</string>
     <string name="settings_csv_import_nutrient_hint">Rea kõik toitaineveerud moodustavad ühe toidu kirje.</string>
+    <string name="settings_csv_import_bp_pressure_hint">mmHg-des. Rea süstoolne ja diastoolne rõhk moodustavad ühe vererõhu mõõtmise; rida, kus on ainult üks neist, lükatakse tagasi.</string>
+    <string name="settings_csv_import_bp_label_hint">Tuvastatakse: %1$s. Suur- ja väiketähed ning tühikud ei loe. Mis tahes muu väärtus või tühi lahter saab allpool oleva vaikeväärtuse.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Ei tuvastatud, kasutatakse vaikeväärtust: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Vererõhu vaikeväärtused</string>
+    <string name="settings_csv_import_bp_defaults_body">Mõõtmistele, mille kehaasendit või manseti asukohta fail ei anna või annab tundmatu sõnaga. Jäetakse järgmiseks impordiks meelde.</string>
     <string name="settings_csv_import_date_time_title">Kuupäev ja kellaaeg</string>
     <string name="settings_csv_import_date_format_label">Vorming</string>
     <string name="settings_csv_import_date_format_auto">Tuvasta automaatselt</string>
@@ -2585,6 +2590,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Ükski valimi rida ei vasta sellele kuupäevavormingule.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Lõpukuupäev ja -kellaaeg saab olla ainult ühes veerus.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Toidu nime saab hoida ainult üks veerg.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Vererõhk vajab nii süstoolse kui ka diastoolse rõhu veergu.</string>
     <string name="settings_csv_import_confirm_title">Importimiseks valmis</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mõõtmist rea kohta</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s kuni %3$s</string>
@@ -2643,6 +2649,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Lähteäpis välja jäetud</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Lõpukuupäevast ei saadud aru</string>
     <string name="settings_csv_import_reason_end_not_after_start">Lõpp ei ole pärast algust</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Süstoolne või diastoolne rõhk puudub</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Süstoolne ei ole diastoolsest suurem</string>
     <string name="settings_csv_import_save_report">Salvesta raport</string>
     <string name="settings_csv_import_report_saved">Raport salvestatud.</string>
     <string name="settings_csv_import_report_save_failed">Raportit ei õnnestunud salvestada.</string>

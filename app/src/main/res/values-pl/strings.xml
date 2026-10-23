@@ -2510,6 +2510,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Masie w %1$s, jako udział kolumny wagi</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect przechowuje tkankę tłuszczową jako procent, więc jest wyliczana z wagi zmierzonej w tym samym wierszu.</string>
     <string name="settings_csv_import_nutrient_hint">Wszystkie kolumny składników odżywczych z wiersza tworzą jeden wpis jedzenia.</string>
+    <string name="settings_csv_import_bp_pressure_hint">W mmHg. Ciśnienie skurczowe i rozkurczowe z jednego wiersza tworzą jeden pomiar ciśnienia; wiersz z tylko jednym z nich jest odrzucany.</string>
+    <string name="settings_csv_import_bp_label_hint">Rozpoznawane: %1$s. Wielkość liter i odstępy nie mają znaczenia. Każda inna wartość lub pusta komórka przyjmuje wartość domyślną poniżej.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Nie rozpoznano, użyto wartości domyślnej: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Domyślne wartości ciśnienia krwi</string>
+    <string name="settings_csv_import_bp_defaults_body">Dla pomiarów, w których plik pomija pozycję ciała lub miejsce mankietu albo podaje je nierozpoznanym słowem. Zapamiętywane na następny import.</string>
     <string name="settings_csv_import_date_time_title">Data i godzina</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Wykryj automatycznie</string>
@@ -2567,6 +2572,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Żaden z próbkowanych wierszy nie pasuje do tego formatu daty.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Tylko jedna kolumna może zawierać datę i godzinę zakończenia.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Tylko jedna kolumna może zawierać nazwę produktu.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Ciśnienie krwi wymaga kolumny skurczowej i rozkurczowej.</string>
     <string name="settings_csv_import_confirm_title">Gotowe do importu</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d pomiarów na wiersz</string>
     <string name="settings_csv_import_confirm_range">%1$s: od %2$s do %3$s</string>
@@ -2625,6 +2631,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Wykluczone w aplikacji źródłowej</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Nierozpoznana data zakończenia</string>
     <string name="settings_csv_import_reason_end_not_after_start">Zakończenie nie jest późniejsze niż początek</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Brak ciśnienia skurczowego lub rozkurczowego</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Skurczowe nie jest wyższe niż rozkurczowe</string>
     <string name="settings_csv_import_save_report">Zapisz raport</string>
     <string name="settings_csv_import_report_saved">Raport zapisany.</string>
     <string name="settings_csv_import_report_save_failed">Nie udało się zapisać raportu.</string>

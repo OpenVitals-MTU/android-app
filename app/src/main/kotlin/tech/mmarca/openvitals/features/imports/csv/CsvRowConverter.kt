@@ -40,9 +40,12 @@ import tech.mmarca.openvitals.domain.model.NutritionNutrient
 /** The `clientRecordId` namespace for CSV imports. Distinct from the Apple importer's. */
 const val CSV_CLIENT_RECORD_ID_NAMESPACE = "csv"
 
-/** A record built from one CSV cell, or from a row's nutrient cells, with everything the import loop needs. */
+/**
+ * A record built from one CSV cell, or from a row's nutrient or blood pressure
+ * cells, with everything the import loop needs.
+ */
 data class CsvConvertedRecord(
-    /** Null for a nutrition record, which no single metric makes. */
+    /** Null for a nutrition or blood pressure record, which no single metric makes. */
     val metric: CsvImportMetric?,
     /** Mirrors [CsvMetricSpec.targetType]; a segment of [clientRecordId]. */
     val targetType: String,
@@ -50,7 +53,7 @@ data class CsvConvertedRecord(
     val clientRecordId: String,
     /** The measurement's instant, used to bound the duplicate-lookup window. */
     val instant: Instant,
-    /** The value in the metric's canonical unit, for the confirm-step preview. Null for nutrition. */
+    /** The value in the metric's canonical unit, for the confirm-step preview. Null for nutrition and blood pressure. */
     val canonicalValue: Double?,
     val record: Record,
     /** A nutrition record's amounts, grams or kcal, for the confirm-step preview. Empty for a metric. */
@@ -67,8 +70,9 @@ data class CsvRowConversion(
 
 /**
  * Converts [row] under [mapping]. A bad timestamp costs the row, a bad value
- * only that metric or nutrient, a bad end timestamp only the interval records.
- * [nutritionOccurrences] numbers nutrition records across one run.
+ * only that metric, nutrient or blood pressure reading, a bad end timestamp
+ * only the interval records. [nutritionOccurrences] numbers nutrition records
+ * across one run.
  */
 fun convertCsvRow(
     row: CsvRow,
@@ -81,10 +85,12 @@ fun convertCsvRow(
     if (!mapping.importsAnything) return CsvRowConversion()
 
     // "Too short" is relative to what the mapping reads: trailing empty columns
-    // are normal. The end and food-name columns are not counted; a missing end
-    // falls back to the one-minute span, a missing name to none.
+    // are normal. The end, food-name, body position and cuff location columns
+    // are not counted; a missing end falls back to the one-minute span, a
+    // missing name to none, a missing position or location to its default.
     val endTimestampColumn = mapping.endTimestampColumn
-    val readColumns = metricColumns + mapping.nutrientColumns + timestampColumn
+    val pressureColumns = mapping.bloodPressureColumns.filter { it.bloodPressurePart?.isPressure == true }
+    val readColumns = metricColumns + mapping.nutrientColumns + pressureColumns + timestampColumn
     val highestIndex = readColumns.maxOf { it.columnIndex }
     if (row.fields.size <= highestIndex) {
         return CsvRowConversion(
@@ -194,6 +200,7 @@ fun convertCsvRow(
 
     convertCsvNutritionRow(row, mapping, instant, endText, endInstant, nutritionOccurrences, diagnostics)
         ?.let { records += it }
+    convertCsvBloodPressureRow(row, mapping, instant, diagnostics)?.let { records += it }
 
     return CsvRowConversion(records = records, diagnostics = diagnostics)
 }

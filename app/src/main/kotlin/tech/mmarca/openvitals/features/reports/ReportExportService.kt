@@ -18,6 +18,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.export.stageExport
+import tech.mmarca.openvitals.core.presentation.BpBodyPositionLabels
+import tech.mmarca.openvitals.core.presentation.BpMeasurementLocationLabels
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -186,26 +188,8 @@ class ReportExportService @Inject constructor(
             },
             bpEstimatedNote = context.getString(R.string.report_pdf_bp_estimated_note),
             bpPosition = context.getString(R.string.report_pdf_bp_position),
-            bpPositions = mapOf(
-                tech.mmarca.openvitals.domain.model.BpRecordValues.BODY_POSITION_SITTING_DOWN to
-                    context.getString(R.string.bp_position_sitting),
-                tech.mmarca.openvitals.domain.model.BpRecordValues.BODY_POSITION_STANDING_UP to
-                    context.getString(R.string.bp_position_standing),
-                tech.mmarca.openvitals.domain.model.BpRecordValues.BODY_POSITION_LYING_DOWN to
-                    context.getString(R.string.bp_position_lying),
-                tech.mmarca.openvitals.domain.model.BpRecordValues.BODY_POSITION_RECLINING to
-                    context.getString(R.string.bp_position_reclining),
-            ),
-            bpLocations = mapOf(
-                tech.mmarca.openvitals.domain.model.BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM to
-                    context.getString(R.string.bp_location_left_arm),
-                tech.mmarca.openvitals.domain.model.BpRecordValues.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM to
-                    context.getString(R.string.bp_location_right_arm),
-                tech.mmarca.openvitals.domain.model.BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST to
-                    context.getString(R.string.bp_location_left_wrist),
-                tech.mmarca.openvitals.domain.model.BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST to
-                    context.getString(R.string.bp_location_right_wrist),
-            ),
+            bpPositions = BpBodyPositionLabels.mapValues { (_, label) -> context.getString(label) },
+            bpLocations = BpMeasurementLocationLabels.mapValues { (_, label) -> context.getString(label) },
             statChange = context.getString(R.string.report_pdf_stat_change),
             glucoseContext = context.getString(R.string.report_pdf_glucose_context),
             glucoseContexts = mapOf(

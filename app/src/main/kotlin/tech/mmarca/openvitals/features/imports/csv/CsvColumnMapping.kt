@@ -23,6 +23,9 @@ enum class CsvColumnRole {
 
     /** The name of the row's food. Optional; read only when nutrient columns are mapped. */
     FOOD_NAME,
+
+    /** One part of the row's blood pressure reading. A row's systolic and diastolic columns make one record. */
+    BLOOD_PRESSURE,
 }
 
 /** One column's assignment. */
@@ -35,10 +38,14 @@ data class CsvColumnMapping(
     val interpretation: CsvValueInterpretation? = null,
     /** Set only when [role] is [CsvColumnRole.NUTRIENT]. */
     val nutrient: NutritionNutrient? = null,
+    /** Set only when [role] is [CsvColumnRole.BLOOD_PRESSURE]. */
+    val bloodPressurePart: CsvBloodPressurePart? = null,
 ) {
     val isMetric: Boolean get() = role == CsvColumnRole.METRIC && metric != null
 
     val isNutrient: Boolean get() = role == CsvColumnRole.NUTRIENT && nutrient != null
+
+    val isBloodPressure: Boolean get() = role == CsvColumnRole.BLOOD_PRESSURE && bloodPressurePart != null
 
     val isTimestamp: Boolean get() = role == CsvColumnRole.TIMESTAMP
 
@@ -55,10 +62,11 @@ data class CsvColumnMapping(
         }
 }
 
-/** The complete decision: every column, plus how to read the timestamps. */
+/** The complete decision: every column, plus how to read the timestamps and blood pressure words. */
 data class CsvImportMapping(
     val columns: List<CsvColumnMapping>,
     val dateTime: CsvDateTimeSettings = CsvDateTimeSettings(),
+    val bloodPressure: CsvBloodPressureSettings = CsvBloodPressureSettings(),
 ) {
     /** Every column mapped to a metric, in column order. */
     val metricColumns: List<CsvColumnMapping> get() = columns.filter { it.isMetric }
@@ -66,8 +74,22 @@ data class CsvImportMapping(
     /** Every column mapped to a nutrient, in column order. */
     val nutrientColumns: List<CsvColumnMapping> get() = columns.filter { it.isNutrient }
 
-    /** Whether any column produces a record: a metric, or a nutrient. */
-    val importsAnything: Boolean get() = metricColumns.isNotEmpty() || nutrientColumns.isNotEmpty()
+    /** Every column mapped to a part of the blood pressure reading, in column order. */
+    val bloodPressureColumns: List<CsvColumnMapping> get() = columns.filter { it.isBloodPressure }
+
+    /** Whether any column produces a record: a metric, a nutrient, or a blood pressure part. */
+    val importsAnything: Boolean
+        get() = metricColumns.isNotEmpty() || nutrientColumns.isNotEmpty() || bloodPressureColumns.isNotEmpty()
+
+    /** The most records one row can make: one per metric, one food, one blood pressure reading. */
+    val recordsPerRow: Int
+        get() = metricColumns.size +
+            (if (nutrientColumns.isNotEmpty()) 1 else 0) +
+            (if (bloodPressureColumns.isNotEmpty()) 1 else 0)
+
+    /** The column holding [part], or null when none does. */
+    fun bloodPressureColumn(part: CsvBloodPressurePart): CsvColumnMapping? =
+        bloodPressureColumns.firstOrNull { it.bloodPressurePart == part }
 
     /** The single food-name column, or null when none or several are set. */
     val foodNameColumn: CsvColumnMapping?
@@ -89,12 +111,13 @@ data class CsvImportMapping(
     val needsWeightColumn: Boolean
         get() = metricColumns.any { it.effectiveInterpretation?.needsRowWeight == true }
 
-    /** The write permissions this mapping needs: only the metrics in use, and nutrition for nutrients. */
+    /** The write permissions this mapping needs: only the metrics in use, nutrition and blood pressure. */
     val requiredWritePermissions: Set<String>
         get() = metricColumns.mapNotNullTo(mutableSetOf()) { column ->
             column.metric?.let { CsvMetricCatalog[it]?.writePermission }
         }.apply {
             if (nutrientColumns.isNotEmpty()) add(CsvNutritionWritePermission)
+            if (bloodPressureColumns.isNotEmpty()) add(CsvBloodPressureWritePermission)
         }
 
     /** Replaces the mapping for one column. */
@@ -116,7 +139,7 @@ enum class CsvMappingIssue {
     /** Nothing to import. */
     NO_METRIC_COLUMNS,
 
-    /** Two columns map to the same metric or nutrient, so one would overwrite the other. */
+    /** Two columns map to the same metric, nutrient or blood pressure part, so one would overwrite the other. */
     DUPLICATE_METRIC,
 
     /** More than one column claims to be the interval end. */
@@ -124,6 +147,9 @@ enum class CsvMappingIssue {
 
     /** More than one column claims to be the food name. */
     MULTIPLE_FOOD_NAME_COLUMNS,
+
+    /** A blood pressure column is mapped without both a systolic and a diastolic one. */
+    BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC,
 
     /** Body fat is given as a mass but no weight column is mapped to divide by. */
     MASS_SHARE_NEEDS_WEIGHT_COLUMN,
@@ -155,8 +181,18 @@ fun validateCsvMapping(
 
     val metrics = mapping.metricColumns.map { it.metric }
     val nutrients = mapping.nutrientColumns.map { it.nutrient }
-    if (metrics.size != metrics.toSet().size || nutrients.size != nutrients.toSet().size) {
+    val bloodPressureParts = mapping.bloodPressureColumns.map { it.bloodPressurePart }
+    if (metrics.size != metrics.toSet().size ||
+        nutrients.size != nutrients.toSet().size ||
+        bloodPressureParts.size != bloodPressureParts.toSet().size
+    ) {
         issues += CsvMappingIssue.DUPLICATE_METRIC
+    }
+
+    if (bloodPressureParts.isNotEmpty() &&
+        !bloodPressureParts.containsAll(listOf(CsvBloodPressurePart.SYSTOLIC, CsvBloodPressurePart.DIASTOLIC))
+    ) {
+        issues += CsvMappingIssue.BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC
     }
 
     if (mapping.columns.count { it.isFoodName } > 1) {
