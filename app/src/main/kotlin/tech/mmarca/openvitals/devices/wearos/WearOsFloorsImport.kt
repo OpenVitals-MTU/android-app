@@ -1,29 +1,35 @@
 package tech.mmarca.openvitals.devices.wearos
 
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.units.Length
 import java.time.Instant
 import kotlin.math.roundToLong
 import tech.mmarca.openvitals.wearlink.AscentCredit
 
 /**
- * Maps the watch's ascent minutes to `FloorsClimbedRecord`s, one per minute,
- * keyed on the minute's start: the credited metres over [AscentCredit.METRES_PER_FLOOR],
- * a fraction kept, so a day's partial floors add up.
+ * Maps the watch's ascent minutes to Health Connect records, one per minute
+ * and type, keyed on the minute's start:
+ *
+ * - `ElevationGainedRecord`: the credited metres.
+ * - `FloorsClimbedRecord`: the same metres over [METRES_PER_FLOOR], a
+ *   fraction kept, so a day's partial floors add up.
  *
  * Height counts only with enough steps around it ([AscentCredit]), so
  * elevator rides and weather drift drop out.
  *
- * The credited decimetres are the record's version, so a minute whose steps
- * or ascent grew replaces its record.
+ * The credited decimetres are the records' version, so a minute whose steps
+ * or ascent grew replaces its records.
  *
  * Pure, so it is testable without a device.
  */
 object WearOsFloorsImport {
 
     const val CLIENT_ID_PREFIX = "wearos_floors_"
+    const val ELEVATION_CLIENT_ID_PREFIX = "wearos_elevation_"
 
     /** Records for [ascent], given the [steps] pulled in the same sync. Minutes without enough steps write nothing. */
     fun records(ascent: List<WearOsAscentMinute>, steps: List<WearOsStepMinute>): List<Record> =
@@ -35,6 +41,19 @@ object WearOsFloorsImport {
                 endZoneOffset = null,
                 floors = metres / AscentCredit.METRES_PER_FLOOR,
                 metadata = watchMetadata("$CLIENT_ID_PREFIX${start.toEpochMilli()}", metres),
+            )
+        }
+
+    /** The same credited metres as [records], as elevation gained. */
+    fun elevationRecords(ascent: List<WearOsAscentMinute>, steps: List<WearOsStepMinute>): List<Record> =
+        credited(ascent, steps).map { (start, metres) ->
+            ElevationGainedRecord(
+                startTime = start,
+                startZoneOffset = null,
+                endTime = start.plusSeconds(SECONDS_PER_MINUTE),
+                endZoneOffset = null,
+                elevation = Length.meters(metres),
+                metadata = watchMetadata("$ELEVATION_CLIENT_ID_PREFIX${start.toEpochMilli()}", metres),
             )
         }
 

@@ -501,6 +501,10 @@ class WearOsWatchSyncServiceTest {
         service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(listOf(2.0), insertedOf<androidx.health.connect.client.records.FloorsClimbedRecord>().map { it.floors })
+        assertEquals(
+            listOf(6.0),
+            insertedOf<androidx.health.connect.client.records.ElevationGainedRecord>().map { it.elevation.inMeters },
+        )
         assertEquals(t0.plusSeconds(600), cursors.ascentCursor(WATCH.id))
 
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)

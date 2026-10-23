@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.Record
@@ -60,9 +61,9 @@ import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
  * steps, the steps stay on the watch and the sync goes on. Two estimates
  * come with the steps: cadence, and walking energy when the body weight is
  * known ([WearOsStepsImport]). If the user withheld the write permission for
- * one, it is skipped and the sync goes on. Then floors, the same way; only
- * minutes with steps are written ([WearOsFloorsImport]), so they wait for
- * the steps grant too.
+ * one, it is skipped and the sync goes on. Then floors and their elevation gain, the
+ * same way; only minutes with steps are written ([WearOsFloorsImport]), so
+ * they wait for the steps grant too.
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
@@ -348,6 +349,10 @@ class WearOsWatchSyncService(
                 // The cursor minute apart, as for steps.
                 for (part in records.partition { (it as FloorsClimbedRecord).startTime.isAfter(cursor) }.toList()) {
                     insertEstimates(part, "floors")
+                }
+                val elevation = WearOsFloorsImport.elevationRecords(page.minutes, steps)
+                for (part in elevation.partition { (it as ElevationGainedRecord).startTime.isAfter(cursor) }.toList()) {
+                    insertEstimates(part, "elevation")
                 }
                 climbed += page.minutes.sumOf { it.metres }
                 credited += records.sumOf { (it as FloorsClimbedRecord).floors } * AscentCredit.METRES_PER_FLOOR
