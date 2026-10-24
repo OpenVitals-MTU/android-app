@@ -3545,6 +3545,11 @@
         <item quantity="other">Rango estimado a partir de %1$d ciclos registrados.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Esta estimación se basa solo en tu historial registrado y puede cambiar.</string>
+    <string name="cycle_estimate_basis_lh">Contado desde tu prueba de LH positiva del %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Contado desde tu subida de temperatura del %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Contado desde tu pico de moco del %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un segundo signo registrado coincide.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Tus signos registrados no coinciden, así que este rango usa tu historial de ciclos.</string>
     <string name="cycle_estimate_window_a11y">Rango estimado de %1$d días</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">En aproximadamente %1$d día</item>

@@ -3587,6 +3587,11 @@
         <item quantity="other">Range estimated from %1$d recorded cycles.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">This estimate is based only on your recorded history and may change.</string>
+    <string name="cycle_estimate_basis_lh">Counted from your positive LH test on %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Counted from your temperature rise on %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Counted from your mucus peak on %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">A second recorded sign agrees.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Your recorded signs disagree, so this range uses your cycle history.</string>
     <string name="cycle_estimate_window_a11y">Estimated range of %1$d days</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">In about %1$d day</item>

@@ -3593,6 +3593,11 @@
         <item quantity="other">記録された%1$d周期から推定した範囲です。</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">この推定は記録された履歴のみに基づき、変わることがあります。</string>
+    <string name="cycle_estimate_basis_lh">%1$s の LH 検査陽性から数えています。</string>
+    <string name="cycle_estimate_basis_temperature">%1$s の体温上昇から数えています。</string>
+    <string name="cycle_estimate_basis_mucus">%1$s の頸管粘液のピークから数えています。</string>
+    <string name="cycle_estimate_basis_confirmed">記録された別のサインも一致しています。</string>
+    <string name="cycle_estimate_basis_markers_disagree">記録されたサインが一致しないため、この範囲は周期の履歴に基づいています。</string>
     <string name="cycle_estimate_window_a11y">推定範囲 %1$d日間</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">あと約%1$d日</item>

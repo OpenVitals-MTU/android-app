@@ -206,6 +206,106 @@ class CycleEstimateCalculatorTest {
         assertEquals(next.plusDays(28), estimate.centralDate)
     }
 
+    @Test
+    fun `without markers the estimate counts from the calendar`() {
+        val cycles = closedCycles("2025-01-01", 28, 28, 28)
+
+        val estimate = requireNotNull(CycleEstimateCalculator.evaluate(cycles, markers = emptyMap()).estimateOrNull)
+
+        assertEquals(CycleEstimateBasis.Calendar(), estimate.basis)
+        assertEquals(LocalDate.parse("2025-04-23"), estimate.centralDate)
+    }
+
+    @Test
+    fun `an LH test in the current cycle anchors the estimate on the published prior`() {
+        val cycles = closedCycles("2025-01-01", 28, 28, 28)
+        val lh = LocalDate.parse("2025-04-10")
+
+        val estimate = requireNotNull(
+            CycleEstimateCalculator.evaluate(cycles, markers = currentMarkers(cycles, OvulationMarker.LH_TEST to lh)).estimateOrNull,
+        )
+
+        // 13.77 days after the positive test; one-sided ceil(1.96 * 1.86) = 4.
+        assertEquals(lh.plusDays(14), estimate.centralDate)
+        assertEquals(4, radiusOf(estimate))
+        assertEquals(CycleEstimateBasis.Marker(OvulationMarker.LH_TEST, lh, emptySet(), 0), estimate.basis)
+    }
+
+    @Test
+    fun `a first cycle with a marker gets an estimate before any interval exists`() {
+        val only = listOf(cycle("2025-01-01"))
+        val shift = LocalDate.parse("2025-01-17")
+
+        val estimate = CycleEstimateCalculator.evaluate(only, markers = mapOf(only[0].startDate to mapOf(OvulationMarker.TEMPERATURE to shift)))
+
+        assertEquals(shift.plusDays(11), requireNotNull(estimate.estimateOrNull).centralDate)
+    }
+
+    @Test
+    fun `the user's own marker intervals outweigh the prior and narrow the window`() {
+        val cycles = closedCycles("2025-01-01", 30, 30, 30, 30)
+        // Each earlier cycle: first high day on cycle day 21, next start nine days later.
+        val history = cycles.dropLast(1).associate { it.startDate to mapOf(OvulationMarker.TEMPERATURE to it.startDate.plusDays(20)) }
+        val shift = cycles.last().startDate.plusDays(20)
+
+        val estimate = requireNotNull(
+            CycleEstimateCalculator.evaluate(
+                cycles,
+                markers = history + (cycles.last().startDate to mapOf(OvulationMarker.TEMPERATURE to shift)),
+            ).estimateOrNull,
+        )
+
+        // (4 × 10 + 2 × 11.0) / 6 = 10.33 → 10 days; variance (3 × 0 + 2 × 4.28) / 5 → ceil(1.96 × 1.31) = 3.
+        assertEquals(shift.plusDays(10), estimate.centralDate)
+        assertEquals(3, radiusOf(estimate))
+        assertEquals(4, (estimate.basis as CycleEstimateBasis.Marker).intervalCount)
+    }
+
+    @Test
+    fun `mucus and temperature that agree confirm each other`() {
+        val cycles = closedCycles("2025-01-01", 28, 28)
+        val shift = LocalDate.parse("2025-03-15")
+
+        val estimate = requireNotNull(
+            CycleEstimateCalculator.evaluate(
+                cycles,
+                markers = currentMarkers(cycles, OvulationMarker.TEMPERATURE to shift, OvulationMarker.MUCUS to shift.minusDays(2)),
+            ).estimateOrNull,
+        )
+
+        val basis = estimate.basis as CycleEstimateBasis.Marker
+        assertEquals(OvulationMarker.TEMPERATURE, basis.anchor)
+        assertEquals(setOf(OvulationMarker.TEMPERATURE, OvulationMarker.MUCUS), basis.confirmedBy)
+    }
+
+    @Test
+    fun `markers that disagree fall back to the calendar and say so`() {
+        val cycles = closedCycles("2025-01-01", 28, 28)
+        val shift = LocalDate.parse("2025-03-15")
+        val calendar = requireNotNull(CycleEstimateCalculator.evaluate(cycles).estimateOrNull)
+
+        val estimate = requireNotNull(
+            CycleEstimateCalculator.evaluate(
+                cycles,
+                markers = currentMarkers(cycles, OvulationMarker.TEMPERATURE to shift, OvulationMarker.LH_TEST to shift.plusDays(5)),
+            ).estimateOrNull,
+        )
+
+        assertEquals(calendar.copy(basis = CycleEstimateBasis.Calendar(markersDisagree = true)), estimate)
+    }
+
+    @Test
+    fun `an excluded current cycle keeps the calendar estimate`() {
+        val cycles = closedCycles("2025-01-01", 28, 28).let { it.dropLast(1) + it.last().copy(isExcludedFromEstimates = true) }
+
+        val estimate = CycleEstimateCalculator.evaluate(
+            cycles,
+            markers = currentMarkers(cycles, OvulationMarker.LH_TEST to LocalDate.parse("2025-03-12")),
+        )
+
+        assertEquals(CycleEstimateBasis.Calendar(), requireNotNull(estimate.estimateOrNull).basis)
+    }
+
     private fun intervalsToCycles(intervals: List<Int>): List<RecordedCycle> {
         var date = LocalDate.parse("2025-01-01")
         val cycles = mutableListOf(cycle(date))
@@ -215,6 +315,17 @@ class CycleEstimateCalculatorTest {
         }
         return cycles
     }
+
+    /** Closed cycles from [first] with the given lengths, then an open current cycle. */
+    private fun closedCycles(first: String, vararg lengths: Int): List<RecordedCycle> {
+        val starts = lengths.runningFold(LocalDate.parse(first)) { date, length -> date.plusDays(length.toLong()) }
+        return starts.mapIndexed { index, start ->
+            RecordedCycle(startDate = start, endDate = starts.getOrNull(index + 1)?.minusDays(1))
+        }
+    }
+
+    private fun currentMarkers(cycles: List<RecordedCycle>, vararg markers: Pair<OvulationMarker, LocalDate>) =
+        mapOf(cycles.last().startDate to markers.toMap())
 
     private fun radiusOf(estimate: CycleEstimate): Int =
         ChronoUnit.DAYS.between(estimate.centralDate, estimate.latestDate).toInt()

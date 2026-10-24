@@ -3570,6 +3570,11 @@
         <item quantity="other">Диапазон оценён по %1$d отмеченного цикла.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Эта оценка основана только на вашей отмеченной истории и может измениться.</string>
+    <string name="cycle_estimate_basis_lh">Отсчитано от положительного теста на ЛГ %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Отсчитано от подъёма температуры %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Отсчитано от пика слизи %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Второй записанный признак совпадает.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Записанные признаки противоречат друг другу, поэтому диапазон рассчитан по истории циклов.</string>
     <string name="cycle_estimate_window_a11y">Оценочный диапазон %1$d дн.</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Примерно через %1$d день</item>
