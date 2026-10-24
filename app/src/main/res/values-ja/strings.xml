@@ -3593,6 +3593,11 @@
         <item quantity="other">記録された%1$d周期から推定した範囲です。</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">この推定は記録された履歴のみに基づき、変わることがあります。</string>
+    <string name="cycle_estimate_basis_lh">%1$s の LH 検査陽性から数えています。</string>
+    <string name="cycle_estimate_basis_temperature">%1$s の体温上昇から数えています。</string>
+    <string name="cycle_estimate_basis_mucus">%1$s の頸管粘液のピークから数えています。</string>
+    <string name="cycle_estimate_basis_confirmed">記録された別のサインも一致しています。</string>
+    <string name="cycle_estimate_basis_markers_disagree">記録されたサインが一致しないため、この範囲は周期の履歴に基づいています。</string>
     <string name="cycle_estimate_window_a11y">推定範囲 %1$d日間</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">あと約%1$d日</item>
@@ -3681,7 +3686,51 @@
     <string name="cycle_thermal_shift_confirmed">記録された体温に持続的な上昇が見つかりました。</string>
     <string name="cycle_thermal_coverline">カバーラインは破線で表示</string>
     <string name="cycle_thermal_empty">月経開始日と朝の体温を記録すると、基礎体温グラフが表示されます。</string>
+    <string name="cycle_skin_title">皮膚温と周期</string>
+    <string name="cycle_skin_intro">時計やリングは夜間の皮膚温を測定します。排卵後はやや高くなる傾向があり、小規模なリング研究では約0.3 °Cでした。研究ではこれを周期全体から後から読み取るもので、事前に予測するものではありません。</string>
+    <string name="cycle_skin_accuracy" formatted="false">大規模なApple Watch研究では、0.2 °C以上の上昇があった周期の81 %で排卵日が推定され、その推定の89 %はLH検査で特定した日から2日以内でした。リング研究では平均誤差が1.3日で、カレンダー計算の3.4日を下回りました。これらは各研究独自の方法による結果であり、すべての時計やすべての方法に当てはまるわけではありません。</string>
+    <string name="cycle_skin_limits" formatted="false">• 上昇が見つからなくても排卵がなかったとは限りません：437周期の研究では、持続的な上昇が見られたのは82 %でした。\n• 排卵がなくても上昇が現れることがあります：小規模な手首の研究では、排卵のない周期でも上昇が見つかりました。\n• 発熱や病気でも皮膚温は上がります。\n• 皮膚温は深部体温ではありません：ある研究では口腔温との相関は中程度にとどまりました（r = 0.56）。</string>
+    <string name="cycle_skin_note_hormonal">ホルモン避妊法が設定されているか、過去2か月以内に中止しています。ホルモン法は、このカードが扱う体温リズムに作用し、その多くは排卵（卵子の放出）を抑えます。体温の上昇は排卵に続いて起こるものです。そのため、あなた自身の体温には、前後のはっきりしたパターンが現れないことがあります。大規模な手首温度の研究は、ホルモン法を使っている人と、中止後2か月以内の人を除外しているため、その結果はあなたについてはほとんど何も語りません。これは情報であり、助言ではありません。</string>
+    <string name="cycle_skin_note_pcos">PCOSを設定しています。PCOSで温度による排卵検出を調べた研究は見つかりませんでした。体温パターンは特に慎重に読んでください。</string>
+    <string name="cycle_skin_not_a_method">OpenVitalsは推定に皮膚温を使用していません。これは背景情報であり、避妊法や妊よう性の予測ではなく、医療上の助言でもありません。</string>
+    <string name="cycle_skin_show_details">数値と出典を表示</string>
+    <string name="cycle_skin_hide_details">詳細を隠す</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">ホルモン法についての研究結果です。ピル使用者27人では、手首の皮膚温の日内リズムは、偽黄体期と偽卵胞期（実薬の週と休薬の週）の間で差がなく、自然な周期の14人では差がありました。ピル使用者18人では、朝の口腔温が、実薬の週（36.4 °C）の方が休薬の週（36.1 °C）より高く、その上昇はプロゲスチンの用量と並んでいました。ある総説は、エストロゲンは一般に体温を下げ、プロゲスチンは一般に体温を上げると述べています。ホルモン法の作用機序に関する総説は、配合ピルとプロゲスチン単独の方法の主な作用として、排卵抑制と頸管粘液の変化を挙げています。ここで挙げた他の研究もホルモン使用者を除いています。リング研究（Thigpen）はホルモン使用のある6周期を除外し、指リング研究（Maijala）はその副研究でホルモン避妊の使用者を除外し、2021年の手首研究（Zhu）はホルモン療法を受けていない人だけを対象にしました。ピル以外の方法についての皮膚温の研究は見つかりませんでした。</string>
+    <string name="section_cycle_nightly">周期を通した夜間の脈拍、HRV、呼吸</string>
+    <string name="cycle_nightly_subtitle">現在の周期の睡眠記録から取った、周期日ごとの夜間の値です。参考情報のみで、排卵・妊孕性・避妊については何も示さず、どの推定にも影響しません。</string>
+    <string name="cycle_nightly_loading">この周期の夜間データを読み込み中…</string>
+    <string name="cycle_nightly_no_sleep">この周期には睡眠記録が見つからないため、夜間の値を夜に割り当てられません。腕時計や他のアプリによる睡眠の記録が必要です。</string>
+    <string name="cycle_nightly_nights">この周期で睡眠記録のある夜: %1$d</string>
+    <string name="cycle_nightly_signal_pulse">安静時脈拍</string>
+    <string name="cycle_nightly_signal_hrv">HRV (RMSSD)</string>
+    <string name="cycle_nightly_signal_breathing">呼吸数</string>
+    <string name="cycle_nightly_range_pulse">%1$s〜%2$s bpm</string>
+    <string name="cycle_nightly_range_hrv">%1$s〜%2$s ms</string>
+    <string name="cycle_nightly_range_breathing">%1$s〜%2$s 回/分</string>
+    <string name="cycle_nightly_legend">%1$s、独自の目盛り: %2$s</string>
+    <string name="cycle_nightly_chart_description">%1$s、値のある夜: %2$d、範囲 %3$s</string>
+    <string name="cycle_nightly_all_hidden">線を表示するには、上のチップで項目をオンにしてください。</string>
+    <string name="cycle_nightly_source">表示元: %1$s。</string>
+    <string name="cycle_nightly_source_others">表示元: %1$s。%2$s の値は混ぜていません。</string>
+    <string name="cycle_nightly_missing_pulse">この周期の夜間に安静時脈拍が見つかりませんでした。多くの腕時計は記録しないか、OpenVitals に読み取りの許可がない可能性があります。</string>
+    <string name="cycle_nightly_missing_hrv">この周期の夜間に HRV が見つかりませんでした。多くの腕時計は夜間に記録しないか、OpenVitals に読み取りの許可がない可能性があります。</string>
+    <string name="cycle_nightly_missing_breathing">この周期の夜間に呼吸数が見つかりませんでした。多くの腕時計は記録しないか、OpenVitals に読み取りの許可がない可能性があります。</string>
+    <string name="cycle_nightly_details_show">表示している理由</string>
+    <string name="cycle_nightly_details_hide">詳細を隠す</string>
+    <string name="cycle_nightly_permission_needed">許可がまだ付与されていないため、一部の夜間の値を読み取れません。</string>
+    <string name="cycle_nightly_allow_reading">夜間の値の読み取りを許可</string>
+    <string name="cycle_nightly_daily_value">白抜きの点は機器の 1 日分の値で、夜間の測定値ではありません。</string>
+    <string name="cycle_nightly_why_intro">ウェアラブル機器を使った研究では、安静時脈拍は周期の初めに低く、次の月経の直前に高くなりやすく、HRV はその逆に動きやすいと報告されています。差は毎分数拍、HRV では数パーセント程度です。</string>
+    <string name="cycle_nightly_evidence_goodale_pulse">237 人の参加女性が夜間に Ava のブレスレットを着けた研究では、夜間の心拍数の平均は卵胞期で 56.6 bpm、黄体後期で 60.5 bpm でした。</string>
+    <string name="cycle_nightly_evidence_jasinski_days">WHOOP バンドで記録された 11,590 人・45,811 周期では、安静時心拍数は平均して周期 5 日目が最も低く 26 日目が最も高く、HRV (RMSSD) は 5 日目が最も高く 27 日目が最も低くなりました。</string>
+    <string name="cycle_nightly_evidence_lin_phase">mcPHASES データセットでは、月経のある 42 人の若年成人が 3 か月間 Fitbit Sense を着けました。安静時心拍数の中央値は周期の各期で有意に異なり、卵胞期に最も低く、黄体期にピークとなりました。</string>
+    <string name="cycle_nightly_evidence_de_jager_hrv" formatted="false">16 件の研究を対象とした随時更新の系統的レビューでは、ウェアラブルで測定した HRV は周期の初めに高く終わりに向けて低くなり、その差は 3〜9 % でした。ホルモン避妊薬の使用者は、特に周期の後半で HRV が低くなっていました。</string>
+    <string name="cycle_nightly_evidence_gonzalez_sleep" formatted="false">WHOOP を着けた 2,596 人・42,759 周期の記録では、週の睡眠時間が 10 % 減ると、周期の時期にかかわらず安静時心拍数が 1.2 % 上がりました。</string>
+    <string name="cycle_nightly_evidence_pietila_alcohol">フィンランドの就労者 4,098 人では、飲酒量に応じて、睡眠の最初の 3 時間の副交感神経の調節が弱まっていました。HRV に基づく回復の指標は、少量・中等量・多量の飲酒でそれぞれ 9.3、24.0、39.2 パーセントポイント低下しました。</string>
+    <string name="cycle_nightly_evidence_shi_small_gain">27 件の研究の系統的レビューとネットワークメタ解析では、ウェアラブルの複数の信号を体温と組み合わせても得られる改善はわずかで (統合精度 0.89 対 0.87)、信頼区間は重なっていました。</string>
+    <string name="cycle_nightly_method">夜の値の作り方: OpenVitals は、その夜の睡眠セッション内のすべての測定値の中央値を取り、目覚めた日に割り当てます。研究では集計方法が異なります。HRV のレビューでは、Oura リングの研究は夜間の 5 分間隔、ある WHOOP の研究は最後の徐波睡眠サイクル、別の研究は主睡眠の覚醒していない時間全体を使っていました。そのため絶対値は研究と比べられません。複数のアプリや機器が同じ項目を書き込んでいる場合は、最も多くの夜を網羅する 1 つだけを描きます。</string>
+    <string name="cycle_nightly_caveats">睡眠、飲酒、ホルモン避妊もこれらの線を動かすため、1 晩だけでは多くは分かりません。また、上のレビューでは複数の信号を組み合わせても改善は小さいものでした。OpenVitals は、これらの値を推定、時期の判定、妊孕性に関するいかなる主張にも使いません。</string>
     <string name="cycle_patterns_subtitle">各症状が各期に記録された回数です。数えるだけで、診断や予測はしません。</string>
     <string name="cycle_patterns_empty_title">まだ症状がありません</string>
     <string name="cycle_patterns_empty_body">周期の中で症状を記録していくと、ここにパターンが表示されます。</string>
@@ -4019,4 +4068,16 @@
     <string name="settings_scales_delete_body">体重、心拍数、体組成が Health Connect から削除されます。</string>
     <string name="settings_scales_remove">体重計を削除</string>
     <string name="settings_scales_remove_body">OpenVitals は受信を停止し、キーを消去します。保存済みの測定は残ります。</string>
+    <string name="cycle_hormonal_title">ホルモン避妊</string>
+    <string name="cycle_hormonal_body">ホルモン系の方法は、周期や体温のパターンを変えることがあります。ここにはホルモンを使う方法だけを挙げています。銅付加IUD、コンドーム、ペッサリーはホルモンを使わないため、ここには載せていません。周期表示のための背景情報であり、それ以上のものではありません。</string>
+    <string name="cycle_hormonal_set_by_pill">ピルのスケジュールにより「%1$s」に設定されています。別の方法を選ぶにはスケジュールをオフにしてください。</string>
+    <string name="cycle_hormonal_stopped_on">中止した日（任意。未来の日付は使用中として扱われます）</string>
+    <string name="cycle_hormonal_stopped_clear">中止日を消去</string>
+    <string name="cycle_hormonal_kind_none">なし</string>
+    <string name="cycle_hormonal_kind_pill">ピル</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">ホルモン放出IUD</string>
+    <string name="cycle_hormonal_kind_implant">インプラント</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">リングまたはパッチ</string>
+    <string name="cycle_hormonal_kind_injection">注射</string>
+    <string name="cycle_hormonal_kind_other">その他のホルモン系の方法</string>
 </resources>

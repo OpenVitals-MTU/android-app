@@ -3521,6 +3521,11 @@
         <item quantity="other">Zeitraum geschätzt aus %1$d erfassten Zyklen.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Diese Schätzung beruht nur auf deinem erfassten Verlauf und kann sich ändern.</string>
+    <string name="cycle_estimate_basis_lh">Gezählt ab deinem positiven LH-Test am %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Gezählt ab deinem Temperaturanstieg am %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Gezählt ab deinem Schleim-Höhepunkt am %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Ein zweites erfasstes Zeichen stimmt damit überein.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Deine erfassten Zeichen widersprechen sich, daher nutzt dieser Zeitraum deinen Zyklusverlauf.</string>
     <string name="cycle_estimate_window_a11y">Geschätzter Bereich von %1$d Tagen</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">In etwa %1$d Tag</item>
@@ -3609,7 +3614,51 @@
     <string name="cycle_thermal_shift_confirmed">In den erfassten Temperaturen wurde ein anhaltender Anstieg gefunden.</string>
     <string name="cycle_thermal_coverline">Deckungslinie als gestrichelte Linie</string>
     <string name="cycle_thermal_empty">Erfasse einen Periodenbeginn und Morgentemperaturen, um die Temperaturkurve zu sehen.</string>
+    <string name="cycle_skin_title">Hauttemperatur und dein Zyklus</string>
+    <string name="cycle_skin_intro">Uhren und Ringe messen nachts deine Hauttemperatur. Nach dem Eisprung liegt sie tendenziell etwas höher, in einer kleinen Ringstudie um etwa 0,3 °C. Studien lesen das im Nachhinein aus dem ganzen Zyklus, nie im Voraus.</string>
+    <string name="cycle_skin_accuracy" formatted="false">In einer großen Apple-Watch-Studie wurde für 81 % der Zyklen mit einem Anstieg von mindestens 0,2 °C ein Eisprungtag geschätzt, und 89 % dieser Schätzungen lagen höchstens 2 Tage neben dem mit LH-Tests ermittelten Tag. Eine Ringstudie fand einen mittleren Fehler von 1,3 Tagen, gegenüber 3,4 Tagen beim Zählen nach dem Kalender. Das sind Ergebnisse der jeweils eigenen Methode der Studie; sie lassen sich nicht auf jede Uhr und jede Methode übertragen.</string>
+    <string name="cycle_skin_limits" formatted="false">• Kein erkannter Anstieg heißt nicht, dass kein Eisprung stattfand: In einer Studie mit 437 Zyklen zeigte sich in 82 % ein anhaltender Anstieg.\n• Ein Anstieg kann auch ohne Eisprung auftreten: Eine kleine Handgelenkstudie fand Anstiege auch in Zyklen ohne Eisprung.\n• Auch Fieber oder Krankheit erhöhen die Hauttemperatur.\n• Die Hauttemperatur ist nicht die Körperkerntemperatur: In einer Studie korrelierte sie nur mäßig mit der oralen Temperatur (r = 0,56).</string>
+    <string name="cycle_skin_note_hormonal">Du hast eine hormonelle Methode angegeben oder eine in den letzten zwei Monaten abgesetzt. Hormonelle Methoden wirken auf denselben Temperaturrhythmus, um den es in dieser Karte geht, und viele von ihnen unterdrücken den Eisprung (die Freisetzung einer Eizelle), dem der Temperaturanstieg folgt. Deine eigene Temperatur zeigt deshalb möglicherweise kein klares Vorher-Nachher-Muster. Die große Handgelenk-Temperaturstudie hat Menschen mit hormonellen Methoden und bis zu zwei Monate nach dem Absetzen ausgeschlossen; ihre Ergebnisse sagen daher wenig über dich aus. Das ist eine Information, kein Rat.</string>
+    <string name="cycle_skin_note_pcos">Du hast PCOS angegeben. Wir haben keine Studie zur temperaturbasierten Eisprungerkennung bei PCOS gefunden; lies jedes Temperaturmuster daher mit besonderer Vorsicht.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals nutzt die Hauttemperatur nicht für seine Schätzungen. Das ist Hintergrundwissen, keine Verhütungsmethode, keine Fruchtbarkeitsvorhersage und keine medizinische Beratung.</string>
+    <string name="cycle_skin_show_details">Zahlen und Quellen anzeigen</string>
+    <string name="cycle_skin_hide_details">Details ausblenden</string>
     <string name="cycle_thermal_day_label">T%1$d</string>
+    <string name="cycle_skin_hormonal_details">Was die Studien zu hormonellen Methoden fanden. Bei 27 Pillen-Nutzerinnen unterschied sich der Tagesrhythmus der Handgelenk-Hauttemperatur nicht zwischen der pseudo-lutealen und der pseudo-follikulären Phase (Pillenwochen und pillenfreie Woche), bei 14 Personen mit natürlichem Zyklus dagegen schon. Bei 18 Pillen-Nutzerinnen lag die orale Morgentemperatur in den Wochen mit Wirkstoffpillen (36,4 °C) höher als in der pillenfreien Woche (36,1 °C), und der Anstieg ging mit der Gestagendosis einher. Ein Übersichtsartikel beschreibt Östrogene als in der Regel temperatursenkend und Gestagene als in der Regel temperatursteigernd für die Körpertemperatur. Ein Übersichtsartikel zur Wirkweise hormoneller Methoden nennt Eisprunghemmung und Veränderungen des Gebärmutterhalsschleims unter den Hauptmechanismen der kombinierten Pillen und der reinen Gestagenmethoden. Auch die anderen Studien hier schlossen Hormonnutzerinnen aus: Eine Ringstudie (Thigpen) entfernte 6 Zyklen mit Hormonanwendung, eine Fingerring-Studie (Maijala) schloss in ihrer Teilstudie Nutzerinnen hormoneller Verhütung aus, und die Handgelenkstudie von 2021 (Zhu) nahm nur Personen ohne Hormontherapie auf. Für andere Methoden als die Pille haben wir keine Studie zur Hauttemperatur gefunden.</string>
+    <string name="section_cycle_nightly">Nachtpuls, HRV und Atmung im Zyklus</string>
+    <string name="cycle_nightly_subtitle">Deine nächtlichen Werte nach Zyklustag, entnommen den Schlafphasen des aktuellen Zyklus. Nur zur Information: Sie sagen nichts über Eisprung, Fruchtbarkeit oder Verhütung aus und ändern keine Schätzung.</string>
+    <string name="cycle_nightly_loading">Die Nächte dieses Zyklus werden gelesen …</string>
+    <string name="cycle_nightly_no_sleep">In diesem Zyklus wurde keine Schlafphase gefunden, daher lassen sich nächtliche Werte keiner Nacht zuordnen. Nötig ist eine Schlafaufzeichnung von einer Uhr oder einer anderen App.</string>
+    <string name="cycle_nightly_nights">Nächte mit Schlafphase in diesem Zyklus: %1$d</string>
+    <string name="cycle_nightly_signal_pulse">Ruhepuls</string>
+    <string name="cycle_nightly_signal_hrv">HRV (RMSSD)</string>
+    <string name="cycle_nightly_signal_breathing">Atemfrequenz</string>
+    <string name="cycle_nightly_range_pulse">%1$s bis %2$s Schläge/min</string>
+    <string name="cycle_nightly_range_hrv">%1$s bis %2$s ms</string>
+    <string name="cycle_nightly_range_breathing">%1$s bis %2$s Atemzüge pro Minute</string>
+    <string name="cycle_nightly_legend">%1$s, eigene Skala: %2$s</string>
+    <string name="cycle_nightly_chart_description">%1$s, Nächte mit Wert: %2$d, Bereich %3$s</string>
+    <string name="cycle_nightly_all_hidden">Schalte oben ein Signal ein, um seine Linie zu sehen.</string>
+    <string name="cycle_nightly_source">Angezeigt aus %1$s.</string>
+    <string name="cycle_nightly_source_others">Angezeigt aus %1$s. Werte aus %2$s werden nicht untergemischt.</string>
+    <string name="cycle_nightly_missing_pulse">Für die Nächte dieses Zyklus wurde kein Ruhepuls gefunden. Viele Uhren zeichnen ihn nicht auf, oder OpenVitals darf ihn nicht lesen.</string>
+    <string name="cycle_nightly_missing_hrv">Für die Nächte dieses Zyklus wurde keine HRV gefunden. Viele Uhren zeichnen sie nachts nicht auf, oder OpenVitals darf sie nicht lesen.</string>
+    <string name="cycle_nightly_missing_breathing">Für die Nächte dieses Zyklus wurde keine Atemfrequenz gefunden. Viele Uhren zeichnen sie nicht auf, oder OpenVitals darf sie nicht lesen.</string>
+    <string name="cycle_nightly_details_show">Warum das angezeigt wird</string>
+    <string name="cycle_nightly_details_hide">Details ausblenden</string>
+    <string name="cycle_nightly_permission_needed">Einige nächtliche Werte lassen sich nicht lesen, weil die Berechtigung noch nicht erteilt ist.</string>
+    <string name="cycle_nightly_allow_reading">Lesen der nächtlichen Werte erlauben</string>
+    <string name="cycle_nightly_daily_value">Hohle Punkte sind der Tageswert des Geräts, keine Messung aus der Nacht.</string>
+    <string name="cycle_nightly_why_intro">Studien mit Wearables berichten, dass der Ruhepuls früh im Zyklus meist am niedrigsten und kurz vor der nächsten Periode am höchsten ist und dass sich die HRV tendenziell umgekehrt verhält. Die Unterschiede betragen einige Schläge pro Minute und einige Prozent der HRV.</string>
+    <string name="cycle_nightly_evidence_goodale_pulse">In einer Studie mit 237 rekrutierten Frauen, die nachts das Ava-Armband trugen, lag der nächtliche Puls im Mittel bei 56,6 Schlägen/min in der Follikelphase und bei 60,5 Schlägen/min in der späten Lutealphase.</string>
+    <string name="cycle_nightly_evidence_jasinski_days">Bei 11.590 Teilnehmerinnen und 45.811 mit einem WHOOP-Armband aufgezeichneten Zyklen war der Ruhepuls im Mittel am Zyklustag 5 am niedrigsten und am Tag 26 am höchsten. Die HRV (RMSSD) war am Tag 5 am höchsten und am Tag 27 am niedrigsten.</string>
+    <string name="cycle_nightly_evidence_lin_phase">Im Datensatz mcPHASES trugen 42 junge Erwachsene, die menstruieren, drei Monate lang eine Fitbit Sense. Der mediane Ruhepuls unterschied sich deutlich zwischen den Zyklusphasen: Er war in der Follikelphase am niedrigsten und erreichte in der Lutealphase seinen Höchstwert.</string>
+    <string name="cycle_nightly_evidence_de_jager_hrv" formatted="false">Ein laufend aktualisierter systematischer Review von 16 Studien fand die mit Wearables gemessene HRV zu Beginn des Zyklus höher und gegen Ende niedriger, mit Unterschieden von 3 bis 9 %. Anwenderinnen hormoneller Verhütungsmittel hatten eine niedrigere HRV, besonders spät im Zyklus.</string>
+    <string name="cycle_nightly_evidence_gonzalez_sleep" formatted="false">Bei 2.596 Frauen mit 42.759 erfassten Zyklen, die ein WHOOP trugen, stieg der Ruhepuls um 1,2 %, wenn der wöchentliche Schlaf um 10 % sank, unabhängig von der Zyklusphase.</string>
+    <string name="cycle_nightly_evidence_pietila_alcohol">Bei 4.098 finnischen Beschäftigten war Alkoholkonsum dosisabhängig mit einer schwächeren parasympathischen Regulation in den ersten 3 Stunden des Schlafs verbunden. Ein auf der HRV beruhendes Erholungsmaß sank bei geringer, mittlerer und hoher Menge um 9,3, 24,0 und 39,2 Prozentpunkte.</string>
+    <string name="cycle_nightly_evidence_shi_small_gain">Ein systematischer Review mit Netzwerk-Metaanalyse von 27 Studien fand nur einen geringen Gewinn, wenn mehrere Wearable-Signale mit der Temperatur kombiniert werden (gepoolte Genauigkeit 0,89 gegenüber 0,87), bei überlappenden Konfidenzintervallen.</string>
+    <string name="cycle_nightly_method">So entsteht der Nachtwert: OpenVitals nimmt den Median aller Messwerte innerhalb der Schlafphase der Nacht und ordnet ihn dem Tag zu, an dem du aufgewacht bist. Studien aggregieren anders: Im HRV-Review nutzten Studien mit dem Oura-Ring 5-Minuten-Intervalle über Nacht, eine WHOOP-Studie den letzten Tiefschlafzyklus und eine andere die gesamte Nicht-Wachzeit des Hauptschlafs. Absolute Werte lassen sich deshalb nicht mit den Studien vergleichen. Haben mehrere Apps oder Geräte ein Signal geschrieben, wird nur das gezeichnet, das die meisten Nächte abdeckt.</string>
+    <string name="cycle_nightly_caveats">Schlaf, Alkohol und hormonelle Verhütung verschieben diese Linien ebenfalls, daher sagt eine einzelne Nacht wenig aus, und der Gewinn aus der Kombination mehrerer Signale war im obigen Review gering. OpenVitals verwendet keinen dieser Werte für eine Schätzung, eine Phase oder irgendeine Aussage über Fruchtbarkeit.</string>
     <string name="cycle_patterns_subtitle">Wie oft jedes Symptom in jeder Phase erfasst wurde. Nur Zählungen; nichts wird diagnostiziert oder vorhergesagt.</string>
     <string name="cycle_patterns_empty_title">Noch keine Symptome</string>
     <string name="cycle_patterns_empty_body">Muster erscheinen hier, sobald du Symptome über deine Zyklen hinweg erfasst.</string>
@@ -3947,4 +3996,16 @@
     <string name="settings_scales_delete_body">Gewicht, Herzfrequenz und Körperzusammensetzung werden aus Health Connect entfernt.</string>
     <string name="settings_scales_remove">Waage entfernen</string>
     <string name="settings_scales_remove_body">OpenVitals lauscht nicht mehr und vergisst den Schlüssel. Bereits gespeicherte Messungen bleiben.</string>
+    <string name="cycle_hormonal_title">Hormonelle Verhütung</string>
+    <string name="cycle_hormonal_body">Hormonelle Methoden können den Zyklus und den Temperaturverlauf verändern. Aufgeführt sind nur Methoden mit Hormonen: Kupferspirale, Kondom und Diaphragma enthalten keine Hormone und stehen deshalb nicht hier. Das ist nur Kontext für die Zyklusansicht, nichts weiter.</string>
+    <string name="cycle_hormonal_set_by_pill">Durch dein Pillenschema auf %1$s gesetzt. Schalte das Schema aus, um eine andere Methode zu wählen.</string>
+    <string name="cycle_hormonal_stopped_on">Beendet am (optional; ein Datum in der Zukunft gilt als weiter angewendet)</string>
+    <string name="cycle_hormonal_stopped_clear">Enddatum löschen</string>
+    <string name="cycle_hormonal_kind_none">Keine</string>
+    <string name="cycle_hormonal_kind_pill">Pille</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">Hormonspirale</string>
+    <string name="cycle_hormonal_kind_implant">Implantat</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Ring oder Pflaster</string>
+    <string name="cycle_hormonal_kind_injection">Spritze</string>
+    <string name="cycle_hormonal_kind_other">Andere hormonelle Methode</string>
 </resources>

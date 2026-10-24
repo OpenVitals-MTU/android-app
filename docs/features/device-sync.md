@@ -65,9 +65,9 @@ Running the same sync twice therefore writes nothing new, and the two phones con
 
 ## The Cycle Journal
 
-The cycle category also carries what the cycle screen keeps outside Health Connect: the day logs (pain, mood, energy, symptoms, notes, pregnancy-test results, temperature disturbances, cervical sensation), the cycles excluded from estimates, and the declared tracking contexts and age band. These need no Health Connect permission, so the category is always offered.
+The cycle category also carries what the cycle screen keeps outside Health Connect: the day logs (pain, mood, energy, symptoms, notes, pregnancy-test results, temperature disturbances, cervical sensation), the cycles excluded from estimates, and the declared tracking contexts, age band and hormonal contraception. These need no Health Connect permission, so the category is always offered.
 
-A day log is fingerprinted by its content, so an unchanged day counts as already present. When both phones edited the same day, the later edit wins and the other is counted as not accepted. Excluded cycles merge; taking a cycle back into the estimates on one phone does not travel. The contexts and age band move only to a phone that has declared none. Reminder settings do not move: they are alarms on one phone.
+A day log is fingerprinted by its content, so an unchanged day counts as already present. When both phones edited the same day, the later edit wins and the other is counted as not accepted. Excluded cycles merge; taking a cycle back into the estimates on one phone does not travel. The contexts, age band and hormonal method each move only to a phone that has not declared that part; a part the phone has declared stays. Reminder settings do not move: they are alarms on one phone.
 
 ## Medical Records
 

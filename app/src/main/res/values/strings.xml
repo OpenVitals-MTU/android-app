@@ -3587,6 +3587,11 @@
         <item quantity="other">Range estimated from %1$d recorded cycles.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">This estimate is based only on your recorded history and may change.</string>
+    <string name="cycle_estimate_basis_lh">Counted from your positive LH test on %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Counted from your temperature rise on %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Counted from your mucus peak on %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">A second recorded sign agrees.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Your recorded signs disagree, so this range uses your cycle history.</string>
     <string name="cycle_estimate_window_a11y">Estimated range of %1$d days</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">In about %1$d day</item>
@@ -3677,7 +3682,51 @@
     <string name="cycle_thermal_shift_confirmed">A sustained thermal shift was found in the recorded temperatures.</string>
     <string name="cycle_thermal_coverline">Coverline shown as a dashed line</string>
     <string name="cycle_thermal_empty">Record a period start and morning temperatures to see the thermal chart.</string>
+    <string name="cycle_skin_title">Skin temperature and your cycle</string>
+    <string name="cycle_skin_intro">Watches and rings measure your skin temperature at night. After ovulation it tends to be a little higher, by about 0.3 °C in one small ring study. Studies read this afterwards, from the whole cycle, never in advance.</string>
+    <string name="cycle_skin_accuracy" formatted="false">In a large Apple Watch study, an ovulation day was estimated for 81% of the cycles that showed a rise of at least 0.2 °C, and 89% of those estimates were within 2 days of the day found with LH tests. A ring study found a mean error of 1.3 days, against 3.4 days when counting from the calendar. These are the results of each study’s own method; they do not carry over to every watch or every method.</string>
+    <string name="cycle_skin_limits" formatted="false">• No rise found does not mean no ovulation: in a study of 437 cycles, a sustained rise showed in 82%.\n• A rise can also appear without ovulation: a small wrist study found rises in cycles without ovulation too.\n• Fever or illness raises skin temperature as well.\n• Skin temperature is not core body temperature: in one study it correlated only moderately with oral temperature (r = 0.56).</string>
+    <string name="cycle_skin_note_hormonal">You set a hormonal method, or stopped one within the last two months. Hormonal methods act on the same body-temperature rhythm this card is about, and many of them stop ovulation (the release of an egg), which is what the temperature rise follows. Your own temperature may therefore show no clear before-and-after pattern. The large wrist-temperature study left out people on hormonal methods and for two months after stopping, so its results say little about you. This is information, not advice.</string>
+    <string name="cycle_skin_note_pcos">You declared PCOS. We found no study of temperature-based ovulation detection in PCOS, so read any temperature pattern with extra caution.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals does not use skin temperature for its estimates. This is background information, not a method of birth control or fertility prediction, and not medical advice.</string>
+    <string name="cycle_skin_show_details">Show numbers and sources</string>
+    <string name="cycle_skin_hide_details">Hide details</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">What the studies found about hormonal methods. In 27 pill users, the daily rhythm of wrist skin temperature did not differ between the pseudo-luteal and the pseudo-follicular phase (pill weeks and pill-free week), while it did in 14 people with a natural cycle. In 18 pill users, morning oral temperature was higher in the weeks with active pills (36.4 °C) than in the pill-free week (36.1 °C), and the rise went with the progestin dose. A review describes estrogens as generally lowering and progestins as generally raising body temperature. A review of how hormonal methods work lists ovulation inhibition and changes in cervical mucus among the main mechanisms of combined pills and progestin-only methods. The other studies here also left out hormone users: a ring study (Thigpen) removed 6 cycles with hormone use, a finger-ring study (Maijala) excluded users of hormonal contraception in its sub-study, and the 2021 wrist study (Zhu) enrolled only people not on hormonal therapy. We found no skin-temperature study for methods other than the pill.</string>
+    <string name="section_cycle_nightly">Night pulse, HRV and breathing across your cycle</string>
+    <string name="cycle_nightly_subtitle">Your overnight values by cycle day, taken from the sleep sessions of the current cycle. For information only: this says nothing about ovulation, fertility or contraception, and it changes no estimate.</string>
+    <string name="cycle_nightly_loading">Reading the nights of this cycle…</string>
+    <string name="cycle_nightly_no_sleep">No sleep session was found in this cycle, so overnight values cannot be placed on a night. Sleep recording from a watch or another app is needed.</string>
+    <string name="cycle_nightly_nights">Nights with a sleep session in this cycle: %1$d</string>
+    <string name="cycle_nightly_signal_pulse">Resting pulse</string>
+    <string name="cycle_nightly_signal_hrv">HRV (RMSSD)</string>
+    <string name="cycle_nightly_signal_breathing">Breathing rate</string>
+    <string name="cycle_nightly_range_pulse">%1$s to %2$s bpm</string>
+    <string name="cycle_nightly_range_hrv">%1$s to %2$s ms</string>
+    <string name="cycle_nightly_range_breathing">%1$s to %2$s breaths per minute</string>
+    <string name="cycle_nightly_legend">%1$s, own scale: %2$s</string>
+    <string name="cycle_nightly_chart_description">%1$s, nights with a value: %2$d, range %3$s</string>
+    <string name="cycle_nightly_all_hidden">Turn on a signal above to see its line.</string>
+    <string name="cycle_nightly_source">Shown from %1$s.</string>
+    <string name="cycle_nightly_source_others">Shown from %1$s. Values from %2$s are not mixed in.</string>
+    <string name="cycle_nightly_missing_pulse">No resting pulse was found for the nights of this cycle. Many watches do not record it, or OpenVitals may not be allowed to read it.</string>
+    <string name="cycle_nightly_missing_hrv">No HRV was found for the nights of this cycle. Many watches do not record it overnight, or OpenVitals may not be allowed to read it.</string>
+    <string name="cycle_nightly_missing_breathing">No breathing rate was found for the nights of this cycle. Many watches do not record it, or OpenVitals may not be allowed to read it.</string>
+    <string name="cycle_nightly_details_show">Why this is shown</string>
+    <string name="cycle_nightly_details_hide">Hide details</string>
+    <string name="cycle_nightly_permission_needed">Some overnight values cannot be read because the permission is not granted yet.</string>
+    <string name="cycle_nightly_allow_reading">Allow reading overnight values</string>
+    <string name="cycle_nightly_daily_value">Hollow points are the device’s daily value, not a reading from the night.</string>
+    <string name="cycle_nightly_why_intro">Studies of wearables report that resting pulse tends to be lowest early in the cycle and highest shortly before the next period, and that HRV tends to move the other way. The differences are a few beats per minute and a few percent of HRV.</string>
+    <string name="cycle_nightly_evidence_goodale_pulse">In a study with 237 recruited women wearing the Ava bracelet at night, nightly heart rate averaged 56.6 bpm in the follicular phase and 60.5 bpm in the late luteal phase.</string>
+    <string name="cycle_nightly_evidence_jasinski_days">Across 11,590 participants and 45,811 cycles recorded with a WHOOP strap, resting heart rate was on average lowest on cycle day 5 and highest on day 26. HRV (RMSSD) was highest on day 5 and lowest on day 27.</string>
+    <string name="cycle_nightly_evidence_lin_phase">In the mcPHASES dataset, 42 young adults who menstruate wore a Fitbit Sense for three months. Median resting heart rate differed significantly between cycle phases: it was lowest in the follicular phase and peaked in the luteal phase.</string>
+    <string name="cycle_nightly_evidence_de_jager_hrv" formatted="false">A living systematic review of 16 studies found wearable HRV higher at the beginning of the cycle and lower toward the end, with differences of 3 to 9%. Users of hormonal contraceptives had lower HRV, particularly late in the cycle.</string>
+    <string name="cycle_nightly_evidence_gonzalez_sleep" formatted="false">In 2,596 women with 42,759 logged cycles wearing a WHOOP, resting heart rate rose by 1.2% when weekly sleep fell by 10%, regardless of cycle phase.</string>
+    <string name="cycle_nightly_evidence_pietila_alcohol">In 4,098 Finnish employees, alcohol intake was dose-dependently linked to weaker parasympathetic regulation during the first 3 hours of sleep. An HRV-based recovery measure fell by 9.3, 24.0 and 39.2 percentage units after low, moderate and high intake.</string>
+    <string name="cycle_nightly_evidence_shi_small_gain">A systematic review and network meta-analysis of 27 studies found only a slight gain from combining several wearable signals with temperature (pooled accuracy 0.89 versus 0.87), with overlapping confidence intervals.</string>
+    <string name="cycle_nightly_method">How the night value is made: OpenVitals takes the median of all readings inside the night’s sleep session and places it on the day you woke up. Studies aggregate differently: in the HRV review, Oura ring studies used 5-minute intervals overnight, one WHOOP study used the last slow-wave sleep cycle and another all non-wake time of the main sleep. Absolute values therefore do not compare with the studies. When several apps or devices wrote a signal, only the one covering most nights is drawn.</string>
+    <string name="cycle_nightly_caveats">Sleep, alcohol and hormonal contraception also move these lines, so a single night says little, and the gain from combining several signals was small in the review above. OpenVitals uses none of these values for an estimate, a phase or any statement about fertility.</string>
     <string name="cycle_patterns_subtitle">How often each symptom was recorded in each phase. Counts only; nothing is diagnosed or predicted.</string>
     <string name="cycle_patterns_empty_title">No symptoms yet</string>
     <string name="cycle_patterns_empty_body">Patterns appear here as you log symptoms across your cycles.</string>
@@ -4014,4 +4063,16 @@
     <string name="settings_scales_delete_body">Its weight, heart rate and body composition are removed from Health Connect.</string>
     <string name="settings_scales_remove">Remove scale</string>
     <string name="settings_scales_remove_body">OpenVitals stops listening and forgets the key. Weigh-ins already saved stay.</string>
+    <string name="cycle_hormonal_title">Hormonal contraception</string>
+    <string name="cycle_hormonal_body">Hormonal methods can change the cycle and the temperature pattern. Only methods that use hormones are listed: copper IUDs, condoms and diaphragms do not use hormones, so they are not listed here. This is context for your cycle view, nothing more.</string>
+    <string name="cycle_hormonal_set_by_pill">Set to %1$s by your pill scheme. Turn the scheme off to choose another method.</string>
+    <string name="cycle_hormonal_stopped_on">Stopped on (optional; a future date counts as still running)</string>
+    <string name="cycle_hormonal_stopped_clear">Clear stop date</string>
+    <string name="cycle_hormonal_kind_none">None</string>
+    <string name="cycle_hormonal_kind_pill">Pill</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">Hormonal IUD (hormone coil)</string>
+    <string name="cycle_hormonal_kind_implant">Implant</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Ring or patch</string>
+    <string name="cycle_hormonal_kind_injection">Injection</string>
+    <string name="cycle_hormonal_kind_other">Other hormonal method</string>
 </resources>
