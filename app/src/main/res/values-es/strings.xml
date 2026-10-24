@@ -3545,6 +3545,11 @@
         <item quantity="other">Rango estimado a partir de %1$d ciclos registrados.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Esta estimación se basa solo en tu historial registrado y puede cambiar.</string>
+    <string name="cycle_estimate_basis_lh">Contado desde tu prueba de LH positiva del %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Contado desde tu subida de temperatura del %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Contado desde tu pico de moco del %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un segundo signo registrado coincide.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Tus signos registrados no coinciden, así que este rango usa tu historial de ciclos.</string>
     <string name="cycle_estimate_window_a11y">Rango estimado de %1$d días</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">En aproximadamente %1$d día</item>
@@ -3638,7 +3643,17 @@
     <string name="cycle_thermal_shift_confirmed">Se encontró un ascenso térmico sostenido en las temperaturas registradas.</string>
     <string name="cycle_thermal_coverline">Línea de cobertura mostrada como línea discontinua</string>
     <string name="cycle_thermal_empty">Registra un inicio de regla y temperaturas matinales para ver el gráfico térmico.</string>
+    <string name="cycle_skin_title">Temperatura de la piel y tu ciclo</string>
+    <string name="cycle_skin_intro">Los relojes y los anillos miden la temperatura de tu piel por la noche. Después de la ovulación suele ser algo más alta, unos 0,3 °C en un pequeño estudio con anillo. Los estudios lo leen a posteriori, a partir de todo el ciclo, nunca por adelantado.</string>
+    <string name="cycle_skin_accuracy" formatted="false">En un gran estudio con Apple Watch se estimó un día de ovulación en el 81 % de los ciclos con una subida de al menos 0,2 °C, y el 89 % de esas estimaciones estaba a 2 días como máximo del día hallado con pruebas de LH. Un estudio con anillo halló un error medio de 1,3 días, frente a 3,4 días al contar según el calendario. Son resultados del método propio de cada estudio; no valen para cualquier reloj ni cualquier método.</string>
+    <string name="cycle_skin_limits" formatted="false">• No ver una subida no significa que no hubo ovulación: en un estudio de 437 ciclos, una subida sostenida apareció en el 82 %.\n• Una subida también puede aparecer sin ovulación: un pequeño estudio de muñeca encontró subidas también en ciclos sin ovulación.\n• La fiebre o una enfermedad también elevan la temperatura de la piel.\n• La temperatura de la piel no es la temperatura central: en un estudio solo se correlacionaba moderadamente con la temperatura oral (r = 0,56).</string>
+    <string name="cycle_skin_note_hormonal">Has indicado un método hormonal o has dejado uno en los últimos dos meses. Los métodos hormonales actúan sobre el mismo ritmo de temperatura corporal del que trata esta tarjeta, y muchos de ellos detienen la ovulación (la liberación de un óvulo), a la que sigue el aumento de la temperatura. Por eso tu propia temperatura puede no mostrar un patrón claro de antes y después. El gran estudio de temperatura de muñeca excluyó a las personas con métodos hormonales y hasta dos meses después de dejarlos, así que sus resultados dicen poco sobre ti. Es información, no un consejo.</string>
+    <string name="cycle_skin_note_pcos">Has indicado SOP. No encontramos ningún estudio sobre la detección de la ovulación por temperatura en el SOP; lee cualquier patrón de temperatura con especial cautela.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals no usa la temperatura de la piel en sus estimaciones. Es información de contexto, no un método anticonceptivo ni una predicción de fertilidad, ni consejo médico.</string>
+    <string name="cycle_skin_show_details">Mostrar cifras y fuentes</string>
+    <string name="cycle_skin_hide_details">Ocultar detalles</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">Lo que encontraron los estudios sobre los métodos hormonales. En 27 usuarias de la píldora, el ritmo diario de la temperatura de la piel de la muñeca no difirió entre la fase pseudolútea y la pseudofolicular (semanas de píldora y semana sin píldora), mientras que sí lo hizo en 14 personas con ciclo natural. En 18 usuarias de la píldora, la temperatura oral matinal fue más alta en las semanas con píldoras activas (36,4 °C) que en la semana sin píldora (36,1 °C), y el aumento fue de la mano de la dosis de progestágeno. Una revisión describe los estrógenos como reductores y los progestágenos como elevadores, por lo general, de la temperatura corporal. Otra revisión sobre cómo actúan los métodos hormonales cita la inhibición de la ovulación y los cambios en el moco cervical entre los mecanismos principales de las píldoras combinadas y de los métodos solo con progestágeno. Los demás estudios aquí citados también dejaron fuera a quienes usaban hormonas: un estudio con anillo (Thigpen) retiró 6 ciclos con uso de hormonas, un estudio con anillo de dedo (Maijala) excluyó en su subestudio a usuarias de anticoncepción hormonal y el estudio de muñeca de 2021 (Zhu) incluyó solo a personas sin tratamiento hormonal. No encontramos ningún estudio de temperatura de la piel para otros métodos distintos de la píldora.</string>
     <string name="cycle_patterns_subtitle">Con qué frecuencia se registró cada síntoma en cada fase. Solo recuentos; nada se diagnostica ni se predice.</string>
     <string name="cycle_patterns_empty_title">Aún sin síntomas</string>
     <string name="cycle_patterns_empty_body">Los patrones aparecen aquí a medida que registras síntomas a lo largo de tus ciclos.</string>
@@ -3986,4 +4001,16 @@
     <string name="settings_scales_delete_body">Su peso, frecuencia cardiaca y composición corporal se eliminan de Health Connect.</string>
     <string name="settings_scales_remove">Quitar báscula</string>
     <string name="settings_scales_remove_body">OpenVitals deja de escuchar y olvida la clave. Los pesajes ya guardados se conservan.</string>
+    <string name="cycle_hormonal_title">Anticoncepción hormonal</string>
+    <string name="cycle_hormonal_body">Los métodos hormonales pueden cambiar el ciclo y el patrón de temperatura. Solo se listan los métodos con hormonas: el DIU de cobre, el preservativo y el diafragma no usan hormonas, por lo que no aparecen aquí. Es solo contexto para la vista del ciclo, nada más.</string>
+    <string name="cycle_hormonal_set_by_pill">Establecido en %1$s por tu pauta de píldora. Desactiva la pauta para elegir otro método.</string>
+    <string name="cycle_hormonal_stopped_on">Dejado el (opcional; una fecha futura cuenta como en uso)</string>
+    <string name="cycle_hormonal_stopped_clear">Borrar fecha de interrupción</string>
+    <string name="cycle_hormonal_kind_none">Ninguno</string>
+    <string name="cycle_hormonal_kind_pill">Píldora</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">DIU hormonal</string>
+    <string name="cycle_hormonal_kind_implant">Implante</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Anillo o parche</string>
+    <string name="cycle_hormonal_kind_injection">Inyección</string>
+    <string name="cycle_hormonal_kind_other">Otro método hormonal</string>
 </resources>
