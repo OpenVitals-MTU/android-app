@@ -3596,6 +3596,11 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
         <item quantity="other">Intervalo estimado a partir de %1$d ciclos rexistrados.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Esta estimación baséase só no teu historial rexistrado e pode cambiar.</string>
+    <string name="cycle_estimate_basis_lh">Contado desde a túa proba de LH positiva do %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Contado desde a túa suba de temperatura do %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Contado desde o teu pico de moco do %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un segundo sinal rexistrado coincide.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Os teus sinais rexistrados non coinciden, así que este intervalo usa o teu historial de ciclos.</string>
     <string name="cycle_estimate_window_a11y">Intervalo estimado de %1$d días</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Dentro duns %1$d día</item>
@@ -3684,6 +3689,15 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="cycle_thermal_shift_confirmed">Atopouse unha subida térmica sostida nas temperaturas rexistradas.</string>
     <string name="cycle_thermal_coverline">Liña de cobertura mostrada en trazos</string>
     <string name="cycle_thermal_empty">Rexistra un inicio de regra e temperaturas matinais para ver a gráfica térmica.</string>
+    <string name="cycle_skin_title">Temperatura da pel e o teu ciclo</string>
+    <string name="cycle_skin_intro">Os reloxos e os aneis miden a temperatura da túa pel pola noite. Despois da ovulación adoita ser algo máis alta, uns 0,3 °C nun pequeno estudo con anel. Os estudos lénno a posteriori, a partir de todo o ciclo, nunca por adiantado.</string>
+    <string name="cycle_skin_accuracy" formatted="false">Nun gran estudo con Apple Watch estimouse un día de ovulación no 81 % dos ciclos cunha subida de polo menos 0,2 °C, e o 89 % desas estimacións quedaba a 2 días como máximo do día achado con probas de LH. Un estudo con anel achou un erro medio de 1,3 días, fronte a 3,4 días ao contar polo calendario. Son resultados do método propio de cada estudo; non valen para calquera reloxo nin calquera método.</string>
+    <string name="cycle_skin_limits" formatted="false">• Non ver unha subida non significa que non houbese ovulación: nun estudo de 437 ciclos, unha subida sostida apareceu no 82 %.\n• Unha subida tamén pode aparecer sen ovulación: un pequeno estudo de pulso achou subidas tamén en ciclos sen ovulación.\n• A febre ou unha enfermidade tamén elevan a temperatura da pel.\n• A temperatura da pel non é a temperatura central: nun estudo só se correlacionaba moderadamente coa temperatura oral (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Rexistras a pílula. O gran estudo de temperatura no pulso excluíu persoas con anticoncepción hormonal e ata dous meses despois de deixala, así que os seus resultados din pouco sobre a túa temperatura.</string>
+    <string name="cycle_skin_note_pcos">Indicaches SOP. Non atopamos ningún estudo sobre a detección da ovulación por temperatura no SOP; le calquera patrón de temperatura con especial cautela.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals non usa a temperatura da pel nas súas estimacións. É información de contexto, non un método anticonceptivo nin unha predición de fertilidade, nin consello médico.</string>
+    <string name="cycle_skin_show_details">Mostrar cifras e fontes</string>
+    <string name="cycle_skin_hide_details">Agochar os detalles</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_patterns_subtitle">Cantas veces se rexistrou cada síntoma en cada fase. Só reconto; nada se diagnostica nin se predí.</string>
     <string name="cycle_patterns_empty_title">Aínda sen síntomas</string>

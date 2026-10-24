@@ -3545,6 +3545,11 @@
         <item quantity="other">Plage estimée à partir de %1$d cycles enregistrés.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Cette estimation repose uniquement sur votre historique enregistré et peut changer.</string>
+    <string name="cycle_estimate_basis_lh">Compté à partir de votre test LH positif du %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Compté à partir de votre montée de température du %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Compté à partir de votre pic de glaire du %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un deuxième signe enregistré concorde.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Vos signes enregistrés ne concordent pas, cette plage utilise donc l\'historique de vos cycles.</string>
     <string name="cycle_estimate_window_a11y">Plage estimée de %1$d jours</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Dans environ %1$d jour</item>
@@ -3638,6 +3643,15 @@
     <string name="cycle_thermal_shift_confirmed">Une hausse thermique durable a été trouvée dans les températures enregistrées.</string>
     <string name="cycle_thermal_coverline">Ligne de base affichée en pointillés</string>
     <string name="cycle_thermal_empty">Enregistrez un début de règles et des températures du matin pour voir la courbe thermique.</string>
+    <string name="cycle_skin_title">Température cutanée et cycle</string>
+    <string name="cycle_skin_intro">Les montres et les bagues mesurent la température de ta peau la nuit. Après l’ovulation, elle est en général un peu plus élevée, d’environ 0,3 °C dans une petite étude sur bague. Les études lisent cela après coup, sur l’ensemble du cycle, jamais à l’avance.</string>
+    <string name="cycle_skin_accuracy" formatted="false">Dans une grande étude sur Apple Watch, un jour d’ovulation a été estimé pour 81 % des cycles présentant une hausse d’au moins 0,2 °C, et 89 % de ces estimations tombaient à 2 jours au plus du jour trouvé par les tests LH. Une étude sur bague a trouvé une erreur moyenne de 1,3 jour, contre 3,4 jours en comptant d’après le calendrier. Ce sont les résultats de la méthode propre à chaque étude ; ils ne valent pas pour toutes les montres ni toutes les méthodes.</string>
+    <string name="cycle_skin_limits" formatted="false">• Ne pas voir de hausse ne signifie pas qu’il n’y a pas eu d’ovulation : dans une étude de 437 cycles, une hausse durable est apparue dans 82 % des cas.\n• Une hausse peut aussi apparaître sans ovulation : une petite étude au poignet a trouvé des hausses aussi dans des cycles sans ovulation.\n• La fièvre ou une maladie augmente aussi la température cutanée.\n• La température cutanée n’est pas la température centrale : dans une étude, elle ne corrélait que modérément avec la température orale (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Tu suis la pilule. La grande étude sur la température au poignet a exclu les personnes sous contraception hormonale et pendant deux mois après l’arrêt ; ses résultats disent donc peu de choses sur ta température.</string>
+    <string name="cycle_skin_note_pcos">Tu as indiqué un SOPK. Nous n’avons trouvé aucune étude sur la détection de l’ovulation par la température dans le SOPK ; lis donc toute courbe de température avec une prudence particulière.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals n’utilise pas la température cutanée pour ses estimations. Ce sont des informations générales, pas une méthode de contraception ni une prédiction de fertilité, et pas un avis médical.</string>
+    <string name="cycle_skin_show_details">Afficher les chiffres et les sources</string>
+    <string name="cycle_skin_hide_details">Masquer les détails</string>
     <string name="cycle_thermal_day_label">J%1$d</string>
     <string name="cycle_patterns_subtitle">La fréquence de chaque symptôme dans chaque phase. Des comptes seulement ; rien n’est diagnostiqué ni prédit.</string>
     <string name="cycle_patterns_empty_title">Pas encore de symptômes</string>

@@ -3539,6 +3539,11 @@
         <item quantity="other">Intervallo stimato da %1$d cicli registrati.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Questa stima si basa solo sulla tua cronologia registrata e può cambiare.</string>
+    <string name="cycle_estimate_basis_lh">Calcolato dal tuo test LH positivo del %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Calcolato dal tuo rialzo di temperatura del %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Calcolato dal tuo picco di muco del %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un secondo segno registrato concorda.</string>
+    <string name="cycle_estimate_basis_markers_disagree">I segni registrati non concordano, quindi questo intervallo usa la cronologia dei tuoi cicli.</string>
     <string name="cycle_estimate_window_a11y">Intervallo stimato di %1$d giorni</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Tra circa %1$d giorno</item>
@@ -3632,6 +3637,15 @@
     <string name="cycle_thermal_shift_confirmed">Nelle temperature registrate è stato trovato un rialzo termico sostenuto.</string>
     <string name="cycle_thermal_coverline">Linea di copertura mostrata tratteggiata</string>
     <string name="cycle_thermal_empty">Registra un inizio di mestruazioni e le temperature del mattino per vedere il grafico termico.</string>
+    <string name="cycle_skin_title">Temperatura cutanea e ciclo</string>
+    <string name="cycle_skin_intro">Orologi e anelli misurano di notte la temperatura della tua pelle. Dopo l’ovulazione tende a essere un po’ più alta, di circa 0,3 °C in un piccolo studio con anello. Gli studi la leggono a posteriori, sull’intero ciclo, mai in anticipo.</string>
+    <string name="cycle_skin_accuracy" formatted="false">In un grande studio con Apple Watch è stato stimato un giorno di ovulazione per l’81 % dei cicli con un aumento di almeno 0,2 °C, e l’89 % di queste stime era entro 2 giorni dal giorno trovato con i test LH. Uno studio con anello ha rilevato un errore medio di 1,3 giorni, contro 3,4 giorni contando dal calendario. Sono i risultati del metodo proprio di ogni studio; non valgono per ogni orologio né per ogni metodo.</string>
+    <string name="cycle_skin_limits" formatted="false">• Non vedere un aumento non significa che non ci sia stata ovulazione: in uno studio su 437 cicli un aumento sostenuto è comparso nell’82 %.\n• Un aumento può comparire anche senza ovulazione: un piccolo studio al polso ha trovato aumenti anche in cicli senza ovulazione.\n• Anche febbre o malattia aumentano la temperatura cutanea.\n• La temperatura cutanea non è la temperatura corporea centrale: in uno studio era correlata solo moderatamente con la temperatura orale (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Registri la pillola. Il grande studio sulla temperatura al polso ha escluso le persone con contraccezione ormonale e fino a due mesi dopo la sospensione, quindi i suoi risultati dicono poco sulla tua temperatura.</string>
+    <string name="cycle_skin_note_pcos">Hai indicato la PCOS. Non abbiamo trovato studi sul rilevamento dell’ovulazione tramite temperatura nella PCOS; leggi quindi ogni andamento della temperatura con particolare cautela.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals non usa la temperatura cutanea per le sue stime. Sono informazioni di contesto, non un metodo contraccettivo né una previsione della fertilità, e non un parere medico.</string>
+    <string name="cycle_skin_show_details">Mostra numeri e fonti</string>
+    <string name="cycle_skin_hide_details">Nascondi i dettagli</string>
     <string name="cycle_thermal_day_label">G%1$d</string>
     <string name="cycle_patterns_subtitle">Quante volte ogni sintomo è stato registrato in ogni fase. Solo conteggi; niente viene diagnosticato o previsto.</string>
     <string name="cycle_patterns_empty_title">Ancora nessun sintomo</string>
