@@ -20,6 +20,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleStatistics
+import tech.mmarca.openvitals.domain.cycle.NightlyVitals
+import tech.mmarca.openvitals.domain.usecase.LoadCycleNightlyVitalsUseCase
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
@@ -52,6 +54,10 @@ data class CycleUiState(
     val statistics: CycleStatistics? = null,
     val journalEntries: List<CycleJournalEntry> = emptyList(),
     val missingPermissions: Set<String> = emptySet(),
+    /** The current cycle's nightly signals, or null before they loaded or without a current cycle. */
+    val nightly: NightlyVitals? = null,
+    /** The optional overnight reads not granted yet; the card offers a button while this is not empty. */
+    val missingNightlyPermissions: Set<String> = emptySet(),
     val error: ScreenError? = null,
 )
 
@@ -67,6 +73,7 @@ class CycleViewModel @Inject constructor(
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
+    private val nightlyVitals: LoadCycleNightlyVitalsUseCase? = null,
 ) : ViewModel() {
 
     private val initialDate = savedStateHandle.selectedDayOrNull()
@@ -86,6 +93,10 @@ class CycleViewModel @Inject constructor(
     )
     val uiState: StateFlow<CycleUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
+    private val nightlyCoordinator = LoadCoordinator()
+
+    /** The cycle start and day the overnight values on screen were read for. */
+    private var nightlyLoadedFor: Pair<LocalDate, LocalDate>? = null
 
     val cyclePermissions: Set<String> get() = repository.phase4Permissions
 
@@ -105,37 +116,52 @@ class CycleViewModel @Inject constructor(
 
     fun previousPeriod() {
         applyPeriodSelection(periodDriver.previousPeriod())
-        load()
+        loadPeriod(forceNightly = false)
     }
 
     fun nextPeriod() {
         periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
-            load()
+            loadPeriod(forceNightly = false)
         }
     }
 
     /** Moves the calendar to the month holding [date]. There is no day view to drill into. */
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodDriver.selectDate(date))
-        load()
+        loadPeriod(forceNightly = false)
     }
 
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) loadPeriod(forceNightly = false)
             return
         }
         applyPeriodSelection(selection)
-        load()
+        loadPeriod(forceNightly = false)
     }
 
     fun onCyclePermissionsResult(granted: Set<String>) {
         load()
     }
 
-    fun load() {
+    /** The optional overnight reads were asked for: read them again, whatever the answer. */
+    fun onNightlyPermissionsResult() {
+        load()
+    }
+
+    /** What the nightly card's button asks Health Connect for. */
+    val nightlyPermissions: Set<String> get() = repository.cycleNightlyPermissions
+
+    /** A full reload, the overnight values included (pull to refresh, a saved entry, a grant). */
+    fun load() = loadPeriod(forceNightly = true)
+
+    /**
+     * Month navigation reloads the calendar only: the overnight values are of the current
+     * cycle, which a browsed month does not change, so they are not read again.
+     */
+    private fun loadPeriod(forceNightly: Boolean) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -158,6 +184,7 @@ class CycleViewModel @Inject constructor(
                         journalEntries = result.journalEntries,
                         allJournalEntries = result.allJournalEntries,
                         currentCycleTemperatures = result.currentCycleTemperatures,
+                        currentCycleSkinTemperature = result.currentCycleSkinTemperature,
                         profile = profile,
                         pill = pill,
                     )
@@ -172,6 +199,7 @@ class CycleViewModel @Inject constructor(
                     journalEntries = result.journalEntries,
                     missingPermissions = result.missingPermissions,
                 )
+                loadNightly(result.statistics?.currentCycle?.startDate, forceNightly)
             }.onFailure { error ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -180,6 +208,30 @@ class CycleViewModel @Inject constructor(
                     error = error.toScreenError(),
                 )
             }
+        }
+    }
+
+    /**
+     * The overnight signals are read after the screen shows, so the slow Health Connect
+     * reads never hold the calendar back. They never feed the estimate.
+     */
+    private fun loadNightly(cycleStart: LocalDate?, force: Boolean) {
+        val useCase = nightlyVitals
+        if (useCase == null || cycleStart == null) {
+            // No current cycle: whatever was reading is for a cycle that is gone.
+            nightlyCoordinator.cancel()
+            nightlyLoadedFor = null
+            _uiState.value = _uiState.value.copy(nightly = null, missingNightlyPermissions = emptySet())
+            return
+        }
+        val key = cycleStart to LocalDate.now()
+        if (!force && nightlyLoadedFor == key && _uiState.value.nightly != null) return
+        nightlyCoordinator.launch(viewModelScope) load@{
+            val missing = runCatching { repository.missingNightlyPermissions() }.getOrDefault(emptySet())
+            val vitals = withContext(dispatchers.default) { useCase(cycleStart) }
+            if (!isCurrent) return@load
+            nightlyLoadedFor = key
+            _uiState.value = _uiState.value.copy(nightly = vitals, missingNightlyPermissions = missing)
         }
     }
 

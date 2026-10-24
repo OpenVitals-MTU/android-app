@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 
 interface HeartRepository {
@@ -34,6 +35,12 @@ interface HeartRepository {
     suspend fun loadRestingHeartRate(date: LocalDate): Long?
 
     suspend fun loadDailyRestingHR(start: LocalDate, end: LocalDate): List<DailyRestingHR>
+
+    /**
+     * The resting heart rate records in the window, one sample each, not averaged. Empty
+     * without the read permission.
+     */
+    suspend fun loadRestingHeartRateSamples(start: Instant, end: Instant): List<RestingHeartRateSample>
 
     /** The day's HRV as the Day view shows it: raw samples, minute-bucketed. */
     suspend fun loadHrvRmssd(date: LocalDate): Double?

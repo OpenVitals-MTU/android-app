@@ -10,6 +10,8 @@ import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
@@ -42,7 +44,11 @@ class CycleJournalExportTest {
         CycleJournalEntry(date = LocalDate.of(2026, 7, 11), painLevel = 1, updatedAt = Instant.parse("2026-07-11T21:00:00Z")),
     )
     private val exclusions = mapOf(LocalDate.of(2026, 5, 3) to CycleExclusionReason.ILLNESS, LocalDate.of(2026, 3, 1) to null)
-    private val profile = CycleTrackingProfile(contexts = setOf(TrackingContext.PMS, TrackingContext.PCOS), ageBand = AgeBand.AGE_30_34)
+    private val profile = CycleTrackingProfile(
+        contexts = setOf(TrackingContext.PMS, TrackingContext.PCOS),
+        ageBand = AgeBand.AGE_30_34,
+        hormonalContraception = HormonalContraception(HormonalContraceptionKind.OTHER_HORMONAL, LocalDate.of(2026, 6, 30)),
+    )
 
     @Test
     fun `the file round-trips entries, exclusions and the profile`() {

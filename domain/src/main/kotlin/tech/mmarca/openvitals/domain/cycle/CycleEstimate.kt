@@ -16,9 +16,28 @@ data class CycleEstimate(
     val cycleCount: Int,
     /** Spread of the intervals used, longest minus shortest. */
     val variabilityDays: Int,
+    val basis: CycleEstimateBasis = CycleEstimateBasis.Calendar(),
 ) {
     val window: ClosedRange<LocalDate>
         get() = earliestDate..latestDate
+}
+
+/** What the estimate counts from. */
+sealed interface CycleEstimateBasis {
+    /** Start-to-start intervals. [markersDisagree] when recorded markers were set aside. */
+    data class Calendar(val markersDisagree: Boolean = false) : CycleEstimateBasis
+
+    /**
+     * A marker recorded in the current cycle plus the interval from that marker to
+     * the next start. [confirmedBy] lists the markers that agree with the temperature
+     * shift, the shift included; empty when one marker stands alone.
+     */
+    data class Marker(
+        val anchor: OvulationMarker,
+        val anchorDate: LocalDate,
+        val confirmedBy: Set<OvulationMarker>,
+        val intervalCount: Int,
+    ) : CycleEstimateBasis
 }
 
 /**
@@ -84,13 +103,25 @@ object CycleEstimateCalculator {
     /**
      * @param ageBand selects the variability prior; null uses the undeclared value.
      * @param hasTimingContext floors the variance at the prior. It can only widen.
+     * @param markers the ovulation markers per cycle, keyed by cycle start. A marker in
+     *   the current cycle replaces the calendar estimate; see [MarkerEstimate].
      */
     fun evaluate(
         cycles: List<RecordedCycle>,
         ageBand: AgeBand? = null,
         hasTimingContext: Boolean = false,
+        markers: Map<LocalDate, Map<OvulationMarker, LocalDate>> = emptyMap(),
     ): CycleEstimateResult {
         val sorted = cycles.sortedBy { it.startDate }
+        val calendar = calendarEstimate(sorted, ageBand, hasTimingContext)
+        return when (val marker = MarkerEstimate.evaluate(sorted, markers, hasTimingContext)) {
+            null -> calendar
+            MarkerEstimate.Disagreement -> calendar.withBasis(CycleEstimateBasis.Calendar(markersDisagree = true))
+            is MarkerEstimate.Estimate -> CycleEstimateResult.Available(marker.estimate)
+        }
+    }
+
+    private fun calendarEstimate(sorted: List<RecordedCycle>, ageBand: AgeBand?, hasTimingContext: Boolean): CycleEstimateResult {
         if (sorted.map { it.startDate }.distinct().size < MINIMUM_INTERVALS + 1) {
             return CycleEstimateResult.NeedsMoreHistory
         }
@@ -101,11 +132,16 @@ object CycleEstimateCalculator {
         val averageLength = recent.average().roundToInt()
         // Persistence is defined over ten cycles, so it is judged on the wider list.
         val highVariability = hasPersistentVariability(lengths)
+        val priorSd = ageBand?.variationSdDays ?: AgeBand.UNDECLARED_VARIATION_SD_DAYS
         val radius = rangeRadiusDays(
-            lengths = recent,
-            highVariability = highVariability,
+            variance = shrunkVariance(
+                lengths = recent,
+                priorVariance = priorSd * priorSd,
+                priorWeight = if (highVariability) PRIOR_WEIGHT_HIGH_VARIABILITY else PRIOR_WEIGHT,
+            ),
+            priorVariance = priorSd * priorSd,
             hasTimingContext = hasTimingContext,
-            priorSdDays = ageBand?.variationSdDays ?: AgeBand.UNDECLARED_VARIATION_SD_DAYS,
+            minimumDays = MINIMUM_RANGE_RADIUS_DAYS,
         )
         val last = sorted.last()
         val central = last.startDate.plusDays(averageLength.toLong())
@@ -146,37 +182,35 @@ object CycleEstimateCalculator {
     }
 
     /** The window never starts inside recorded flow. */
-    private fun earliestFloor(cycle: RecordedCycle): LocalDate {
+    internal fun earliestFloor(cycle: RecordedCycle): LocalDate {
         val afterFlow = cycle.lastFlowDay?.plusDays(1)
         return if (afterFlow != null && afterFlow.isAfter(cycle.startDate)) afterFlow else cycle.startDate
     }
 
     /**
-     * Half-width of the window: the sample variance shrunk toward the prior,
-     * then a 95% band. A range divided by two is not a dispersion estimate and
-     * understated uncertainty most when history was thinnest.
+     * The sample variance shrunk toward the prior. A range divided by two is not
+     * a dispersion estimate and understated uncertainty most when history was thinnest.
      */
-    private fun rangeRadiusDays(
-        lengths: List<Int>,
-        highVariability: Boolean,
-        hasTimingContext: Boolean,
-        priorSdDays: Double,
-    ): Int {
+    internal fun shrunkVariance(lengths: List<Int>, priorVariance: Double, priorWeight: Double = PRIOR_WEIGHT): Double {
         val n = lengths.size
-        val priorVariance = priorSdDays * priorSdDays
-        val shrunkVariance = if (n < 2) {
-            priorVariance
-        } else {
-            val mean = lengths.average()
-            val sampleVariance = lengths.sumOf { (it - mean) * (it - mean) } / (n - 1)
-            val priorWeight = if (highVariability) PRIOR_WEIGHT_HIGH_VARIABILITY else PRIOR_WEIGHT
-            val sampleWeight = (n - 1).toDouble()
-            (sampleWeight * sampleVariance + priorWeight * priorVariance) / (sampleWeight + priorWeight)
-        }
+        if (n < 2) return priorVariance
+        val mean = lengths.average()
+        val sampleVariance = lengths.sumOf { (it - mean) * (it - mean) } / (n - 1)
+        val sampleWeight = (n - 1).toDouble()
+        return (sampleWeight * sampleVariance + priorWeight * priorVariance) / (sampleWeight + priorWeight)
+    }
+
+    /** Half-width of a 95% window on [variance], at least [minimumDays]. */
+    internal fun rangeRadiusDays(
+        variance: Double,
+        priorVariance: Double,
+        hasTimingContext: Boolean,
+        minimumDays: Int,
+    ): Int {
         // A declared timing context guarantees at least population-level uncertainty.
-        val flooredVariance = if (hasTimingContext) max(shrunkVariance, priorVariance) else shrunkVariance
+        val flooredVariance = if (hasTimingContext) max(variance, priorVariance) else variance
         val radius = ceil(WINDOW_Z * sqrt(flooredVariance)).toInt()
-        return radius.coerceIn(MINIMUM_RANGE_RADIUS_DAYS, MAXIMUM_RANGE_RADIUS_DAYS)
+        return radius.coerceIn(minimumDays, MAXIMUM_RANGE_RADIUS_DAYS)
     }
 
     /**
@@ -201,3 +235,6 @@ object CycleEstimateCalculator {
         return excursions >= PERSISTENCE_MIN_OCCURRENCES
     }
 }
+
+private fun CycleEstimateResult.withBasis(basis: CycleEstimateBasis): CycleEstimateResult =
+    if (this is CycleEstimateResult.Available) CycleEstimateResult.Available(estimate.copy(basis = basis)) else this
