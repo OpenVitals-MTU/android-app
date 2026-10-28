@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
+import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,12 +47,16 @@ fun CycleScreen(
         viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
+    val nightlyPermissionLauncher = rememberHealthConnectPermissionLauncher(
+        onResult = viewModel::onNightlyPermissionsResult,
+    )
     val actions = CycleContentActions(
         onOpenDayLog = onLogCycleEntry,
         onChooseLog = onChooseCycleEntry,
         onTogglePillTaken = viewModel::setPillTaken,
         onAddPastPeriod = { showBackfill = true },
         onOpenSettings = onOpenCycleSettings,
+        onAllowNightlyReading = { nightlyPermissionLauncher.launch(viewModel.nightlyPermissions) },
         onManageExclusion = { exclusionTarget = it },
         onRequestDelete = { deleteTarget = it },
     )

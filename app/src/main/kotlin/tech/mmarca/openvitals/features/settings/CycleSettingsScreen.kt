@@ -83,6 +83,16 @@ fun CycleSettingsScreen(
         }
         item { SettingsCardSpacer() }
         item {
+            CycleHormonalContraceptionCard(
+                hormonal = state.profile.hormonalContraception,
+                setByPillScheme = state.pill.enabled,
+                onSelectKind = viewModel::setHormonalKind,
+                onSetStoppedOn = viewModel::setHormonalStoppedOn,
+                modifier = gutter,
+            )
+        }
+        item { SettingsCardSpacer() }
+        item {
             CycleRemindersCard(
                 state = state,
                 viewModel = viewModel,
