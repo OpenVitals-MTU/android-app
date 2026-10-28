@@ -64,6 +64,14 @@ class WearLinkSession internal constructor(
         }
     }
 
+    /** One live window of up to [seconds]: hands each reading to [onSample] as it arrives; the count when it ends. */
+    fun liveHeartRate(seconds: Int, onSample: (WearLinkProtocol.HeartRateSample) -> Unit): WearLinkOutcome<Int> =
+        exchange(WearLinkProtocol.Request.LiveHeartRate(seconds)) { line ->
+            WearLinkProtocol.parseSample(line)?.let { onSample(it); return@exchange Reply.More }
+            WearLinkProtocol.parseEnd(line)?.let { return@exchange Reply.Done(it.count) }
+            Reply.Unexpected
+        }
+
     /** Closes the connection; the watch is waiting for exactly this. */
     fun close() = connection.close()
 

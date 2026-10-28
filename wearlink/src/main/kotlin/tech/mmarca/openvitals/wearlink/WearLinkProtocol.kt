@@ -29,6 +29,10 @@ import java.util.UUID
  *   each newer than `epochMillis` (exclusive), then `END <count> <more>`.
  * - `SM_SINCE <epochMillis> <limit>` → up to `limit` `SM` lines, oldest first,
  *   each newer than `epochMillis` (exclusive), then `END <count> <more>`.
+ * - `HR_LIVE <seconds>` → for up to `seconds` (at most [MAX_LIVE_SECONDS],
+ *   less than the watch's idle timeout), one `HR` line as each reading
+ *   arrives, then `END <count> 0`. Only a watch announcing `hl` serves it; a
+ *   watch off the wrist answers `END 0 0` at once. Nothing is stored for it.
  *
  * Reply lines:
  * - `HR <epochMillis> <bpm>` — one heart rate sample.
@@ -76,6 +80,7 @@ object WearLinkProtocol {
     const val STEP_MINUTE: String = "ST"
     const val ASCENT_SINCE: String = "AS_SINCE"
     const val ASCENT_MINUTE: String = "AS"
+    const val HEART_RATE_LIVE: String = "HR_LIVE"
     const val END: String = "END"
 
     /** Longer than this a line is a protocol violation; the reader closes rather than buffers. */
@@ -88,6 +93,7 @@ object WearLinkProtocol {
     const val CAP_SLEEP_MINUTES: String = "sm"
     const val CAP_STEPS: String = "st"
     const val CAP_ASCENT: String = "as"
+    const val CAP_LIVE_HEART_RATE: String = "hl"
     const val NO_CAPABILITIES: String = "-"
 
     /** The phone's opening line. */
@@ -131,6 +137,7 @@ object WearLinkProtocol {
         data class SleepMinutesSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class StepsSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class AscentSince(val sinceEpochMillis: Long, val limit: Int) : Request()
+        data class LiveHeartRate(val seconds: Int) : Request()
     }
 
     fun formatHello(hello: Hello): String =
@@ -187,6 +194,7 @@ object WearLinkProtocol {
         is Request.SleepMinutesSince -> formatSleepMinutesRequest(request.sinceEpochMillis, request.limit)
         is Request.StepsSince -> formatStepsRequest(request.sinceEpochMillis, request.limit)
         is Request.AscentSince -> formatAscentRequest(request.sinceEpochMillis, request.limit)
+        is Request.LiveHeartRate -> "$HEART_RATE_LIVE ${request.seconds.coerceIn(1, MAX_LIVE_SECONDS)}"
     }
 
     /** Null unless [line] is a well-formed request. */
@@ -200,7 +208,15 @@ object WearLinkProtocol {
         parseSinceRequest(line, ASCENT_SINCE, MAX_ASCENT_MINUTES_PER_REQUEST)?.let { (since, limit) ->
             return Request.AscentSince(since, limit)
         }
+        parseLiveRequest(line)?.let { return Request.LiveHeartRate(it) }
         return null
+    }
+
+    private fun parseLiveRequest(line: String): Int? {
+        val fields = fields(line)
+        if (fields.size != 2 || fields[0] != HEART_RATE_LIVE) return null
+        val seconds = fields[1].toIntOrNull() ?: return null
+        return if (seconds < 1) null else seconds.coerceAtMost(MAX_LIVE_SECONDS)
     }
 
     private fun formatCapabilities(capabilities: Set<String>): String =
@@ -230,6 +246,9 @@ object WearLinkProtocol {
 
     /** The most step minutes one `ST_SINCE` reply carries. The phone pages past it. */
     const val MAX_STEP_MINUTES_PER_REQUEST: Int = 2000
+
+    /** The longest one `HR_LIVE` runs: below the watch's 15-second idle timeout. The phone asks again. */
+    const val MAX_LIVE_SECONDS: Int = 10
 
     /** The most ascent minutes one `AS_SINCE` reply carries. The phone pages past it. */
     const val MAX_ASCENT_MINUTES_PER_REQUEST: Int = 2000

@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.devices.wearos
 
 import java.time.Instant
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,6 +25,24 @@ private class FakeWearOsNodePort : WearOsNodePort {
     override suspend fun pullSleepMinutes(targetAddress: String?, targetName: String?, since: Instant): WearOsSleepMinutePage? = null
     override suspend fun pullSteps(targetAddress: String?, targetName: String?, since: Instant): WearOsStepPage? = null
     override suspend fun pullAscent(targetAddress: String?, targetName: String?, since: Instant): WearOsAscentPage? = null
+
+    /** One entry per live session: the readings it hands out, then whether the watch could stream; a failure throws. */
+    val liveSessions = ArrayDeque<Pair<List<Int>, Boolean>>()
+    var liveFailures = 0
+
+    override suspend fun liveHeartRate(
+        targetAddress: String?,
+        targetName: String?,
+        onSample: (WearOsHeartRateSample) -> Unit,
+    ): Boolean {
+        if (liveFailures > 0) {
+            liveFailures--
+            throw WearOsLinkFailure.NoAnswer()
+        }
+        val (readings, supported) = liveSessions.removeFirstOrNull() ?: (emptyList<Int>() to false)
+        readings.forEach { onSample(WearOsHeartRateSample(Instant.EPOCH, it)) }
+        return supported
+    }
 }
 
 class WearOsCompanionManagerTest {
@@ -88,5 +107,25 @@ class WearOsCompanionManagerTest {
         assertEquals(WearOsAppStatus.APP_RUNNING, status.appStatus)
         assertTrue(status.isAppRunning)
         assertEquals("Pixel Watch 3", status.connectedNodeName)
+    }
+
+    @Test
+    fun `live heart rate pauses between sessions and ends when the watch cannot stream`() = runTest {
+        fakePort.liveSessions += listOf(72, 74) to true
+        fakePort.liveSessions += listOf(80) to true
+        // The watch app answered without `hl`: the flow ends.
+        fakePort.liveSessions += emptyList<Int>() to false
+
+        val seen = manager.liveHeartRate("A8:D1:62:BE:3A:3B", null).toList()
+
+        assertEquals(listOf(72, 74, null, 80, null, null), seen)
+    }
+
+    @Test
+    fun `a link failure is retried, not the end`() = runTest {
+        fakePort.liveFailures = 1
+        fakePort.liveSessions += listOf(66) to false
+
+        assertEquals(listOf(null, 66, null), manager.liveHeartRate(null, "Galaxy Watch8").toList())
     }
 }

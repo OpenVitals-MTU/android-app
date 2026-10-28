@@ -23,10 +23,11 @@ class WearLinkServerHost(
     private val adapter: () -> BluetoothAdapter?,
     trust: WearTrustStore,
     store: MetricStore,
+    live: LiveHeartRate,
     private val localName: () -> String,
     private val state: WearLinkState = WearLinkState,
 ) {
-    private val server = WearLinkServer(trust, Handler(store, localName))
+    private val server = WearLinkServer(trust, Handler(store, live, localName))
 
     @Volatile
     private var serverSocket: BluetoothServerSocket? = null
@@ -107,11 +108,14 @@ class WearLinkServerHost(
 
     private class Handler(
         private val store: MetricStore,
+        private val live: LiveHeartRate,
         private val localName: () -> String,
     ) : WearLinkRequestHandler {
         override fun localName(): String = localName.invoke()
 
-        override fun capabilities(): Set<String> = WearMetrics.ALL.mapTo(LinkedHashSet()) { it.key }
+        override fun capabilities(): Set<String> = WearMetrics.ALL.mapTo(LinkedHashSet()) { it.key }.apply {
+            if (live.hasSensor) add(WearLinkProtocol.CAP_LIVE_HEART_RATE)
+        }
 
         override fun heartRateSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.HeartRateSample> =
             page(WearMetrics.HEART_RATE, sinceEpochMillis, limit)
@@ -124,6 +128,9 @@ class WearLinkServerHost(
 
         override fun ascentSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.AscentMinute> =
             page(WearMetrics.ASCENT, sinceEpochMillis, limit)
+
+        override fun liveHeartRate(seconds: Int, emit: (WearLinkProtocol.HeartRateSample) -> Unit): Int =
+            live.window(seconds, emit)
 
         private fun <T> page(metric: WearMetric<T>, sinceEpochMillis: Long, limit: Int): Page<T> {
             // One more than asked tells whether the limit cut the reply.

@@ -88,10 +88,7 @@ class HeartRateRecorder(
         val at = SensorTime.epochMillisOf(event.timestamp)
         // The cached reading handed to a new listener carries the time the sensor last ran.
         if (SensorTime.isStale(at)) return
-        if (event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT ||
-            event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
-            bpm !in WearLinkProtocol.MIN_BPM..WearLinkProtocol.MAX_BPM
-        ) {
+        if (!isUsableHeartRate(event.accuracy, bpm)) {
             noteSkipped(event.accuracy, bpm)
             onContact(at, false)
             return
@@ -144,3 +141,9 @@ class HeartRateRecorder(
         const val SKIP_LOG_EVERY_MILLIS = 60_000L
     }
 }
+
+/** False for no contact, an unreliable reading, or a rate outside what a heart does. */
+internal fun isUsableHeartRate(accuracy: Int, bpm: Int): Boolean =
+    accuracy != SensorManager.SENSOR_STATUS_NO_CONTACT &&
+        accuracy != SensorManager.SENSOR_STATUS_UNRELIABLE &&
+        bpm in WearLinkProtocol.MIN_BPM..WearLinkProtocol.MAX_BPM
