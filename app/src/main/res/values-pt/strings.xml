@@ -3536,6 +3536,11 @@
         <item quantity="other">Intervalo estimado a partir de %1$d ciclos registados.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Esta estimativa baseia-se apenas no teu histórico registado e pode mudar.</string>
+    <string name="cycle_estimate_basis_lh">Contado a partir do teu teste de LH positivo de %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Contado a partir da tua subida de temperatura de %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Contado a partir do teu pico de muco de %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Um segundo sinal registado concorda.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Os teus sinais registados não concordam, por isso este intervalo usa o teu histórico de ciclos.</string>
     <string name="cycle_estimate_window_a11y">Intervalo estimado de %1$d dias</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Daqui a cerca de %1$d dia</item>

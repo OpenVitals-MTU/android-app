@@ -3521,6 +3521,11 @@
         <item quantity="other">Vahemik on hinnatud %1$d salvestatud tsükli põhjal.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">See hinnang põhineb ainult sinu salvestatud ajalool ja võib muutuda.</string>
+    <string name="cycle_estimate_basis_lh">Arvestatud sinu positiivsest LH-testist %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Arvestatud sinu temperatuuritõusust %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Arvestatud sinu limatipust %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Teine salvestatud tunnus on sellega kooskõlas.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Sinu salvestatud tunnused on vastuolus, seega kasutab see vahemik sinu tsüklite ajalugu.</string>
     <string name="cycle_estimate_window_a11y">Hinnanguline vahemik %1$d päeva</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Umbes %1$d päeva pärast</item>

@@ -3527,6 +3527,11 @@
         <item quantity="other">根据 %1$d 个已记录周期预估的范围。</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">此预估仅基于你记录的历史，可能会变化。</string>
+    <string name="cycle_estimate_basis_lh">从 %1$s 的 LH 检测阳性起算。</string>
+    <string name="cycle_estimate_basis_temperature">从 %1$s 的体温升高起算。</string>
+    <string name="cycle_estimate_basis_mucus">从 %1$s 的宫颈黏液高峰起算。</string>
+    <string name="cycle_estimate_basis_confirmed">另一项记录的体征与之一致。</string>
+    <string name="cycle_estimate_basis_markers_disagree">记录的体征相互矛盾，因此该范围依据你的周期历史。</string>
     <string name="cycle_estimate_window_a11y">预估范围 %1$d 天</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">约 %1$d 天后</item>
