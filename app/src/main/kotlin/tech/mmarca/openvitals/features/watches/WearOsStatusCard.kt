@@ -48,6 +48,8 @@ internal fun WearOsStatusCard(
     isChecking: Boolean,
     onCheck: () -> Unit,
     onGrantBluetooth: () -> Unit,
+    /** The heart rate the watch streams while this screen is open; null while none arrives. */
+    liveHeartRateBpm: Int? = null,
 ) {
     val context = LocalContext.current
     if (error == ScreenError.PermissionDenied) {
@@ -121,6 +123,12 @@ internal fun WearOsStatusCard(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
+                )
+            }
+            liveHeartRateBpm?.let { bpm ->
+                Text(
+                    text = stringResource(R.string.settings_watch_live_now, bpm),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
             if (status.bondLost || status.appStatus == WearOsAppStatus.NOT_PAIRED) {
@@ -243,10 +251,12 @@ internal fun WearOsSyncCard(
                     val stepsLine = stringResource(R.string.settings_watch_wearos_needs_steps_write)
                     val caloriesLine = stringResource(R.string.settings_watch_wearos_needs_calories_write)
                     val weightLine = stringResource(R.string.settings_watch_wearos_needs_weight_read)
+                    val restingHeartRateLine = stringResource(R.string.settings_watch_wearos_needs_resting_heart_rate)
                     InlineGrantPrompt(
                         message = listOfNotNull(
                             stepsLine.takeIf { UnwrittenSeries.STEPS in unwritten },
                             caloriesLine.takeIf { UnwrittenSeries.WALKING_ENERGY in unwritten },
+                            restingHeartRateLine.takeIf { UnwrittenSeries.RESTING_HEART_RATE in unwritten },
                             weightLine.takeIf { weightUnreadable },
                         ).joinToString("\n"),
                         actionLabel = stringResource(R.string.action_grant_permission),

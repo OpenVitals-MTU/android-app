@@ -19,9 +19,9 @@ import java.util.TimeZone
 /**
  * Records the sleep pipeline's input, one row per clock minute, into the
  * [MetricStore]. The math is [MinuteAggregator]'s; this class is the
- * Android around it: the batched accelerometer, the off-body sensor, the
- * charger and screen broadcasts, and the heart rate the other recorder
- * hands over. Runs inside `WearAppService`, so it outlives the activity.
+ * Android around it: the batched accelerometer, the charger and screen
+ * broadcasts, and what the other recorders hand over: the heart rate, and
+ * whether the watch is worn ([WornMonitor]). Runs inside `WearAppService`, so it outlives the activity.
  *
  * The accelerometer needs no permission. It is registered batched at five
  * readings a second with the same report latency as the heart rate, so the
@@ -93,10 +93,6 @@ class SleepMinuteRecorder(
             Log.w(TAG, "Accelerometer listener not registered")
             return false
         }
-        // Optional: not every watch exposes it, and without it the heart rate tells.
-        sensorManager.getDefaultSensor(Sensor.TYPE_LOW_LATENCY_OFFBODY_DETECT, true)?.let { offBody ->
-            sensorManager.registerListener(this, offBody, SensorManager.SENSOR_DELAY_NORMAL, workerHandler)
-        }
         // The sticky battery broadcast seeds the charging state; the two power actions follow it.
         val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
@@ -139,6 +135,17 @@ class SleepMinuteRecorder(
         handler?.post { aggregator.onHeartRate(epochMillis, bpm) }
     }
 
+    /** The off-body sensor's reading. Any thread. Without that sensor, the heart rate tells. */
+    fun noteWorn(epochMillis: Long, worn: Boolean) {
+        if (SensorTime.isStale(epochMillis)) return
+        handler?.post {
+            this.worn = worn
+            aggregator.onWorn(epochMillis, worn)
+            applyHold()
+            closeMinutes(System.currentTimeMillis())
+        }
+    }
+
     /** The heart rate sensor lost contact with the wrist. Any thread. */
     fun noteHeartRateContact(epochMillis: Long, contact: Boolean) {
         handler?.post { aggregator.onHeartRateContact(epochMillis, contact) }
@@ -147,24 +154,13 @@ class SleepMinuteRecorder(
     override fun onSensorChanged(event: SensorEvent) {
         val at = SensorTime.epochMillisOf(event.timestamp)
         if (SensorTime.isStale(at)) return
-        when (event.sensor.type) {
-            Sensor.TYPE_ACCELEROMETER -> {
-                if (event.values.size < 3) return
-                aggregator.onAcceleration(
-                    at,
-                    event.values[0] / GRAVITY,
-                    event.values[1] / GRAVITY,
-                    event.values[2] / GRAVITY,
-                )
-            }
-            Sensor.TYPE_LOW_LATENCY_OFFBODY_DETECT -> {
-                // 1 on the body, 0 off it.
-                worn = (event.values.firstOrNull() ?: 1f) >= 0.5f
-                aggregator.onWorn(at, worn)
-                applyHold()
-            }
-            else -> return
-        }
+        if (event.sensor.type != Sensor.TYPE_ACCELEROMETER || event.values.size < 3) return
+        aggregator.onAcceleration(
+            at,
+            event.values[0] / GRAVITY,
+            event.values[1] / GRAVITY,
+            event.values[2] / GRAVITY,
+        )
         closeMinutes(System.currentTimeMillis())
     }
 

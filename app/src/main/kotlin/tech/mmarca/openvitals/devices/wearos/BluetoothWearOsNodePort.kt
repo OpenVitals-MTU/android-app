@@ -113,6 +113,45 @@ class BluetoothWearOsNodePort @Inject constructor(
         }
     }
 
+    override suspend fun pullAscent(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsAscentPage? = withContext(Dispatchers.IO) {
+        val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext null
+        withSession(match, targetAddress, PULL_TIMEOUT_MS) { session ->
+            // A watch app from before ascent would answer the request with an error.
+            if (WearLinkProtocol.CAP_ASCENT !in session.peer.capabilities) return@withSession WearOsAscentPage(emptyList(), false)
+            val page = unwrap(session.pullAscent(since.toEpochMilli(), WearLinkProtocol.MAX_ASCENT_MINUTES_PER_REQUEST))
+            WearOsAscentPage(
+                minutes = page.items.map { WearOsAscentMinute(Instant.ofEpochMilli(it.epochMillis), it.decimetres / 10.0) },
+                hasMore = page.more,
+            )
+        }
+    }
+
+    override suspend fun liveHeartRate(
+        targetAddress: String?,
+        targetName: String?,
+        onSample: (WearOsHeartRateSample) -> Unit,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext false
+        withSession(match, targetAddress, LIVE_SESSION_MS + PING_TIMEOUT_MS) { session ->
+            if (WearLinkProtocol.CAP_LIVE_HEART_RATE !in session.peer.capabilities) return@withSession false
+            val started = System.currentTimeMillis()
+            // One window after another on the same connection, each shorter than the watch's idle timeout.
+            while (System.currentTimeMillis() - started < LIVE_SESSION_MS) {
+                val count = unwrap(
+                    session.liveHeartRate(WearLinkProtocol.MAX_LIVE_SECONDS) {
+                        onSample(WearOsHeartRateSample(Instant.ofEpochMilli(it.epochMillis), it.bpm))
+                    },
+                )
+                if (count == 0) break
+            }
+            true
+        }
+    }
+
     /** The name the watch gave in its last `OK`, for the status card. */
     @Volatile
     private var lastWatchName: String? = null
@@ -230,5 +269,8 @@ class BluetoothWearOsNodePort @Inject constructor(
 
         /** A full page over RFCOMM is well under a second; the connect dominates. */
         private const val PULL_TIMEOUT_MS = 30_000L
+
+        /** One live connection: well inside the watch's 10-minute limit on a connection. */
+        private const val LIVE_SESSION_MS = 8L * 60 * 1000
     }
 }

@@ -9,12 +9,19 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
@@ -174,6 +181,20 @@ class WatchDeviceViewModel @Inject constructor(
     }
         .combine(agpsStore.agps) { state, agps -> state.copy(agps = agps) }
         .stateInViewModel(initial = WatchDeviceUiState())
+
+    /**
+     * A Wear OS watch's heart rate as it happens, null while none arrives.
+     * Streams only while the screen collects it, so the watch's sensor runs
+     * unbatched only while someone looks.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val wearOsLiveHeartRateBpm: StateFlow<Int?> = deviceRepository.devicesFlow
+        .map { devices -> devices.firstOrNull { it.id == deviceId }?.takeIf { it.isWearosWatch } }
+        .distinctUntilChanged { old, new -> old?.address == new?.address && old?.bluetoothName == new?.bluetoothName }
+        .flatMapLatest { device ->
+            device?.let { wearOsCompanionManager.liveHeartRate(it.address, it.bluetoothName) } ?: flowOf(null)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(LIVE_STOP_TIMEOUT_MS), null)
 
     init {
         // The first check runs once the device has loaded; later ones are by hand.
@@ -441,3 +462,6 @@ class WatchDeviceViewModel @Inject constructor(
 }
 
 private const val TAG = "WatchDeviceViewModel"
+
+/** Keeps the live stream through a rotation; longer, and the watch's sensor runs for nothing. */
+private const val LIVE_STOP_TIMEOUT_MS = 5_000L

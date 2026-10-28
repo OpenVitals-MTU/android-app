@@ -158,6 +158,19 @@ class WearLinkServer(
                 for (minute in page.items) writer.line(WearLinkProtocol.formatStepMinute(minute))
                 writer.line(WearLinkProtocol.formatEnd(page.items.size, page.more))
             }
+            is WearLinkProtocol.Request.AscentSince -> {
+                val page = handler.ascentSince(request.sinceEpochMillis, request.limit)
+                for (minute in page.items) writer.line(WearLinkProtocol.formatAscentMinute(minute))
+                writer.line(WearLinkProtocol.formatEnd(page.items.size, page.more))
+            }
+            is WearLinkProtocol.Request.LiveHeartRate -> {
+                // Each reading goes out at once; the phone shows it as it comes.
+                val count = handler.liveHeartRate(request.seconds) { sample ->
+                    writer.line(WearLinkProtocol.formatSample(sample.epochMillis, sample.bpm))
+                    writer.flush()
+                }
+                writer.line(WearLinkProtocol.formatEnd(count, false))
+            }
         }
     }
 
