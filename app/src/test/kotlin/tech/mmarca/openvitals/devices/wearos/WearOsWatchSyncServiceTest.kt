@@ -76,6 +76,10 @@ class WearOsWatchSyncServiceTest {
     private val watchSteps = mutableListOf<WearOsStepMinute>()
     private val stepPullsSince = mutableListOf<Instant>()
     private var stepsNotPaired = false
+
+    /** Floor pages the same way. */
+    private val ascentPages = ArrayDeque<WearOsAscentPage>()
+    private val ascentPullsSince = mutableListOf<Instant>()
     private val nodePort = object : WearOsNodePort {
         override suspend fun checkStatus(targetAddress: String?, targetName: String?) = WearOsCompanionStatus()
         override suspend fun pullHeartRate(targetAddress: String?, targetName: String?, since: Instant): WearOsHeartRatePage? {
@@ -99,6 +103,11 @@ class WearOsWatchSyncServiceTest {
             if (stepsNotPaired) return null
             val after = watchSteps.filter { it.start.isAfter(since) }.sortedBy { it.start }
             return WearOsStepPage(after.take(STEP_PAGE), hasMore = after.size > STEP_PAGE)
+        }
+
+        override suspend fun pullAscent(targetAddress: String?, targetName: String?, since: Instant): WearOsAscentPage? {
+            ascentPullsSince += since
+            return ascentPages.removeFirstOrNull() ?: WearOsAscentPage(emptyList(), hasMore = false)
         }
     }
 
@@ -478,6 +487,62 @@ class WearOsWatchSyncServiceTest {
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(ScreenError.Text(R.string.settings_watch_wearos_fail_partial), (result as DeviceSyncResult.Failed).error)
+    }
+
+    @Test
+    fun `floors climbed with steps are written, an elevator ride is not, and the next pull takes the cursor minute again`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 40)
+        ascentPages += WearOsAscentPage(
+            listOf(WearOsAscentMinute(t0, 6.0), WearOsAscentMinute(t0.plusSeconds(600), 15.0)),
+            hasMore = false,
+        )
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(listOf(2.0), insertedOf<androidx.health.connect.client.records.FloorsClimbedRecord>().map { it.floors })
+        assertEquals(
+            listOf(6.0),
+            insertedOf<androidx.health.connect.client.records.ElevationGainedRecord>().map { it.elevation.inMeters },
+        )
+        assertEquals(t0.plusSeconds(600), cursors.ascentCursor(WATCH.id))
+
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(t0.plusSeconds(600).minusMillis(1), ascentPullsSince.last())
+    }
+
+    @Test
+    fun `the step pull reaches back to the minute before the floors cursor, without writing it again`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += List(3) { WearOsStepMinute(t0.plusSeconds(60L * it), 40) }
+        ascentPages += WearOsAscentPage(listOf(WearOsAscentMinute(t0, 3.0)), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+        // Steps reached t0 + 2 min, floors only t0.
+
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        ascentPages += WearOsAscentPage(listOf(WearOsAscentMinute(t0.plusSeconds(60), 6.0)), hasMore = false)
+        insertCalls.clear()
+        stepPullsSince.clear()
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(t0.minusSeconds(60).minusMillis(1), stepPullsSince.first())
+        // Only the cursor minute is tried again; t0 and t0 + 1 min are not rewritten.
+        assertEquals(listOf(t0.plusSeconds(120)), insertedOf<StepsRecord>().map { it.startTime })
+        assertEquals(listOf(2.0), insertedOf<androidx.health.connect.client.records.FloorsClimbedRecord>().map { it.floors })
+    }
+
+    @Test
+    fun `without the grant to write steps, floors stay on the watch too`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns emptySet()
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        ascentPages += WearOsAscentPage(listOf(WearOsAscentMinute(t0, 3.0)), hasMore = false)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(emptyList<Instant>(), ascentPullsSince)
+        assertEquals(Instant.EPOCH, cursors.ascentCursor(WATCH.id))
     }
 
     @Test

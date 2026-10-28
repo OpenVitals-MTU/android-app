@@ -23,6 +23,7 @@ private class FakeWearOsNodePort : WearOsNodePort {
 
     override suspend fun pullSleepMinutes(targetAddress: String?, targetName: String?, since: Instant): WearOsSleepMinutePage? = null
     override suspend fun pullSteps(targetAddress: String?, targetName: String?, since: Instant): WearOsStepPage? = null
+    override suspend fun pullAscent(targetAddress: String?, targetName: String?, since: Instant): WearOsAscentPage? = null
 }
 
 class WearOsCompanionManagerTest {
