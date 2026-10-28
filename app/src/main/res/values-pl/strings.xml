@@ -3569,6 +3569,11 @@
         <item quantity="other">Zakres oszacowany z %1$d zapisanego cyklu.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">To oszacowanie opiera się wyłącznie na zapisanej historii i może się zmienić.</string>
+    <string name="cycle_estimate_basis_lh">Liczone od Twojego pozytywnego testu LH z %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Liczone od Twojego wzrostu temperatury z %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Liczone od Twojego szczytu śluzu z %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Drugi zapisany objaw się zgadza.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Twoje zapisane objawy są sprzeczne, więc ten zakres opiera się na historii cykli.</string>
     <string name="cycle_estimate_window_a11y">Szacowany zakres %1$d dni</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Za około %1$d dzień</item>
@@ -3667,6 +3672,15 @@
     <string name="cycle_thermal_shift_confirmed">W zapisanych temperaturach znaleziono utrzymujący się wzrost.</string>
     <string name="cycle_thermal_coverline">Linia pokrycia pokazana przerywaną kreską</string>
     <string name="cycle_thermal_empty">Zapisz początek miesiączki i poranne temperatury, aby zobaczyć wykres temperatury.</string>
+    <string name="cycle_skin_title">Temperatura skóry a Twój cykl</string>
+    <string name="cycle_skin_intro">Zegarki i pierścienie mierzą w nocy temperaturę Twojej skóry. Po owulacji bywa nieco wyższa, w jednym małym badaniu z pierścieniem o około 0,3 °C. Badania odczytują to z perspektywy czasu, z całego cyklu, nigdy z wyprzedzeniem.</string>
+    <string name="cycle_skin_accuracy" formatted="false">W dużym badaniu z Apple Watch dzień owulacji oszacowano dla 81 % cykli ze wzrostem o co najmniej 0,2 °C, a 89 % tych oszacowań mieściło się w granicach 2 dni od dnia ustalonego testami LH. Badanie z pierścieniem wykazało średni błąd 1,3 dnia wobec 3,4 dnia przy liczeniu według kalendarza. To wyniki własnej metody każdego badania; nie dotyczą każdego zegarka ani każdej metody.</string>
+    <string name="cycle_skin_limits" formatted="false">• Brak wykrytego wzrostu nie oznacza braku owulacji: w badaniu 437 cykli trwały wzrost wystąpił w 82 %.\n• Wzrost może wystąpić także bez owulacji: małe badanie na nadgarstku znalazło wzrosty również w cyklach bez owulacji.\n• Temperaturę skóry podnosi też gorączka lub choroba.\n• Temperatura skóry to nie temperatura wewnętrzna ciała: w jednym badaniu korelowała z temperaturą w jamie ustnej tylko umiarkowanie (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Zapisujesz tabletkę. Duże badanie temperatury na nadgarstku wykluczyło osoby stosujące antykoncepcję hormonalną oraz do dwóch miesięcy po jej odstawieniu, więc jego wyniki mówią niewiele o Twojej temperaturze.</string>
+    <string name="cycle_skin_note_pcos">Zaznaczono PCOS. Nie znaleźliśmy badania dotyczącego wykrywania owulacji na podstawie temperatury w PCOS; każdy wykres temperatury czytaj więc ze szczególną ostrożnością.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals nie używa temperatury skóry do swoich szacunków. To informacja uzupełniająca, a nie metoda antykoncepcji ani prognoza płodności, ani porada medyczna.</string>
+    <string name="cycle_skin_show_details">Pokaż liczby i źródła</string>
+    <string name="cycle_skin_hide_details">Ukryj szczegóły</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_patterns_subtitle">Jak często każdy objaw był zapisywany w każdej fazie. Tylko liczby; nic nie jest diagnozowane ani przewidywane.</string>
     <string name="cycle_patterns_empty_title">Na razie brak objawów</string>

@@ -3527,6 +3527,11 @@
         <item quantity="other">根据 %1$d 个已记录周期预估的范围。</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">此预估仅基于你记录的历史，可能会变化。</string>
+    <string name="cycle_estimate_basis_lh">从 %1$s 的 LH 检测阳性起算。</string>
+    <string name="cycle_estimate_basis_temperature">从 %1$s 的体温升高起算。</string>
+    <string name="cycle_estimate_basis_mucus">从 %1$s 的宫颈黏液高峰起算。</string>
+    <string name="cycle_estimate_basis_confirmed">另一项记录的体征与之一致。</string>
+    <string name="cycle_estimate_basis_markers_disagree">记录的体征相互矛盾，因此该范围依据你的周期历史。</string>
     <string name="cycle_estimate_window_a11y">预估范围 %1$d 天</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">约 %1$d 天后</item>
@@ -3615,6 +3620,15 @@
     <string name="cycle_thermal_shift_confirmed">在记录的体温中发现持续升温。</string>
     <string name="cycle_thermal_coverline">基准线以虚线显示</string>
     <string name="cycle_thermal_empty">记录经期开始日和晨间体温，即可查看基础体温图。</string>
+    <string name="cycle_skin_title">皮肤温度与你的周期</string>
+    <string name="cycle_skin_intro">手表和戒指会在夜间测量你的皮肤温度。排卵后它往往略高，在一项小型戒指研究中约高0.3 °C。研究是事后根据整个周期来读取这一变化的，从不提前预测。</string>
+    <string name="cycle_skin_accuracy" formatted="false">在一项大型Apple Watch研究中，对出现至少0.2 °C上升的周期，有81 %估算出了排卵日，其中89 %的估算与LH试纸找到的日期相差不超过2天。一项戒指研究的平均误差为1.3天，而按日历推算为3.4天。这些是各项研究自己所用方法的结果，并不适用于所有手表和所有方法。</string>
+    <string name="cycle_skin_limits" formatted="false">• 没有发现上升并不意味着没有排卵：在一项437个周期的研究中，82 %出现了持续上升。\n• 没有排卵时也可能出现上升：一项小型手腕研究在无排卵周期中同样发现了上升。\n• 发烧或生病同样会使皮肤温度升高。\n• 皮肤温度不是核心体温：在一项研究中，它与口腔温度仅呈中等程度相关（r = 0.56）。</string>
+    <string name="cycle_skin_note_pill">你在记录避孕药。这项大型手腕温度研究排除了使用激素避孕的人以及停用后两个月内的人，因此其结果对你的体温说明有限。</string>
+    <string name="cycle_skin_note_pcos">你已标注多囊卵巢综合征（PCOS）。我们没有找到关于PCOS中基于温度检测排卵的研究，因此请格外谨慎地解读任何温度模式。</string>
+    <string name="cycle_skin_not_a_method">OpenVitals的估算不使用皮肤温度。这只是背景信息，不是避孕方法，也不是生育力预测，更不是医疗建议。</string>
+    <string name="cycle_skin_show_details">显示数字和来源</string>
+    <string name="cycle_skin_hide_details">隐藏详情</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_patterns_subtitle">每种症状在各阶段被记录的次数。仅为计数，不做诊断或预测。</string>
     <string name="cycle_patterns_empty_title">暂无症状</string>

@@ -55,6 +55,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 |---|---|---|
 | `CycleEstimateCalculator` | Start-to-start intervals, last six inside 15..90 days, excluded cycles skipped, a gap over 90 days resets the history. Central date = last start + rounded mean. Half-width = 1.96 × √(variance shrunk toward a population prior with weight 2, or 0.5 once the record shows persistent 7-day swings), floored at 3 days, capped at 22, floored again so the window never starts inside recorded flow. Prior SD by age band (Apple Women's Health Study table), 4.54 days undeclared. A declared timing context floors the variance at the prior. Results: available, needs more history (fewer than two starts), intervals out of range. | new, replaces the mean-and-spread rule |
 | `CurrentCyclePhaseCalculator` | Menstrual is recorded (day 1 or flow today). Days 2–7 without flow detail are indeterminate. Follicular before the ovulation band, luteal after it, ovulatory only on the central day (central − 13) and only with six stable intervals varying at most 7 days. The two days before the central date and the estimate window are the "next period window"; past the window the estimate has expired. | new |
+| `MarkerEstimate` | Once the current cycle holds an ovulation marker (first positive LH test, first high day of the thermal shift, mucus peak followed by three lesser days), the next start is the marker day plus that marker's own interval to the next start, learned from earlier cycles and shrunk toward a prior (LH 13.8 ± 1.86, temperature 11.0 ± 2.07, mucus 13.0 ± 2.5, weight 2), half-width 1.96 SD floored at 2. A mucus peak or LH test 0–3 days before the first high day confirms the shift; a shift and markers that do not agree fall back to the calendar and say so. See *Marker estimate sources*. | new (2026-10) |
 | Cycle facts | 24 population facts with sources, one per day by date hash, shown when the phase is indeterminate. | new |
 | Phase tips | 30 sourced tips, filtered by phase, declared contexts and the last three days' symptoms; ties broken by date hash. | new |
 
@@ -110,6 +111,22 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 
 Network sync, end-to-end encryption, partner sharing, and crash reporting. OpenVitals has no `INTERNET` permission by design.
 
+## Marker estimate sources
+
+What each number rests on, and how far it was checked. The priors only matter until a user has one or two earlier cycles with the same marker.
+
+| Number | Source | Checked |
+|---|---|---|
+| Interval after ovulation varies less than the follicular phase (within-woman variance 3.0 vs 5.2 days², 53 women, 676 ovulatory cycles) | Henry, Shirin, Goshtasebi, Prior 2024, *Hum Reprod* 39(11):2565 | full text |
+| Temperature prior 11.0 ± 2.07: luteal phase counted from the temperature shift, median 10.9 days; between-women variance 4.3; shift 2.4 ± 1.5 days after the LH peak | Henry et al. 2024 | full text |
+| LH prior 13.8 ± 1.86: luteal phase 12.77 ± 1.86 days from the day after the LH surge, 75,981 cycles | Soumpasis, Grace, Johnson 2020, *Hum Reprod Open* hoaa011 | full text |
+| Six-low, three-high rule, last high 0.2 °C above the six; mucus peak known only once the secretion is sticky again; end of the fertile time three days after the peak | Frank-Herrmann et al. 2007, *Hum Reprod* 22(5):1310 | full text |
+| Mucus peak 1–3 days before the temperature rise in 74% of 2,276 cycles; basis for the 0–3 day agreement bound and the mucus prior (temperature prior + 2) | PubMed 3366346 (German sympto-thermal cohort) | abstract via search summary only |
+| LH peak +0.46 days from ultrasound ovulation; mucus peak and initial LH rise close to it in more than 72% of cycles | Ecochard et al. 2001, *BJOG* 108(8):822 | abstract |
+| Backtest: on the Marquette cycle data (159 women, 1,370 cycles) a marker plus the user's own interval gave a mean absolute error of 1.3 days and a window of 8.5 days at 96.6% coverage, against 2.1 days and 15.5 days for the calendar | `FedCycleData071012.csv` (Kaggle mirror), script outside the repository | the dataset's ovulation-day definition is undocumented |
+
+Settings without a source: watery mucus is not best quality; the 7–20 day plausible interval; the 2-day minimum half-width; LH before temperature before mucus as anchor order.
+
 ## Data model
 
 Two Room tables, migration 12 → 13. Health Connect has no record type for any of these fields.
@@ -120,6 +137,20 @@ Two Room tables, migration 12 → 13. Health Connect has no record type for any 
 | `cycle_exclusions` | `start_date` (ISO day) | `reason` |
 
 Preferences, through a `CyclePreferences` contract: declared contexts, age band, reminder configuration.
+
+## Skin temperature sources
+
+What the information card under the thermal chart quotes. Each DOI resolved on Crossref (title, journal, year and first author match); each number was read in the abstract or full text.
+
+| Statement on the card | Source | Checked |
+|---|---|---|
+| Night skin temperature is about 0.3 °C higher in the luteal phase (finger ring, 22 participants); skin and oral temperature correlate with r = 0.563 | Maijala et al. 2019, *BMC Womens Health*, 10.1186/s12905-019-0844-9 | full text |
+| A sustained wrist-temperature rise showed in 357 of 437 cycles (82%); the rule is 0.2 °C above at least five of the preceding six days, for three days | Shilaih et al. 2018, *Biosci Rep*, 10.1042/bsr20171279 | full text |
+| Ovulation day estimated in 80.8% of completed cycles with a rise of at least 0.2 °C, 89.0% within ±2 days of the LH-test day; hormonal contraception and the two months after stopping were exclusion criteria | Wang et al. 2025, *Hum Reprod*, 10.1093/humrep/deaf005 | full text |
+| Ring: ovulation detected in 96.4% of 1,155 cycles, mean error 1.26 days against 3.44 days for the calendar method | Thigpen et al. 2025, *J Med Internet Res*, 10.2196/60667 | full text |
+| Wrist temperature was more sensitive than basal temperature (0.62 against 0.23) and less specific (0.26 against 0.70) in 193 cycles, 23 of them anovulatory | Zhu et al. 2021, *J Med Internet Res*, 10.2196/20710 | abstract |
+
+What was looked for and not found, so the app does not claim it: a prior for the days from a wrist or finger temperature rise to the next period (the luteal lengths found were measured with basal temperature, LH tests or mucus, not with a skin sensor), a study of temperature-based ovulation detection in PCOS, and a measured time for the skin-temperature rhythm to normalise after stopping hormonal contraception. The 60-day washout in an earlier plan comes from Apple's exclusion criterion, not from a measurement. Until such a prior exists, skin temperature stays out of `MarkerEstimate`.
 
 ## Phases
 
