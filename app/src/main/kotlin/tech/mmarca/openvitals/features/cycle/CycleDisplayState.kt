@@ -59,6 +59,10 @@ data class CycleTodayDisplay(
     val totalCycles: Int = 0,
     /** Whether a context or an age band was declared. Drives the setup card. */
     val hasProfile: Boolean = false,
+    /** Whether PCOS was declared. The skin-temperature card adds its caution for it. */
+    val pcosDeclared: Boolean = false,
+    /** Whether a hormonal method is set, or was stopped within 60 days. The skin-temperature card adds its note for it. */
+    val hormonalInfluencing: Boolean = false,
     /** Null when the pill is not tracked. */
     val pill: PillTodayDisplay? = null,
 ) {

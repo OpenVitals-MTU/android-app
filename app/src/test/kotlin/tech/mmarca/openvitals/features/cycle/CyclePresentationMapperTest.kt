@@ -13,6 +13,9 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
@@ -137,6 +140,30 @@ class CyclePresentationMapperTest {
 
         assertTrue(display.summary.periodDays >= 3)
         assertEquals(2, display.summary.bbtReadingCount)
+    }
+
+    private fun hormonalNote(contraception: HormonalContraception): Boolean = CyclePresentationMapper.build(
+        query = monthQuery,
+        data = CycleData(),
+        profile = CycleTrackingProfile(hormonalContraception = contraception),
+        today = anchorDate,
+    ).today.hormonalInfluencing
+
+    @Test fun `the skin temperature note shows for every hormonal kind`() {
+        HormonalContraceptionKind.entries.filter { it != HormonalContraceptionKind.NONE }.forEach { kind ->
+            assertTrue(kind.id, hormonalNote(HormonalContraception(kind)))
+        }
+    }
+
+    @Test fun `the skin temperature note stays for 60 days after the stop date and ends after`() {
+        val kind = HormonalContraceptionKind.IMPLANT
+        assertTrue(hormonalNote(HormonalContraception(kind, anchorDate.minusDays(60))))
+        assertFalse(hormonalNote(HormonalContraception(kind, anchorDate.minusDays(61))))
+    }
+
+    @Test fun `the skin temperature note stays away without a hormonal method`() {
+        assertFalse(hormonalNote(HormonalContraception()))
+        assertFalse(hormonalNote(HormonalContraception(HormonalContraceptionKind.NONE, anchorDate)))
     }
 
     private fun instant(value: String): Instant = Instant.parse(value)

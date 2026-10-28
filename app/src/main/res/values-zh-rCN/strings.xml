@@ -3527,6 +3527,11 @@
         <item quantity="other">根据 %1$d 个已记录周期预估的范围。</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">此预估仅基于你记录的历史，可能会变化。</string>
+    <string name="cycle_estimate_basis_lh">从 %1$s 的 LH 检测阳性起算。</string>
+    <string name="cycle_estimate_basis_temperature">从 %1$s 的体温升高起算。</string>
+    <string name="cycle_estimate_basis_mucus">从 %1$s 的宫颈黏液高峰起算。</string>
+    <string name="cycle_estimate_basis_confirmed">另一项记录的体征与之一致。</string>
+    <string name="cycle_estimate_basis_markers_disagree">记录的体征相互矛盾，因此该范围依据你的周期历史。</string>
     <string name="cycle_estimate_window_a11y">预估范围 %1$d 天</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">约 %1$d 天后</item>
@@ -3615,7 +3620,17 @@
     <string name="cycle_thermal_shift_confirmed">在记录的体温中发现持续升温。</string>
     <string name="cycle_thermal_coverline">基准线以虚线显示</string>
     <string name="cycle_thermal_empty">记录经期开始日和晨间体温，即可查看基础体温图。</string>
+    <string name="cycle_skin_title">皮肤温度与你的周期</string>
+    <string name="cycle_skin_intro">手表和戒指会在夜间测量你的皮肤温度。排卵后它往往略高，在一项小型戒指研究中约高0.3 °C。研究是事后根据整个周期来读取这一变化的，从不提前预测。</string>
+    <string name="cycle_skin_accuracy" formatted="false">在一项大型Apple Watch研究中，对出现至少0.2 °C上升的周期，有81 %估算出了排卵日，其中89 %的估算与LH试纸找到的日期相差不超过2天。一项戒指研究的平均误差为1.3天，而按日历推算为3.4天。这些是各项研究自己所用方法的结果，并不适用于所有手表和所有方法。</string>
+    <string name="cycle_skin_limits" formatted="false">• 没有发现上升并不意味着没有排卵：在一项437个周期的研究中，82 %出现了持续上升。\n• 没有排卵时也可能出现上升：一项小型手腕研究在无排卵周期中同样发现了上升。\n• 发烧或生病同样会使皮肤温度升高。\n• 皮肤温度不是核心体温：在一项研究中，它与口腔温度仅呈中等程度相关（r = 0.56）。</string>
+    <string name="cycle_skin_note_hormonal">你设置了激素类避孕方式，或在过去两个月内停用了一种。激素类方式会作用于本卡片所讲的体温节律，其中许多会抑制排卵（卵子的释放），体温升高正是跟在排卵之后。因此你自己的体温可能不会显示出清晰的前后变化模式。那项大型手腕温度研究排除了使用激素类方式的人以及停用后两个月内的人，所以它的结果对你参考意义不大。这是信息，不是建议。</string>
+    <string name="cycle_skin_note_pcos">你已标注多囊卵巢综合征（PCOS）。我们没有找到关于PCOS中基于温度检测排卵的研究，因此请格外谨慎地解读任何温度模式。</string>
+    <string name="cycle_skin_not_a_method">OpenVitals的估算不使用皮肤温度。这只是背景信息，不是避孕方法，也不是生育力预测，更不是医疗建议。</string>
+    <string name="cycle_skin_show_details">显示数字和来源</string>
+    <string name="cycle_skin_hide_details">隐藏详情</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">研究对激素类方式的发现。在27名服用避孕药的人中，手腕皮肤温度的昼夜节律在假黄体期与假卵泡期（服药周与停药周）之间没有差异，而在14名自然周期的人中有差异。在18名服用避孕药的人中，服用有效药片的几周晨起口腔温度（36.4 °C）高于停药周（36.1 °C），且升高幅度与孕激素剂量相伴。一篇综述指出雌激素一般使体温降低、孕激素一般使体温升高。另一篇关于激素类方式作用机制的综述把抑制排卵和宫颈黏液的改变列为复方避孕药和纯孕激素方式的主要机制之一。此处引用的其他研究同样排除了使用激素的人：一项指环研究（Thigpen）剔除了6个使用激素的周期，一项手指指环研究（Maijala）在其子研究中排除了使用激素避孕的人，2021年的手腕研究（Zhu）只纳入未接受激素治疗的人。对于避孕药以外的方式，我们没有找到皮肤温度方面的研究。</string>
     <string name="cycle_patterns_subtitle">每种症状在各阶段被记录的次数。仅为计数，不做诊断或预测。</string>
     <string name="cycle_patterns_empty_title">暂无症状</string>
     <string name="cycle_patterns_empty_body">随着你在周期中记录症状，规律会显示在这里。</string>
@@ -3954,4 +3969,16 @@
     <string name="settings_scales_delete_body">其体重、心率和身体成分将从 Health Connect 中移除。</string>
     <string name="settings_scales_remove">移除体重秤</string>
     <string name="settings_scales_remove_body">OpenVitals 将停止接收并忘记密钥。已保存的称重记录会保留。</string>
+    <string name="cycle_hormonal_title">激素避孕</string>
+    <string name="cycle_hormonal_body">激素类方法可能改变周期和体温模式。这里只列出使用激素的方法：铜制宫内节育器、避孕套和子宫帽不使用激素，因此不在此列。这只是周期视图的背景信息，仅此而已。</string>
+    <string name="cycle_hormonal_set_by_pill">已由你的服药方案设为“%1$s”。关闭该方案即可选择其他方法。</string>
+    <string name="cycle_hormonal_stopped_on">停用日期（可选；未来的日期按仍在使用计算）</string>
+    <string name="cycle_hormonal_stopped_clear">清除停用日期</string>
+    <string name="cycle_hormonal_kind_none">无</string>
+    <string name="cycle_hormonal_kind_pill">口服避孕药</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">含激素宫内节育器</string>
+    <string name="cycle_hormonal_kind_implant">植入剂</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">阴道环或贴片</string>
+    <string name="cycle_hormonal_kind_injection">注射</string>
+    <string name="cycle_hormonal_kind_other">其他激素类方法</string>
 </resources>
