@@ -31,11 +31,12 @@ interface WearLinkTrustStore {
 
     fun isBlocked(peerAddress: String): Boolean
 
-    /** An unknown phone presented [token]: remember it for the wearer to allow or block. */
+    /**
+     * A phone presented [token], which the watch does not hold for it: an
+     * unknown phone, or a known one with another token. Remember it for the
+     * wearer to allow or block; allowing replaces a stored token.
+     */
     fun notePending(peerAddress: String, token: String, peerName: String)
-
-    /** A known phone presented a different token: tell the wearer. */
-    fun noteMismatch(peerAddress: String, peerName: String)
 }
 
 /** One page of a pull. [more] means the limit cut it short. */

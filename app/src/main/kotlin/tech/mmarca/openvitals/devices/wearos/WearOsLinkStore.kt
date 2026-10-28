@@ -22,10 +22,12 @@ data class WearOsLinkSnapshot(
 
 /**
  * What the phone keeps about its watches' links: the token it presents to
- * each watch (one per Classic address, made on first use and never changed
- * unless the watch is forgotten), the Classic address a watch once answered
- * a hello from (the surest way to find its bond again), and, in memory,
- * the latest snapshot per device for the screen.
+ * each added watch (made on first use, kept until the watch is removed),
+ * the Classic address a watch once answered a hello from (the surest way to
+ * find its bond again), and, in memory, the latest snapshot per device for
+ * the screen. Both are keyed by the address the watch was added under: the
+ * bond's own address changes when the watch is paired again, and a new
+ * token would have the watch ask the wearer again.
  */
 @Singleton
 class WearOsLinkStore(private val prefs: SharedPreferences) {
@@ -38,19 +40,23 @@ class WearOsLinkStore(private val prefs: SharedPreferences) {
     /** The latest snapshot per device id, as the screen shows it. */
     val snapshots: StateFlow<Map<String, WearOsLinkSnapshot>> = snapshotsFlow
 
-    /** The token for the watch at [classicAddress], created on first use. */
+    /**
+     * The token for the watch added under [registeredAddress], reached through
+     * the bond at [bondAddress]; created on first use. Tokens used to be kept
+     * per bond address: one found there is adopted, so the watch that allowed
+     * it is not asked again.
+     */
     @Synchronized
-    fun tokenFor(classicAddress: String): String {
-        val key = tokenKey(classicAddress)
+    fun tokenFor(registeredAddress: String?, bondAddress: String): String {
+        val key = tokenKey(registeredAddress?.takeIf { it.isNotBlank() } ?: bondAddress)
         prefs.getString(key, null)?.takeIf(WearLinkToken::isWellFormed)?.let { return it }
-        val token = WearLinkToken.generate()
-        prefs.edit { putString(key, token) }
+        val legacyKey = legacyTokenKey(bondAddress)
+        val token = prefs.getString(legacyKey, null)?.takeIf(WearLinkToken::isWellFormed) ?: WearLinkToken.generate()
+        prefs.edit {
+            putString(key, token)
+            remove(legacyKey)
+        }
         return token
-    }
-
-    /** Drops the token for [classicAddress]: the next hello is a fresh request on the watch. */
-    fun forgetToken(classicAddress: String) {
-        prefs.edit { remove(tokenKey(classicAddress)) }
     }
 
     /**
@@ -70,12 +76,20 @@ class WearOsLinkStore(private val prefs: SharedPreferences) {
         snapshotsFlow.update { it + (deviceId to snapshot) }
     }
 
+    /** Forgets a removed watch: adding it again presents a new token, which the watch asks the wearer about. */
     fun clear(deviceId: String, registeredAddress: String?) {
-        registeredAddress?.let { prefs.edit { remove(linkKey(it)) } }
+        registeredAddress?.let {
+            prefs.edit {
+                remove(linkKey(it))
+                remove(tokenKey(it))
+            }
+        }
         snapshotsFlow.update { it - deviceId }
     }
 
-    private fun tokenKey(classicAddress: String) = "token_${classicAddress.uppercase()}"
+    private fun tokenKey(registeredAddress: String) = "watch_token_${registeredAddress.uppercase()}"
+
+    private fun legacyTokenKey(bondAddress: String) = "token_${bondAddress.uppercase()}"
 
     private fun linkKey(registeredAddress: String) = "link_address_${registeredAddress.uppercase()}"
 

@@ -68,15 +68,11 @@ class MemoryTrustStore : WearLinkTrustStore {
     val tokens = HashMap<String, String>()
     val blocked = HashSet<String>()
     val pending = ArrayList<Triple<String, String, String>>()
-    val mismatches = ArrayList<Pair<String, String>>()
 
     override fun tokenFor(peerAddress: String): String? = tokens[peerAddress]
     override fun isBlocked(peerAddress: String): Boolean = peerAddress in blocked
     override fun notePending(peerAddress: String, token: String, peerName: String) {
         pending += Triple(peerAddress, token, peerName)
-    }
-    override fun noteMismatch(peerAddress: String, peerName: String) {
-        mismatches += peerAddress to peerName
     }
 }
 

@@ -128,13 +128,11 @@ class WearLinkServer(
             return WearLinkProtocol.HelloReply.Unauthorized(WearLinkProtocol.UnauthorizedReason.BLOCKED)
         }
         val stored = trust.tokenFor(peerAddress)
-        if (stored == null) {
+        // Another token from a known phone is most often its app reinstalled or reset: ask the
+        // wearer, as for a new phone. The stored token keeps working until the wearer allows.
+        if (stored == null || !WearLinkToken.matches(stored, hello.token)) {
             trust.notePending(peerAddress, hello.token, hello.name)
             return WearLinkProtocol.HelloReply.Pending
-        }
-        if (!WearLinkToken.matches(stored, hello.token)) {
-            trust.noteMismatch(peerAddress, hello.name)
-            return WearLinkProtocol.HelloReply.Unauthorized(WearLinkProtocol.UnauthorizedReason.MISMATCH)
         }
         return WearLinkProtocol.HelloReply.Ok(WearLinkProtocol.VERSION, handler.capabilities(), handler.localName())
     }

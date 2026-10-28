@@ -469,7 +469,7 @@ The phone-to-watch link, in `wearlink/`, pure Kotlin on the JDK with no Android 
 
 - `WearLinkProtocol` — the line grammar over the RFCOMM socket: words, limits, the `SM` row type and every format and parse function. The `SM` fields are specified in [sleep-minute-features.md](sleep-minute-features.md).
 - `WearLinkLines` — the framing, defined once for both ends: UTF-8 lines, `\n` terminated, a trailing `\r` tolerated, a line over 512 bytes closes the connection.
-- `WearLinkToken` — the secret a phone presents on every connection: 32 random bytes as Base64, compared in constant time. The bond says the devices know each other; the token says this app on this phone is the one the wearer allowed.
+- `WearLinkToken` — the secret a phone presents on every connection: 32 random bytes as Base64, compared in constant time. The bond says the devices know each other; the token says this app on this phone is the one the wearer allowed. The phone keeps one per added watch (`WearOsLinkStore`, keyed by the address the watch was added under, since pairing again can list the bond under another address) and drops it when the watch is removed; the watch keeps one per phone address. A known phone presenting another token, as after a reinstall, is asked about again like a new one, and allowing it replaces the old token.
 
 Its tests run in both gates (`verifyCiUnitTest` and `verifyWearCi` depend on `:wearlink:test`), its lockfile is `wearlink/gradle.lockfile`, and the two ratchet tests hold its files to the same limits as the phone app's. `ArchitectureDocTest` fails when a Gradle module is missing from this document.
 

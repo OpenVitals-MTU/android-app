@@ -7,11 +7,18 @@ import kotlinx.coroutines.flow.update
 /** A phone the wearer has allowed. */
 data class TrustedPhone(val address: String, val name: String, val trustedAtMillis: Long)
 
-/** A phone that said hello with a token the watch does not hold yet. */
-data class PendingPhone(val address: String, val token: String, val name: String, val sinceMillis: Long)
-
-/** A known phone that presented a different token. */
-data class RefusedPhone(val address: String, val name: String, val atMillis: Long)
+/**
+ * A phone that said hello with a token the watch does not hold for it. With
+ * [newKey] the phone is a trusted one presenting another token, as after its
+ * app was reinstalled or reset; allowing it replaces the old token.
+ */
+data class PendingPhone(
+    val address: String,
+    val token: String,
+    val name: String,
+    val sinceMillis: Long,
+    val newKey: Boolean = false,
+)
 
 /** What the status screen shows about the link. */
 data class WearLinkUiState(
@@ -20,7 +27,6 @@ data class WearLinkUiState(
     val activeClients: Int = 0,
     val trusted: List<TrustedPhone> = emptyList(),
     val pending: PendingPhone? = null,
-    val refused: RefusedPhone? = null,
     /** Trusted phones no longer in the watch's bonded list. */
     val bondLost: List<TrustedPhone> = emptyList(),
     val ppgLogging: Boolean = false,

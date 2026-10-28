@@ -16,10 +16,12 @@ import java.util.UUID
  *   its capabilities (`hr,sm` or `-`), the secret it holds for this watch
  *   (`WearLinkToken`) and its Bluetooth name, the rest of the line.
  * - `OK <version> <caps> <name...>` — the watch knows that token for this phone.
- * - `PENDING` — the watch holds no token for this phone yet and is asking the
- *   wearer; the phone tries again later.
- * - `UNAUTHORIZED <mismatch|blocked>` — the stored token differs (a possible
- *   impersonation, or a reinstalled phone) or the phone is blocked.
+ * - `PENDING` — the watch does not hold this token for this phone and is asking
+ *   the wearer; the phone tries again later. That is a new phone, or a known
+ *   one presenting another token (a reinstalled or reset app, or an impostor:
+ *   the wearer tells them apart).
+ * - `UNAUTHORIZED <mismatch|blocked>` — the phone is blocked. `mismatch` is
+ *   what an older watch app answers to another token; the phone still reads it.
  * - `VERSION <min> <max>` — the phone's version is outside what the watch speaks.
  * - `ERROR <bad_hello|bad_request|busy|internal>` — the watch could not serve.
  *
