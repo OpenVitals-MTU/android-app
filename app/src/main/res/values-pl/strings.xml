@@ -3569,6 +3569,11 @@
         <item quantity="other">Zakres oszacowany z %1$d zapisanego cyklu.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">To oszacowanie opiera się wyłącznie na zapisanej historii i może się zmienić.</string>
+    <string name="cycle_estimate_basis_lh">Liczone od Twojego pozytywnego testu LH z %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Liczone od Twojego wzrostu temperatury z %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Liczone od Twojego szczytu śluzu z %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Drugi zapisany objaw się zgadza.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Twoje zapisane objawy są sprzeczne, więc ten zakres opiera się na historii cykli.</string>
     <string name="cycle_estimate_window_a11y">Szacowany zakres %1$d dni</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Za około %1$d dzień</item>
@@ -3667,7 +3672,51 @@
     <string name="cycle_thermal_shift_confirmed">W zapisanych temperaturach znaleziono utrzymujący się wzrost.</string>
     <string name="cycle_thermal_coverline">Linia pokrycia pokazana przerywaną kreską</string>
     <string name="cycle_thermal_empty">Zapisz początek miesiączki i poranne temperatury, aby zobaczyć wykres temperatury.</string>
+    <string name="cycle_skin_title">Temperatura skóry a Twój cykl</string>
+    <string name="cycle_skin_intro">Zegarki i pierścienie mierzą w nocy temperaturę Twojej skóry. Po owulacji bywa nieco wyższa, w jednym małym badaniu z pierścieniem o około 0,3 °C. Badania odczytują to z perspektywy czasu, z całego cyklu, nigdy z wyprzedzeniem.</string>
+    <string name="cycle_skin_accuracy" formatted="false">W dużym badaniu z Apple Watch dzień owulacji oszacowano dla 81 % cykli ze wzrostem o co najmniej 0,2 °C, a 89 % tych oszacowań mieściło się w granicach 2 dni od dnia ustalonego testami LH. Badanie z pierścieniem wykazało średni błąd 1,3 dnia wobec 3,4 dnia przy liczeniu według kalendarza. To wyniki własnej metody każdego badania; nie dotyczą każdego zegarka ani każdej metody.</string>
+    <string name="cycle_skin_limits" formatted="false">• Brak wykrytego wzrostu nie oznacza braku owulacji: w badaniu 437 cykli trwały wzrost wystąpił w 82 %.\n• Wzrost może wystąpić także bez owulacji: małe badanie na nadgarstku znalazło wzrosty również w cyklach bez owulacji.\n• Temperaturę skóry podnosi też gorączka lub choroba.\n• Temperatura skóry to nie temperatura wewnętrzna ciała: w jednym badaniu korelowała z temperaturą w jamie ustnej tylko umiarkowanie (r = 0,56).</string>
+    <string name="cycle_skin_note_hormonal">Wskazano metodę hormonalną lub taką, którą odstawiono w ciągu ostatnich dwóch miesięcy. Metody hormonalne działają na ten sam rytm temperatury ciała, o którym mówi ta karta, a wiele z nich hamuje owulację (uwolnienie komórki jajowej), po której temperatura rośnie. Twoja własna temperatura może więc nie pokazywać wyraźnego wzorca przed i po. Duże badanie temperatury na nadgarstku wykluczyło osoby stosujące metody hormonalne oraz do dwóch miesięcy po ich odstawieniu, więc jego wyniki mówią o Tobie niewiele. To informacja, nie porada.</string>
+    <string name="cycle_skin_note_pcos">Zaznaczono PCOS. Nie znaleźliśmy badania dotyczącego wykrywania owulacji na podstawie temperatury w PCOS; każdy wykres temperatury czytaj więc ze szczególną ostrożnością.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals nie używa temperatury skóry do swoich szacunków. To informacja uzupełniająca, a nie metoda antykoncepcji ani prognoza płodności, ani porada medyczna.</string>
+    <string name="cycle_skin_show_details">Pokaż liczby i źródła</string>
+    <string name="cycle_skin_hide_details">Ukryj szczegóły</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">Co badania wykazały o metodach hormonalnych. U 27 użytkowniczek tabletek dobowy rytm temperatury skóry nadgarstka nie różnił się między fazą pseudoluteinową a pseudopęcherzykową (tygodnie z tabletkami i tydzień bez nich), natomiast u 14 osób z naturalnym cyklem różnił się. U 18 użytkowniczek tabletek poranna temperatura w ustach była wyższa w tygodniach z tabletkami aktywnymi (36,4 °C) niż w tygodniu bez tabletek (36,1 °C), a wzrost szedł w parze z dawką progestagenu. Przegląd opisuje estrogeny jako zwykle obniżające, a progestageny jako zwykle podwyższające temperaturę ciała. Przegląd mechanizmu działania metod hormonalnych wymienia hamowanie owulacji i zmiany śluzu szyjkowego wśród głównych mechanizmów tabletek złożonych i metod zawierających tylko progestagen. Pozostałe badania przywołane tutaj również pomijały osoby stosujące hormony: w badaniu z pierścieniem (Thigpen) usunięto 6 cykli z użyciem hormonów, badanie z pierścieniem na palcu (Maijala) wykluczyło w podbadaniu użytkowniczki antykoncepcji hormonalnej, a badanie nadgarstka z 2021 roku (Zhu) objęło tylko osoby bez terapii hormonalnej. Nie znaleźliśmy badania temperatury skóry dla innych metod niż tabletka.</string>
+    <string name="section_cycle_nightly">Nocne tętno, HRV i oddech w trakcie cyklu</string>
+    <string name="cycle_nightly_subtitle">Twoje wartości z nocy według dnia cyklu, pobrane z sesji snu bieżącego cyklu. Tylko informacyjnie: nic nie mówią o owulacji, płodności ani antykoncepcji i nie zmieniają żadnej prognozy.</string>
+    <string name="cycle_nightly_loading">Wczytywanie nocy tego cyklu…</string>
+    <string name="cycle_nightly_no_sleep">W tym cyklu nie znaleziono sesji snu, więc wartości nocnych nie można przypisać do nocy. Potrzebny jest zapis snu z zegarka lub innej aplikacji.</string>
+    <string name="cycle_nightly_nights">Nocy z sesją snu w tym cyklu: %1$d</string>
+    <string name="cycle_nightly_signal_pulse">Tętno spoczynkowe</string>
+    <string name="cycle_nightly_signal_hrv">HRV (RMSSD)</string>
+    <string name="cycle_nightly_signal_breathing">Częstość oddechów</string>
+    <string name="cycle_nightly_range_pulse">%1$s do %2$s uderzeń/min</string>
+    <string name="cycle_nightly_range_hrv">%1$s do %2$s ms</string>
+    <string name="cycle_nightly_range_breathing">%1$s do %2$s oddechów na minutę</string>
+    <string name="cycle_nightly_legend">%1$s, własna skala: %2$s</string>
+    <string name="cycle_nightly_chart_description">%1$s, nocy z wartością: %2$d, zakres %3$s</string>
+    <string name="cycle_nightly_all_hidden">Włącz powyżej któryś sygnał, aby zobaczyć jego linię.</string>
+    <string name="cycle_nightly_source">Pokazano ze źródła %1$s.</string>
+    <string name="cycle_nightly_source_others">Pokazano ze źródła %1$s. Wartości z %2$s nie są mieszane.</string>
+    <string name="cycle_nightly_missing_pulse">Dla nocy tego cyklu nie znaleziono tętna spoczynkowego. Wiele zegarków go nie zapisuje albo OpenVitals może nie mieć zgody na jego odczyt.</string>
+    <string name="cycle_nightly_missing_hrv">Dla nocy tego cyklu nie znaleziono HRV. Wiele zegarków nie zapisuje go w nocy albo OpenVitals może nie mieć zgody na jego odczyt.</string>
+    <string name="cycle_nightly_missing_breathing">Dla nocy tego cyklu nie znaleziono częstości oddechów. Wiele zegarków jej nie zapisuje albo OpenVitals może nie mieć zgody na jej odczyt.</string>
+    <string name="cycle_nightly_details_show">Dlaczego to widać</string>
+    <string name="cycle_nightly_details_hide">Ukryj szczegóły</string>
+    <string name="cycle_nightly_permission_needed">Niektórych wartości z nocy nie można odczytać, bo zgoda nie została jeszcze udzielona.</string>
+    <string name="cycle_nightly_allow_reading">Zezwól na odczyt wartości z nocy</string>
+    <string name="cycle_nightly_daily_value">Puste punkty to dzienna wartość urządzenia, a nie odczyt z nocy.</string>
+    <string name="cycle_nightly_why_intro">Badania z użyciem urządzeń noszonych wskazują, że tętno spoczynkowe bywa najniższe na początku cyklu, a najwyższe tuż przed następną miesiączką, a HRV zmienia się zwykle w przeciwną stronę. Różnice to kilka uderzeń na minutę i kilka procent HRV.</string>
+    <string name="cycle_nightly_evidence_goodale_pulse">W badaniu z 237 zrekrutowanymi kobietami noszącymi nocą opaskę Ava nocne tętno wynosiło średnio 56,6 uderzeń/min w fazie folikularnej i 60,5 uderzeń/min w późnej fazie lutealnej.</string>
+    <string name="cycle_nightly_evidence_jasinski_days">U 11 590 uczestniczek i w 45 811 cyklach zapisanych opaską WHOOP tętno spoczynkowe było średnio najniższe w 5. dniu cyklu, a najwyższe w 26. dniu. HRV (RMSSD) była najwyższa w 5. dniu, a najniższa w 27. dniu.</string>
+    <string name="cycle_nightly_evidence_lin_phase">W zbiorze danych mcPHASES 42 młode dorosłe osoby miesiączkujące nosiły Fitbit Sense przez trzy miesiące. Mediana tętna spoczynkowego istotnie różniła się między fazami cyklu: była najniższa w fazie folikularnej, a szczyt osiągała w fazie lutealnej.</string>
+    <string name="cycle_nightly_evidence_de_jager_hrv" formatted="false">Stale aktualizowany przegląd systematyczny 16 badań wykazał, że HRV mierzona urządzeniami noszonymi jest wyższa na początku cyklu, a niższa pod jego koniec, z różnicami od 3 do 9 %. Osoby stosujące antykoncepcję hormonalną miały niższe HRV, zwłaszcza pod koniec cyklu.</string>
+    <string name="cycle_nightly_evidence_gonzalez_sleep" formatted="false">U 2 596 kobiet z 42 759 zapisanymi cyklami, które nosiły WHOOP, tętno spoczynkowe rosło o 1,2 %, gdy tygodniowy sen skracał się o 10 %, niezależnie od fazy cyklu.</string>
+    <string name="cycle_nightly_evidence_pietila_alcohol">U 4 098 fińskich pracowników spożycie alkoholu było zależnie od dawki związane ze słabszą regulacją przywspółczulną w pierwszych 3 godzinach snu. Wskaźnik regeneracji oparty na HRV spadał o 9,3, 24,0 i 39,2 punktu procentowego po małym, umiarkowanym i dużym spożyciu.</string>
+    <string name="cycle_nightly_evidence_shi_small_gain">Przegląd systematyczny z metaanalizą sieciową 27 badań wykazał tylko niewielki zysk z łączenia kilku sygnałów z urządzeń noszonych z temperaturą (zbiorcza dokładność 0,89 wobec 0,87), przy nakładających się przedziałach ufności.</string>
+    <string name="cycle_nightly_method">Jak powstaje wartość nocy: OpenVitals bierze medianę wszystkich odczytów z sesji snu danej nocy i przypisuje ją do dnia, w którym się obudziłaś lub obudziłeś. Badania agregują inaczej: w przeglądzie dotyczącym HRV badania z pierścieniem Oura używały 5-minutowych przedziałów w nocy, jedno badanie z WHOOP ostatniego cyklu snu wolnofalowego, a inne całego czasu bez czuwania w głównym śnie. Wartości bezwzględne nie są więc porównywalne z badaniami. Jeśli sygnał zapisało kilka aplikacji lub urządzeń, rysowane jest tylko to, które obejmuje najwięcej nocy.</string>
+    <string name="cycle_nightly_caveats">Sen, alkohol i antykoncepcja hormonalna również przesuwają te linie, więc pojedyncza noc mówi niewiele, a zysk z łączenia kilku sygnałów był w powyższym przeglądzie niewielki. OpenVitals nie używa żadnej z tych wartości do prognozy, fazy ani żadnego twierdzenia o płodności.</string>
     <string name="cycle_patterns_subtitle">Jak często każdy objaw był zapisywany w każdej fazie. Tylko liczby; nic nie jest diagnozowane ani przewidywane.</string>
     <string name="cycle_patterns_empty_title">Na razie brak objawów</string>
     <string name="cycle_patterns_empty_body">Wzorce pojawią się tutaj, gdy zapiszesz objawy w kolejnych cyklach.</string>
@@ -4026,4 +4075,16 @@
     <string name="settings_scales_delete_body">Jego waga, tętno i skład ciała zostaną usunięte z Health Connect.</string>
     <string name="settings_scales_remove">Usuń wagę</string>
     <string name="settings_scales_remove_body">OpenVitals przestaje nasłuchiwać i zapomina klucz. Zapisane już ważenia zostają.</string>
+    <string name="cycle_hormonal_title">Antykoncepcja hormonalna</string>
+    <string name="cycle_hormonal_body">Metody hormonalne mogą zmieniać cykl i przebieg temperatury. Wymieniono tylko metody wykorzystujące hormony: wkładka miedziana, prezerwatywa i diafragma nie wykorzystują hormonów, więc nie ma ich tutaj. To tylko kontekst dla widoku cyklu, nic więcej.</string>
+    <string name="cycle_hormonal_set_by_pill">Ustawiono na %1$s przez Twój schemat tabletek. Wyłącz schemat, aby wybrać inną metodę.</string>
+    <string name="cycle_hormonal_stopped_on">Odstawiono (opcjonalnie; przyszła data liczy się jako nadal stosowane)</string>
+    <string name="cycle_hormonal_stopped_clear">Wyczyść datę odstawienia</string>
+    <string name="cycle_hormonal_kind_none">Brak</string>
+    <string name="cycle_hormonal_kind_pill">Tabletki</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">Wkładka hormonalna</string>
+    <string name="cycle_hormonal_kind_implant">Implant</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Pierścień lub plaster</string>
+    <string name="cycle_hormonal_kind_injection">Zastrzyk</string>
+    <string name="cycle_hormonal_kind_other">Inna metoda hormonalna</string>
 </resources>

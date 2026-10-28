@@ -120,6 +120,17 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
     )
 
+    /**
+     * The overnight values behind the cycle screen's nightly card. Optional: asked only from the
+     * card's button, never as part of the cycle feature, so the screen works without them.
+     */
+    val cycleNightlyPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+        HealthPermission.getReadPermission(RespiratoryRateRecord::class),
+    )
+
     val bodyPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(WeightRecord::class),
         HealthPermission.getReadPermission(HeightRecord::class),

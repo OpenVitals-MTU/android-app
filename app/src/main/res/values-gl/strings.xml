@@ -3596,6 +3596,11 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
         <item quantity="other">Intervalo estimado a partir de %1$d ciclos rexistrados.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Esta estimación baséase só no teu historial rexistrado e pode cambiar.</string>
+    <string name="cycle_estimate_basis_lh">Contado desde a túa proba de LH positiva do %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Contado desde a túa suba de temperatura do %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Contado desde o teu pico de moco do %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un segundo sinal rexistrado coincide.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Os teus sinais rexistrados non coinciden, así que este intervalo usa o teu historial de ciclos.</string>
     <string name="cycle_estimate_window_a11y">Intervalo estimado de %1$d días</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Dentro duns %1$d día</item>
@@ -3684,7 +3689,51 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="cycle_thermal_shift_confirmed">Atopouse unha subida térmica sostida nas temperaturas rexistradas.</string>
     <string name="cycle_thermal_coverline">Liña de cobertura mostrada en trazos</string>
     <string name="cycle_thermal_empty">Rexistra un inicio de regra e temperaturas matinais para ver a gráfica térmica.</string>
+    <string name="cycle_skin_title">Temperatura da pel e o teu ciclo</string>
+    <string name="cycle_skin_intro">Os reloxos e os aneis miden a temperatura da túa pel pola noite. Despois da ovulación adoita ser algo máis alta, uns 0,3 °C nun pequeno estudo con anel. Os estudos lénno a posteriori, a partir de todo o ciclo, nunca por adiantado.</string>
+    <string name="cycle_skin_accuracy" formatted="false">Nun gran estudo con Apple Watch estimouse un día de ovulación no 81 % dos ciclos cunha subida de polo menos 0,2 °C, e o 89 % desas estimacións quedaba a 2 días como máximo do día achado con probas de LH. Un estudo con anel achou un erro medio de 1,3 días, fronte a 3,4 días ao contar polo calendario. Son resultados do método propio de cada estudo; non valen para calquera reloxo nin calquera método.</string>
+    <string name="cycle_skin_limits" formatted="false">• Non ver unha subida non significa que non houbese ovulación: nun estudo de 437 ciclos, unha subida sostida apareceu no 82 %.\n• Unha subida tamén pode aparecer sen ovulación: un pequeno estudo de pulso achou subidas tamén en ciclos sen ovulación.\n• A febre ou unha enfermidade tamén elevan a temperatura da pel.\n• A temperatura da pel non é a temperatura central: nun estudo só se correlacionaba moderadamente coa temperatura oral (r = 0,56).</string>
+    <string name="cycle_skin_note_hormonal">Indicaches un método hormonal ou deixaches un nos últimos dous meses. Os métodos hormonais actúan sobre o mesmo ritmo de temperatura corporal do que trata esta tarxeta, e moitos deles deteñen a ovulación (a liberación dun óvulo), á que segue a subida da temperatura. Por iso a túa propia temperatura pode non mostrar un patrón claro de antes e despois. O gran estudo de temperatura do pulso excluíu as persoas con métodos hormonais e ata dous meses despois de deixalos, así que os seus resultados din pouco sobre ti. É información, non un consello.</string>
+    <string name="cycle_skin_note_pcos">Indicaches SOP. Non atopamos ningún estudo sobre a detección da ovulación por temperatura no SOP; le calquera patrón de temperatura con especial cautela.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals non usa a temperatura da pel nas súas estimacións. É información de contexto, non un método anticonceptivo nin unha predición de fertilidade, nin consello médico.</string>
+    <string name="cycle_skin_show_details">Mostrar cifras e fontes</string>
+    <string name="cycle_skin_hide_details">Agochar os detalles</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">O que atoparon os estudos sobre os métodos hormonais. En 27 usuarias da pílula, o ritmo diario da temperatura da pel do pulso non difería entre a fase pseudolútea e a pseudofolicular (semanas de pílula e semana sen pílula), mentres que si difería en 14 persoas con ciclo natural. En 18 usuarias da pílula, a temperatura oral da mañá foi máis alta nas semanas con pílulas activas (36,4 °C) que na semana sen pílula (36,1 °C), e a subida foi da man da dose de proxestáxeno. Unha revisión describe os estróxenos como redutores e os proxestáxenos como elevadores, en xeral, da temperatura corporal. Outra revisión sobre como actúan os métodos hormonais sinala a inhibición da ovulación e os cambios no moco cervical entre os mecanismos principais das pílulas combinadas e dos métodos só con proxestáxeno. Os outros estudos aquí citados tamén deixaron fóra quen usaba hormonas: un estudo con anel (Thigpen) retirou 6 ciclos con uso de hormonas, un estudo con anel no dedo (Maijala) excluíu no seu subestudo usuarias de anticoncepción hormonal e o estudo de pulso de 2021 (Zhu) incluíu só persoas sen terapia hormonal. Non atopamos ningún estudo de temperatura da pel para outros métodos distintos da pílula.</string>
+    <string name="section_cycle_nightly">Pulso, VFC e respiración nocturnos ao longo do ciclo</string>
+    <string name="cycle_nightly_subtitle">Os teus valores nocturnos por día do ciclo, tomados das sesións de sono do ciclo actual. Só informativo: non din nada sobre a ovulación, a fertilidade nin a anticoncepción e non cambian ningunha estimación.</string>
+    <string name="cycle_nightly_loading">Lendo as noites deste ciclo…</string>
+    <string name="cycle_nightly_no_sleep">Non se atopou ningunha sesión de sono neste ciclo, así que os valores nocturnos non se poden asignar a unha noite. Fai falta un rexistro de sono dun reloxo ou doutra app.</string>
+    <string name="cycle_nightly_nights">Noites con sesión de sono neste ciclo: %1$d</string>
+    <string name="cycle_nightly_signal_pulse">Pulso en repouso</string>
+    <string name="cycle_nightly_signal_hrv">VFC (RMSSD)</string>
+    <string name="cycle_nightly_signal_breathing">Frecuencia respiratoria</string>
+    <string name="cycle_nightly_range_pulse">%1$s a %2$s ppm</string>
+    <string name="cycle_nightly_range_hrv">%1$s a %2$s ms</string>
+    <string name="cycle_nightly_range_breathing">%1$s a %2$s respiracións por minuto</string>
+    <string name="cycle_nightly_legend">%1$s, escala propia: %2$s</string>
+    <string name="cycle_nightly_chart_description">%1$s, noites con valor: %2$d, rango %3$s</string>
+    <string name="cycle_nightly_all_hidden">Activa arriba un sinal para ver a súa liña.</string>
+    <string name="cycle_nightly_source">Mostrado desde %1$s.</string>
+    <string name="cycle_nightly_source_others">Mostrado desde %1$s. Os valores de %2$s non se mesturan.</string>
+    <string name="cycle_nightly_missing_pulse">Non se atopou pulso en repouso para as noites deste ciclo. Moitos reloxos non o rexistran, ou pode que OpenVitals non teña permiso para lelo.</string>
+    <string name="cycle_nightly_missing_hrv">Non se atopou VFC para as noites deste ciclo. Moitos reloxos non a rexistran de noite, ou pode que OpenVitals non teña permiso para lela.</string>
+    <string name="cycle_nightly_missing_breathing">Non se atopou frecuencia respiratoria para as noites deste ciclo. Moitos reloxos non a rexistran, ou pode que OpenVitals non teña permiso para lela.</string>
+    <string name="cycle_nightly_details_show">Por que se mostra</string>
+    <string name="cycle_nightly_details_hide">Ocultar detalles</string>
+    <string name="cycle_nightly_permission_needed">Algúns valores nocturnos non se poden ler porque aínda non se concedeu o permiso.</string>
+    <string name="cycle_nightly_allow_reading">Permitir ler os valores nocturnos</string>
+    <string name="cycle_nightly_daily_value">Os puntos ocos son o valor diario do dispositivo, non unha lectura da noite.</string>
+    <string name="cycle_nightly_why_intro">Os estudos con dispositivos vestibles indican que o pulso en repouso adoita ser máis baixo ao comezo do ciclo e máis alto pouco antes da seguinte regra, e que a VFC tende a moverse ao revés. As diferenzas son duns poucos latexos por minuto e duns poucos puntos porcentuais de VFC.</string>
+    <string name="cycle_nightly_evidence_goodale_pulse">Nun estudo con 237 mulleres recrutadas que levaron a pulseira Ava de noite, a frecuencia cardíaca nocturna foi de media 56,6 ppm na fase folicular e 60,5 ppm na fase lútea tardía.</string>
+    <string name="cycle_nightly_evidence_jasinski_days">En 11.590 participantes e 45.811 ciclos rexistrados cunha pulseira WHOOP, a frecuencia cardíaca en repouso foi de media máis baixa o día 5 do ciclo e máis alta o día 26. A VFC (RMSSD) foi máis alta o día 5 e máis baixa o día 27.</string>
+    <string name="cycle_nightly_evidence_lin_phase">No conxunto de datos mcPHASES, 42 mozas adultas que menstrúan levaron un Fitbit Sense durante tres meses. A mediana da frecuencia cardíaca en repouso diferiu de forma significativa entre as fases do ciclo: foi máis baixa na fase folicular e alcanzou o máximo na fase lútea.</string>
+    <string name="cycle_nightly_evidence_de_jager_hrv" formatted="false">Unha revisión sistemática actualizada de forma continua de 16 estudos atopou que a VFC medida con dispositivos vestibles era maior ao comezo do ciclo e menor cara ao final, con diferenzas do 3 ao 9 %. As usuarias de anticonceptivos hormonais tiñan unha VFC máis baixa, sobre todo ao final do ciclo.</string>
+    <string name="cycle_nightly_evidence_gonzalez_sleep" formatted="false">En 2.596 mulleres con 42.759 ciclos rexistrados que levaban un WHOOP, a frecuencia cardíaca en repouso aumentou un 1,2 % cando o sono semanal diminuíu un 10 %, con independencia da fase do ciclo.</string>
+    <string name="cycle_nightly_evidence_pietila_alcohol">En 4.098 empregados finlandeses, o consumo de alcol asociouse, de forma dependente da dose, cunha regulación parasimpática máis débil durante as primeiras 3 horas de sono. Unha medida de recuperación baseada na VFC diminuíu 9,3, 24,0 e 39,2 puntos porcentuais tras unha inxestión baixa, moderada e alta.</string>
+    <string name="cycle_nightly_evidence_shi_small_gain">Unha revisión sistemática con metaanálise en rede de 27 estudos atopou só unha lixeira mellora ao combinar varios sinais de dispositivos vestibles coa temperatura (precisión agrupada de 0,89 fronte a 0,87), con intervalos de confianza que se solapan.</string>
+    <string name="cycle_nightly_method">Como se obtén o valor da noite: OpenVitals toma a mediana de todas as lecturas dentro da sesión de sono da noite e asígnaa ao día en que espertaches. Os estudos agregan doutro xeito: na revisión sobre VFC, os estudos co anel Oura usaron intervalos de 5 minutos durante a noite, un estudo con WHOOP o último ciclo de sono de ondas lentas e outro todo o tempo sen vixilia do sono principal. Por iso os valores absolutos non son comparables cos dos estudos. Se varias apps ou dispositivos escribiron un sinal, só se debuxa o que cobre máis noites.</string>
+    <string name="cycle_nightly_caveats">O sono, o alcol e a anticoncepción hormonal tamén desprazan estas liñas, así que unha soa noite di pouco, e a mellora de combinar varios sinais foi pequena na revisión anterior. OpenVitals non usa ningún destes valores para unha estimación, unha fase nin ningunha afirmación sobre a fertilidade.</string>
     <string name="cycle_patterns_subtitle">Cantas veces se rexistrou cada síntoma en cada fase. Só reconto; nada se diagnostica nin se predí.</string>
     <string name="cycle_patterns_empty_title">Aínda sen síntomas</string>
     <string name="cycle_patterns_empty_body">Os patróns aparecen aquí a medida que rexistras síntomas nos teus ciclos.</string>
@@ -4023,4 +4072,16 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_scales_delete_body">O seu peso, frecuencia cardíaca e composición corporal elimínanse de Health Connect.</string>
     <string name="settings_scales_remove">Quitar báscula</string>
     <string name="settings_scales_remove_body">OpenVitals deixa de escoitar e esquece a clave. As pesaxes xa gardadas consérvanse.</string>
+    <string name="cycle_hormonal_title">Anticoncepción hormonal</string>
+    <string name="cycle_hormonal_body">Os métodos hormonais poden cambiar o ciclo e o patrón de temperatura. Só se listan os métodos con hormonas: o DIU de cobre, o preservativo e o diafragma non usan hormonas, polo que non aparecen aquí. É só contexto para a vista do ciclo, nada máis.</string>
+    <string name="cycle_hormonal_set_by_pill">Establecido en %1$s pola túa pauta da pílula. Desactiva a pauta para escoller outro método.</string>
+    <string name="cycle_hormonal_stopped_on">Deixado o (opcional; unha data futura conta como en uso)</string>
+    <string name="cycle_hormonal_stopped_clear">Borrar a data de interrupción</string>
+    <string name="cycle_hormonal_kind_none">Ningún</string>
+    <string name="cycle_hormonal_kind_pill">Pílula</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">DIU hormonal</string>
+    <string name="cycle_hormonal_kind_implant">Implante</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Anel ou parche</string>
+    <string name="cycle_hormonal_kind_injection">Inxección</string>
+    <string name="cycle_hormonal_kind_other">Outro método hormonal</string>
 </resources>
