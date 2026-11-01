@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
@@ -69,6 +68,10 @@ internal class HealthConnectPermissionService(
     private val availabilityService: HealthConnectAvailabilityService,
     private val diagnostics: HealthConnectDiagnostics,
     private val mindfulnessIntegrationEnabled: () -> Boolean = { true },
+    /** Monotonic clock for the granted-permissions cache, off the JVM so a test needs no Android stub. */
+    private val elapsedMillis: () -> Long = { System.nanoTime() / 1_000_000L },
+    /** The app's foreground epoch: a grant read before a trip to another app is stale. */
+    private val foregroundEpoch: () -> Int = { 0 },
 ) {
     private val featureStatusCache = mutableMapOf<Int, Int>()
     private val featureStatusCacheLock = Any()
@@ -561,36 +564,59 @@ internal class HealthConnectPermissionService(
         }
     }
 
+    /** Forgets the granted set: the next call asks again. For a permission request's result. */
+    fun invalidateGrantedPermissions() {
+        grantedPermissionsCache = null
+    }
+
     private fun freshGrantedPermissions(): Set<String>? {
-        val nowMs = SystemClock.elapsedRealtime()
+        val nowMs = elapsedMillis()
         return grantedPermissionsCache
-            ?.takeIf { nowMs - it.loadedAtMs <= GrantedPermissionsCacheMillis }
+            ?.takeIf { it.epoch == foregroundEpoch() && nowMs - it.loadedAtMs <= GrantedPermissionsCacheMillis }
             ?.permissions
     }
 
     private suspend fun loadGrantedPermissions(): Set<String> {
-        val granted = withContext(Dispatchers.IO) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val granted = withContext(Dispatchers.IO) {
                 managedPermissions.filterTo(mutableSetOf()) { permission ->
                     ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-                }.also { permissions ->
-                    Log.d(TAG, "grantedPermissions(runtime) count=${permissions.size} ${diagnostics.summary()}")
-                }
-            } else {
-                withLogging("permissionController.getGrantedPermissions", emptySet()) {
-                    clientProvider().permissionController.getGrantedPermissions()
-                }.also { permissions ->
-                    Log.d(TAG, "grantedPermissions(client) count=${permissions.size}")
                 }
             }
+            Log.d(TAG, "grantedPermissions(runtime) count=${granted.size} ${diagnostics.summary()}")
+            cacheGrantedPermissions(granted)
+            return granted
         }
-        grantedPermissionsCache = GrantedPermissionsCache(
-            permissions = granted,
-            loadedAtMs = SystemClock.elapsedRealtime(),
-        )
+        // Below Android 14 this is a call into the standalone Health Connect app, refused like a
+        // read once its quota is spent. A refusal is not "nothing granted": it once emptied every
+        // tile of a fresh install. The last good answer stands, and nothing is cached until the
+        // app answers again.
+        val lastGood = grantedPermissionsCache?.permissions
+        if (HealthConnectRateLimitBackoff.remainingMillis() > 0L) {
+            Log.w(TAG, "grantedPermissions(client) not asked - Health Connect rate limited")
+            return lastGood ?: emptySet()
+        }
+        val granted = withContext(Dispatchers.IO) {
+            withLogging<Set<String>?>("permissionController.getGrantedPermissions", null) {
+                clientProvider().permissionController.getGrantedPermissions()
+            }
+        }
+        if (granted == null) {
+            Log.w(TAG, "grantedPermissions(client) failed; keeping the last good answer")
+            return lastGood ?: emptySet()
+        }
+        Log.d(TAG, "grantedPermissions(client) count=${granted.size}")
+        cacheGrantedPermissions(granted)
         return granted
     }
 
+    private fun cacheGrantedPermissions(granted: Set<String>) {
+        grantedPermissionsCache = GrantedPermissionsCache(
+            permissions = granted,
+            loadedAtMs = elapsedMillis(),
+            epoch = foregroundEpoch(),
+        )
+    }
 
     private fun featureStatusCached(feature: Int, logName: String): Int {
         synchronized(featureStatusCacheLock) {
@@ -599,12 +625,10 @@ internal class HealthConnectPermissionService(
                 return cached
             }
         }
-        val status = withLogging(
-            "features.getFeatureStatus[$logName]",
-            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
-        ) {
+        // A failed call is not an answer: cached, it hid a feature for the life of the process.
+        val status = withLogging<Int?>("features.getFeatureStatus[$logName]", null) {
             featureStatus(feature)
-        }
+        } ?: return HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
         synchronized(featureStatusCacheLock) {
             featureStatusCache[feature] = status
         }
@@ -623,12 +647,22 @@ internal class HealthConnectPermissionService(
         block: () -> T,
     ): T = try {
         Log.d(TAG, "Starting $operation ${diagnostics.summary()}")
+        HealthConnectCallCounters.started(operation)
         block().also {
             Log.d(TAG, "Finished $operation successfully")
+            HealthConnectCallCounters.succeeded(operation)
         }
     } catch (t: CancellationException) {
         throw t
     } catch (t: Throwable) {
+        // On Android 13 these are calls into the standalone Health Connect app, and count against its quota.
+        if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+            HealthConnectCallCounters.rateLimited(operation)
+            // The readers must see this refusal too; the message is for the exception, which nobody gets.
+            HealthConnectRateLimitBackoff.markRateLimited(t, messageForRetryAfter = { "" })
+        } else {
+            HealthConnectCallCounters.failed(operation)
+        }
         Log.e(TAG, "Failed $operation ${diagnostics.summary()}", t)
         fallback
     }
@@ -640,13 +674,20 @@ internal class HealthConnectPermissionService(
     private data class GrantedPermissionsCache(
         val permissions: Set<String>,
         val loadedAtMs: Long,
+        val epoch: Int,
     )
 
     companion object {
         /** Bump when requestable/managed permissions change so existing users see the new-permissions prompt. */
         const val PERMISSION_SET_VERSION = 4
 
-        private const val GrantedPermissionsCacheMillis = 500L
+        /**
+         * Below Android 14 a miss is a call into the Health Connect app, against its quota. Half a
+         * second once meant one such call per dashboard tile. A grant changes only through the
+         * permission screen, after which the cache is dropped, or through the Health Connect app
+         * itself, which the foreground epoch catches.
+         */
+        private const val GrantedPermissionsCacheMillis = 30_000L
         private const val HEALTH_READ_PERMISSION_PREFIX = "android.permission.health.READ_"
         private const val TAG = "HealthConnectPermissions"
         private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"

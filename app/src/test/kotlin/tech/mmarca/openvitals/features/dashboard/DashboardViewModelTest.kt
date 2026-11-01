@@ -46,7 +46,9 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import tech.mmarca.openvitals.healthconnect.HealthConnectReadOutcome
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1306,6 +1308,56 @@ class DashboardViewModelTest {
         assertNotNull(vm.uiState.value.data)
     }
 
+    @Test fun `a tile whose reads were refused is marked degraded and reloads alone when the backoff ends`() = runTest {
+        val deadlines = MutableStateFlow(0L)
+        val repo = mockHealthRepository { every { rateLimitDeadlineEpochMillis } returns deadlines }
+        val loader = mockDashboardDataLoader()
+        var refuseSteps = true
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            queries += query
+            // The steps read is refused: the reader answers its fallback and marks the outcome.
+            if (refuseSteps && DashboardMetric.STEPS in query.visibleMetrics) {
+                currentCoroutineContext()[HealthConnectReadOutcome]?.markDegraded()
+            }
+            DashboardData(date = today, steps = 8_000, loadedMetrics = query.visibleMetrics)
+        }
+
+        val vm = dashboardViewModel(loader = loader, repo = repo, prefs = prefs())
+        advanceUntilIdle()
+        val degraded = vm.uiState.value.degradedWidgets
+        assertTrue(DashboardWidgetId.STEPS in degraded)
+        assertFalse(DashboardWidgetId.SLEEP in degraded)
+        assertNull(vm.uiState.value.rateLimitDeadlineEpochMillis)
+
+        // The readers publish the end of the backoff; the banner shows it, and the recovery waits for it.
+        refuseSteps = false
+        queries.clear()
+        deadlines.value = System.currentTimeMillis() + 60_000L
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.rateLimitDeadlineEpochMillis)
+
+        // Only the degraded tile's group was read again; the others kept what they had.
+        assertTrue(queries.isNotEmpty())
+        assertTrue(queries.all { DashboardMetric.STEPS in it.visibleMetrics })
+        assertTrue(vm.uiState.value.degradedWidgets.isEmpty())
+        assertEquals(8_000L, vm.uiState.value.data?.steps)
+    }
+
+    @Test fun `a load Health Connect refused does not start the history drains`() = runTest {
+        // The drains are the most read-hungry thing the app does unasked; after a refusal the screen's reads come first.
+        val loader = mockDashboardDataLoader()
+        loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
+        val scheduler = mockk<HistorySyncScheduler>(relaxed = true)
+        val repo = mockHealthRepository { every { rateLimitRetryAfterMillis() } returns 45_000L }
+
+        dashboardViewModel(loader = loader, repo = repo, prefs = prefs(), historySyncScheduler = scheduler)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { scheduler.drainIncrementalOnce(afterCleanLoad = false) }
+    }
+
     @Test fun `a settled read of today redraws the home widgets and a past day does not`() = runTest {
         val loader = mockDashboardDataLoader()
         loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
@@ -1390,6 +1442,7 @@ class DashboardViewModelTest {
         mockk<HealthRepository>().also { repo ->
             every { repo.availability() } returns HealthConnectAvailability.AVAILABLE
             every { repo.rateLimitRetryAfterMillis() } returns 0L
+            every { repo.rateLimitDeadlineEpochMillis } returns MutableStateFlow(0L)
             every { repo.minimumOnboardingPermissions } returns emptySet()
             coEvery { repo.grantedPermissions() } returns emptySet()
             configure(repo)

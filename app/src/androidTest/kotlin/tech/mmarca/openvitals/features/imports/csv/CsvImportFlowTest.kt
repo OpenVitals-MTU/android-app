@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -339,6 +340,8 @@ class CsvImportFlowTest {
         override fun availability() = error("unused")
 
         override fun rateLimitRetryAfterMillis(): Long = error("unused")
+
+        override val rateLimitDeadlineEpochMillis: StateFlow<Long> get() = error("unused")
 
         override fun permissionContract() = error("unused")
 

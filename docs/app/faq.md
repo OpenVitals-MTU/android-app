@@ -20,7 +20,7 @@ Cycle data is sensitive. OpenVitals requests cycle permissions as their own Heal
 
 Health Connect restricts access to older records unless Health history access is granted. Open Health Connect permissions and grant history access if older data should be included.
 
-Long reads can also hit Health Connect rate limits. When that happens, wait and try again later.
+Long reads can also hit Health Connect rate limits. When that happens the dashboard shows a banner with a countdown and reloads the missing tiles by itself once Health Connect answers again; there is no need to pull to refresh, which only spends more of the limit.
 
 ## Can OpenVitals Edit Records From Other Apps?
 

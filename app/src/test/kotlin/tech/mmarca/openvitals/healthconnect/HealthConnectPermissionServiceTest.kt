@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
+import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
@@ -21,10 +22,12 @@ import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,6 +43,8 @@ class HealthConnectPermissionServiceTest {
 
     @Before
     fun setUp() {
+        HealthConnectRateLimitBackoff.resetForTest()
+        HealthConnectCallCounters.resetForTest()
         mockkStatic(Log::class)
         every { Log.d(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0
@@ -50,6 +55,7 @@ class HealthConnectPermissionServiceTest {
     @After
     fun tearDown() {
         unmockkStatic(Log::class)
+        HealthConnectRateLimitBackoff.resetForTest()
     }
 
     // Phased permission sets.
@@ -455,12 +461,107 @@ class HealthConnectPermissionServiceTest {
         mindfulnessIntegrationEnabled = enabled,
     )
 
+    // The granted set. The JVM reports SDK 0, so these run the pre-Android-14 path: a call into the
+    // Health Connect app, which is what the standalone provider on Android 13 refuses once its quota is spent.
+
+    @Test
+    fun `a granted-permissions answer is reused within the window and asked again after it`() = runTest {
+        var asked = 0
+        var now = 0L
+        val service = service(grantedPermissions = { asked += 1; setOf(READ_SKIN_TEMPERATURE) }, now = { now })
+
+        repeat(25) { service.grantedPermissions() }
+        assertThat(asked).isEqualTo(1)
+
+        now = 30_001L
+        assertThat(service.grantedPermissions()).containsExactly(READ_SKIN_TEMPERATURE)
+        assertThat(asked).isEqualTo(2)
+    }
+
+    @Test
+    fun `a trip to another app or a permission request's result forgets the granted set`() = runTest {
+        var asked = 0
+        var epoch = 0
+        val service = service(grantedPermissions = { asked += 1; emptySet() }, epoch = { epoch })
+
+        service.grantedPermissions()
+        epoch = 1
+        service.grantedPermissions()
+        assertThat(asked).isEqualTo(2)
+
+        service.invalidateGrantedPermissions()
+        service.grantedPermissions()
+        assertThat(asked).isEqualTo(3)
+    }
+
+    @Test
+    fun `a failed granted-permissions call keeps the last good answer and is not cached`() = runTest {
+        var fail = false
+        var asked = 0
+        var now = 0L
+        val service = service(
+            grantedPermissions = {
+                asked += 1
+                if (fail) throw IllegalStateException("binder died") else setOf(READ_SKIN_TEMPERATURE)
+            },
+            now = { now },
+        )
+        service.grantedPermissions()
+
+        fail = true
+        now = 60_000L
+        // The failure is not an answer: the last good set stands...
+        assertThat(service.grantedPermissions()).containsExactly(READ_SKIN_TEMPERATURE)
+        // ...and is not cached as one, so the next call asks again.
+        assertThat(service.grantedPermissions()).containsExactly(READ_SKIN_TEMPERATURE)
+        assertThat(asked).isEqualTo(3)
+    }
+
+    @Test
+    fun `a refused granted-permissions call arms the backoff and is not asked again inside it`() = runTest {
+        var asked = 0
+        val service = service(
+            grantedPermissions = {
+                asked += 1
+                throw RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
+            },
+        )
+
+        // A fresh install: no good answer yet, so nothing is granted for now, not forever.
+        assertThat(service.grantedPermissions()).isEmpty()
+        assertThat(HealthConnectRateLimitBackoff.remainingMillis()).isGreaterThan(0L)
+
+        service.grantedPermissions()
+        assertThat(asked).isEqualTo(1)
+    }
+
+    @Test
+    fun `a failed feature status is asked again, not cached as unavailable`() {
+        var fail = true
+        var calls = 0
+        val service = service(
+            availableFeatures = setOf(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE),
+            onFeatureStatusCall = { calls += 1; if (fail) throw IllegalStateException("binder died") },
+        )
+        // The constructor probes the feature once itself (the vitals permission set); count from here.
+        val probedAtConstruction = calls
+
+        assertThat(service.isSkinTemperatureAvailable()).isFalse()
+        fail = false
+        assertThat(service.isSkinTemperatureAvailable()).isTrue()
+        assertThat(service.isSkinTemperatureAvailable()).isTrue()
+        assertThat(calls - probedAtConstruction).isEqualTo(2)
+    }
+
     private fun service(
         availableFeatures: Set<Int> = emptySet(),
         unknownStatusFeatures: Set<Int> = emptySet(),
         mindfulnessIntegrationEnabled: Boolean = true,
         availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
         onFeatureStatusCall: () -> Unit = {},
+        grantedPermissions: () -> Set<String> = { emptySet() },
+        now: () -> Long = { 0L },
+        epoch: () -> Int = { 0 },
     ): HealthConnectPermissionService {
         val features = mockk<HealthConnectFeatures>()
         every { features.getFeatureStatus(any()) } answers {
@@ -472,8 +573,11 @@ class HealthConnectPermissionServiceTest {
                 else -> HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
             }
         }
+        val permissionController = mockk<PermissionController>()
+        coEvery { permissionController.getGrantedPermissions() } answers { grantedPermissions() }
         val client = mockk<HealthConnectClient>()
         every { client.features } returns features
+        every { client.permissionController } returns permissionController
 
         val availabilityService = mockk<HealthConnectAvailabilityService>()
         every { availabilityService.availability() } returns availability
@@ -487,6 +591,8 @@ class HealthConnectPermissionServiceTest {
             availabilityService = availabilityService,
             diagnostics = diagnostics,
             mindfulnessIntegrationEnabled = { mindfulnessIntegrationEnabled },
+            elapsedMillis = now,
+            foregroundEpoch = epoch,
         )
     }
 

@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import tech.mmarca.openvitals.core.privacy.maskLogcat
+import tech.mmarca.openvitals.healthconnect.HealthConnectCallCounters
 
 data class DebugLogExportResult(
     val writtenLines: Int,
@@ -47,6 +48,8 @@ object PrivacySafeDebugLogExporter {
             writer.appendLine("package=${context.packageName}")
             writer.appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             writer.appendLine(PrivacyHeader)
+            // Counts by operation name, nothing else: what this process asked Health Connect and what it refused.
+            HealthConnectCallCounters.summaryLines().forEach { line -> writer.appendLine("healthConnectCalls: $line") }
             writer.appendLine("writtenLines=${exported.writtenLines}")
             writer.appendLine("droppedLines=${exported.droppedLines}")
             writer.appendLine()

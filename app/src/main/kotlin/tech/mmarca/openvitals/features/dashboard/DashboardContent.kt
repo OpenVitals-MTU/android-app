@@ -85,6 +85,8 @@ internal fun DashboardContent(
     canGoForward: Boolean,
     isRefreshing: Boolean,
     syncPaused: Boolean = false,
+    /** When Health Connect's refusal ends; the banner counts down to it. Null while it answers. */
+    rateLimitDeadlineEpochMillis: Long? = null,
     dashboardWidgets: List<DashboardWidgetId>,
     isEditingDashboard: Boolean,
     sortEmptyTilesLast: Boolean = true,
@@ -171,10 +173,11 @@ internal fun DashboardContent(
                 .fillMaxWidth()
                 .widthIn(max = 1080.dp),
         ) {
-            if (syncPaused) {
+            if (syncPaused || rateLimitDeadlineEpochMillis != null) {
                 HealthConnectSyncStatusBanner(
                     syncPaused = syncPaused,
                     syncInProgress = false,
+                    rateLimitDeadlineEpochMillis = rateLimitDeadlineEpochMillis,
                     modifier = Modifier.padding(
                         start = DashboardScreenPadding,
                         end = DashboardScreenPadding,

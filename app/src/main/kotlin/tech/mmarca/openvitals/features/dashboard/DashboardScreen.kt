@@ -89,15 +89,6 @@ fun DashboardScreen(
             viewModel.clearError()
         }
     }
-    // Rate-limited is not "no data". Keyed on the minute count so it speaks once.
-    val rateLimitedMessage = state.rateLimitedRetryAfterMinutes?.let { minutes ->
-        stringResource(R.string.message_health_connect_rate_limited, minutes)
-    }
-    androidx.compose.runtime.LaunchedEffect(rateLimitedMessage) {
-        if (rateLimitedMessage != null) {
-            Toast.makeText(context, rateLimitedMessage, Toast.LENGTH_LONG).show()
-        }
-    }
     val currentOnOpenDeviceStatus by rememberUpdatedState(onOpenDeviceStatus)
     DeclareAppBar(
         remember(state.sensorStatus.hasDevices) {
@@ -150,6 +141,8 @@ fun DashboardScreen(
                     canGoForward = selectedDate.isBefore(LocalDate.now()),
                     isRefreshing = state.isRefreshing && !pullRefreshRequested,
                     syncPaused = hcUx.syncPaused,
+                    // Rate-limited is not "no data": the banner counts down to the retry.
+                    rateLimitDeadlineEpochMillis = state.rateLimitDeadlineEpochMillis,
                     dashboardWidgets = state.dashboardWidgets,
                     isEditingDashboard = state.isEditingDashboard,
                     sortEmptyTilesLast = state.sortEmptyTilesLast,
