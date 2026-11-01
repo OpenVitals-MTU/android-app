@@ -20,14 +20,9 @@ import kotlin.reflect.KClass
 internal data class TimedSample<out T>(val time: Instant, val value: T)
 
 /**
- * How far before a window to look for a record that started earlier and
- * runs into it. Must exceed the longest record any writer produces; this
- * app wrote a 17.5-hour one. Fixed, so it cannot grow with the range.
- *
- * Only before. A record's samples lie between its start and its end, so a
- * record that starts after the window has none inside it, whichever time
- * Health Connect filters on. Looking the same distance past the end read
- * 84 hours of pages for one day and found nothing it could keep.
+ * How far either side of a window to look for an overlapping record. Must
+ * exceed the longest record any writer produces; this app wrote a 17.5-hour
+ * one. Fixed, so it cannot grow with the range.
  */
 private val SeriesRecordLookaround: Duration = Duration.ofHours(30)
 
@@ -41,11 +36,11 @@ internal suspend fun <R : Record, T> HealthConnectClient.readSeriesSamples(
 ): List<T> {
     if (!end.isAfter(start)) return emptyList()
 
-    // Read wide before, narrow after; keep narrow.
+    // Read wide, keep narrow.
     return readSeriesSamplesClipped(
         recordType = recordType,
         readStart = start.minus(lookaround),
-        readEnd = end,
+        readEnd = end.plus(lookaround),
         clipStart = start,
         clipEnd = end,
         flatten = flatten,

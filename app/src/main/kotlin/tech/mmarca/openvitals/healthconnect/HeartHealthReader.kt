@@ -13,7 +13,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
-import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
+import tech.mmarca.openvitals.domain.model.MaxHeartRateInsightAggregateBuckets
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.dayAverageBpm
@@ -52,7 +52,7 @@ internal class HeartHealthReader(
     /**
      * Heart-rate series dense enough for TRIMP and intensity-minute coverage.
      * Sliced at [HeartRateInsightBucketDuration], at most
-     * [MaxInsightAggregateBuckets] per request, across the whole span: a
+     * [MaxHeartRateInsightAggregateBuckets] per request, across the whole span: a
      * fortnight is a dozen requests. It used to go a local day at a time, two
      * requests each, and the dashboard's two-week walk alone was thirty calls
      * on a quota that counts them. Five-minute buckets do not care about the
@@ -67,7 +67,12 @@ internal class HeartHealthReader(
                 readRawOrAggregatedFallback(start, end)
             }
         }
-        return aggregateWindows(start, end, HeartRateInsightBucketDuration).flatMap { (chunkStart, chunkEnd) ->
+        return aggregateWindows(
+            start,
+            end,
+            HeartRateInsightBucketDuration,
+            maxBuckets = MaxHeartRateInsightAggregateBuckets,
+        ).flatMap { (chunkStart, chunkEnd) ->
             support.withLogging("readHeartRateSamplesForInsights[$chunkStart..$chunkEnd]", emptyList()) {
                 readAggregatedHeartRateSamples(chunkStart, chunkEnd, HeartRateInsightBucketDuration)
             }

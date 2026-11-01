@@ -27,6 +27,7 @@ class HistorySyncSchedulerTest {
     fun setUp() {
         mockkStatic(Log::class)
         every { Log.w(any(), any<String>(), any()) } returns 0
+        every { Log.i(any(), any<String>()) } returns 0
     }
 
     @After

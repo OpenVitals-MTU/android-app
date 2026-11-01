@@ -24,14 +24,22 @@ class HeartRateAggregatedSamplesTest {
     }
 
     @Test
-    fun `a fortnight of insight buckets is at most a dozen requests, and one request stays inside the parcel`() {
+    fun `a local day of insight buckets does not fit in one request`() {
+        val bucketsInADay = Duration.ofDays(1).toMinutes() / HeartRateInsightBucketDuration.toMinutes()
+
+        // A day has to be split: a whole day in one grouped-duration response is the parcel Health Connect refuses.
+        assertTrue(bucketsInADay > MaxInsightAggregateBuckets)
+    }
+
+    @Test
+    fun `a fortnight of heart-rate insight buckets is at most a dozen requests, each inside the parcel`() {
         val bucketsInAFortnight = Duration.ofDays(14).toMinutes() / HeartRateInsightBucketDuration.toMinutes()
-        val requests = (bucketsInAFortnight + MaxInsightAggregateBuckets - 1) / MaxInsightAggregateBuckets
+        val requests = (bucketsInAFortnight + MaxHeartRateInsightAggregateBuckets - 1) / MaxHeartRateInsightAggregateBuckets
 
         // The dashboard's weekly cardio walk is the dearest read on a cold install; it must not cost thirty calls.
         assertTrue(requests <= 12)
-        // 360 buckets of four metrics were measured safe for the Binder parcel; an insight bucket carries one.
-        assertTrue(MaxInsightAggregateBuckets <= 360L)
+        // 360 buckets of four metrics were measured safe for the Binder parcel; a heart-rate insight bucket carries one.
+        assertTrue(MaxHeartRateInsightAggregateBuckets <= 360L)
     }
 
     @Test
