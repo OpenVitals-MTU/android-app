@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
@@ -69,8 +68,8 @@ internal class HealthConnectPermissionService(
     private val availabilityService: HealthConnectAvailabilityService,
     private val diagnostics: HealthConnectDiagnostics,
     private val mindfulnessIntegrationEnabled: () -> Boolean = { true },
-    /** Monotonic clock for the granted-permissions cache. A test drives it. */
-    private val elapsedMillis: () -> Long = SystemClock::elapsedRealtime,
+    /** Monotonic clock for the granted-permissions cache, off the JVM so a test needs no Android stub. */
+    private val elapsedMillis: () -> Long = { System.nanoTime() / 1_000_000L },
     /** The app's foreground epoch: a grant read before a trip to another app is stale. */
     private val foregroundEpoch: () -> Int = { 0 },
 ) {

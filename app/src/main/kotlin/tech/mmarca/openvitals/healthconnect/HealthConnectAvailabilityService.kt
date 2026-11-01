@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.healthconnect
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.SystemClock
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -18,8 +17,8 @@ internal class HealthConnectAvailabilityService(
     private val packageInstalledProvider: (String) -> Boolean = { packageName ->
         packageInstalled(context, packageName)
     },
-    /** Monotonic clock for the status cache. A test drives it. */
-    private val elapsedMillis: () -> Long = SystemClock::elapsedRealtime,
+    /** Monotonic clock for the status cache, off the JVM so a test needs no Android stub. */
+    private val elapsedMillis: () -> Long = { System.nanoTime() / 1_000_000L },
     /** The app's foreground epoch; a status read in an earlier one is stale (the provider may have been installed). */
     private val foregroundEpoch: () -> Int = { 0 },
 ) {

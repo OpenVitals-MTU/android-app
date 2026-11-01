@@ -543,12 +543,14 @@ class HealthConnectPermissionServiceTest {
             availableFeatures = setOf(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE),
             onFeatureStatusCall = { calls += 1; if (fail) throw IllegalStateException("binder died") },
         )
+        // The constructor probes the feature once itself (the vitals permission set); count from here.
+        val probedAtConstruction = calls
 
         assertThat(service.isSkinTemperatureAvailable()).isFalse()
         fail = false
         assertThat(service.isSkinTemperatureAvailable()).isTrue()
         assertThat(service.isSkinTemperatureAvailable()).isTrue()
-        assertThat(calls).isEqualTo(2)
+        assertThat(calls - probedAtConstruction).isEqualTo(2)
     }
 
     private fun service(

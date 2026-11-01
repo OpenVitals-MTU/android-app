@@ -118,7 +118,14 @@ class HealthConnectReaderSupportTest {
 
     @Test fun `reads queued behind the permit when a refusal lands return their fallback without calling`() = runTest {
         // Eight reads behind two permits. The first is refused; the ones still waiting for a permit must not go out.
-        val support = support(nowMillis = { testScheduler.currentTime })
+        // On the test dispatcher the two reads in flight resume in order, so the refusal lands before any permit moves on.
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val dispatchers = object : DispatcherProvider {
+            override val main = dispatcher
+            override val io = dispatcher
+            override val default = dispatcher
+        }
+        val support = support(nowMillis = { testScheduler.currentTime }, dispatchers = dispatchers)
         val calls = AtomicInteger(0)
 
         val results = awaitAll(
@@ -134,8 +141,8 @@ class HealthConnectReaderSupportTest {
             }.toTypedArray(),
         )
 
-        // At most the two that held a permit when the refusal landed were sent.
-        assertTrue("calls=${calls.get()}", calls.get() <= 2)
+        // Only the two that held a permit when the refusal landed were sent.
+        assertEquals(2, calls.get())
         assertEquals(7, results.count { it == -1 })
         assertEquals(2L, HealthConnectCallCounters.snapshot().total.started)
         assertEquals(1L, HealthConnectCallCounters.snapshot().total.rateLimited)
