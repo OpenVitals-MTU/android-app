@@ -99,12 +99,14 @@ fun grantedHealthRepository(
     granted: Set<String> = setOf("read-heart-rate"),
 ): HealthRepository = mockk<HealthRepository>().also {
     every { it.availability() } returns HealthConnectAvailability.AVAILABLE
+    every { it.rateLimitRetryAfterMillis() } returns 0L
     coEvery { it.grantedPermissions() } returns granted
 }
 
 /** A health repository whose permission read fails. Data reads are not routed through it. */
 fun failingPermissionsHealthRepository(): HealthRepository = mockk<HealthRepository>().also {
     every { it.availability() } returns HealthConnectAvailability.AVAILABLE
+    every { it.rateLimitRetryAfterMillis() } returns 0L
     coEvery { it.grantedPermissions() } throws IllegalStateException("rate limited")
 }
 

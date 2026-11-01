@@ -454,11 +454,13 @@ class DashboardViewModel @Inject constructor(
                 isRefreshing = false,
             )
         }
-        // Once per app open, after the load settles: the background passes.
+        // Once per app open, after the load settles: the background passes. Not after a
+        // load Health Connect refused; those reads come first when it answers again.
         historySyncScheduler?.let { scheduler ->
+            val cleanLoad = failures.all { it == null } && repository.rateLimitRetryAfterMillis() == 0L
             viewModelScope.launch {
                 // Three services in a row. Their bookkeeping stays off Main.
-                runCatching { withContext(dispatchers.default) { scheduler.drainIncrementalOnce() } }
+                runCatching { withContext(dispatchers.default) { scheduler.drainIncrementalOnce(cleanLoad) } }
             }
         }
         // The home screen shows today, so a settled read of today is its cue.

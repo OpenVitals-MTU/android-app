@@ -1306,6 +1306,19 @@ class DashboardViewModelTest {
         assertNotNull(vm.uiState.value.data)
     }
 
+    @Test fun `a load Health Connect refused does not start the history drains`() = runTest {
+        // The drains are the most read-hungry thing the app does unasked; after a refusal the screen's reads come first.
+        val loader = mockDashboardDataLoader()
+        loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
+        val scheduler = mockk<HistorySyncScheduler>(relaxed = true)
+        val repo = mockHealthRepository { every { rateLimitRetryAfterMillis() } returns 45_000L }
+
+        dashboardViewModel(loader = loader, repo = repo, prefs = prefs(), historySyncScheduler = scheduler)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { scheduler.drainIncrementalOnce(afterCleanLoad = false) }
+    }
+
     @Test fun `a settled read of today redraws the home widgets and a past day does not`() = runTest {
         val loader = mockDashboardDataLoader()
         loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
