@@ -600,7 +600,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest(testDispatcher) {
+    fun `readHeartRateSamplesForInsights splits a long range into budgeted requests`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(1)
         val client = seeded(heartRate(firstDay, 9, 61L), heartRate(date, 15, 88L))
@@ -615,8 +615,9 @@ class HealthConnectAggregateReadTest {
         // and degraded to empty, so cardio load fell back to step estimates.
         val budget = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
         assertThat(widestRequest(client)).isAtMost(budget)
-        // Two days, more than one request each.
-        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(2)
+        // Two days of five-minute buckets are 576: more than one request, and no more than the two the budget needs.
+        // Thirty calls for the dashboard's fortnight was what the standalone Health Connect app refused.
+        assertThat(client.groupByDurationRequestRanges.size).isEqualTo(2)
         assertThat(samples.map { it.beatsPerMinute }).containsExactly(61L, 88L).inOrder()
     }
 
