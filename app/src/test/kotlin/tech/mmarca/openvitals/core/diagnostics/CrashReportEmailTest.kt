@@ -6,10 +6,11 @@ import tech.mmarca.openvitals.core.privacy.PrivacySentinels
 
 class CrashReportEmailTest {
     @Test
-    fun `crash draft includes the reproduction template, the saved report and no log`() {
+    fun `crash draft includes the reproduction template, the saved report and the log`() {
         val draft = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),
             savedCrashReport = "saved crash stack",
+            diagnosticsLog = "masked log lines",
         )
 
         assertThat(draft.subject).isEqualTo("OpenVitals crash report")
@@ -17,7 +18,7 @@ class CrashReportEmailTest {
         assertThat(draft.body).contains("What happened:")
         assertThat(draft.body).contains("Last saved OpenVitals crash report:\nsaved crash stack")
         assertThat(draft.body).contains("Please don't add health data")
-        assertThat(draft.body).doesNotContain("diagnostics log")
+        assertThat(draft.body).contains("Current diagnostics log (masked):\nmasked log lines")
     }
 
     @Test
@@ -25,19 +26,43 @@ class CrashReportEmailTest {
         val draft = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),
             savedCrashReport = "",
+            diagnosticsLog = "",
         )
 
         assertThat(draft.subject).isEqualTo("OpenVitals issue report")
         assertThat(draft.body).contains("No crash in the last seven days.")
+        assertThat(draft.body).contains("No diagnostics log available.")
         assertThat(draft.body).contains("Steps to reproduce:")
     }
 
     @Test
-    fun `stored crash report includes app info, thread and the crash, and no log`() {
+    fun `the log in a draft is the masked export, with its sentinels gone`() {
+        val exported = PrivacySafeDebugLogExporter.exportLogcat(
+            listOf(
+                "10-23 14:22:01.123  1234  5678 W HealthConnectManager: refused ${PrivacySentinels.Email} on ${PrivacySentinels.Date}",
+                "10-23 14:22:01.124  1234  5678 D ActivityRepository: Skipping loadDailySteps missingCount=1",
+            ),
+        )
+
+        val draft = CrashReportEmail.buildDraft(
+            appInfo = testAppInfo(),
+            savedCrashReport = "",
+            diagnosticsLog = PrivacySafeDebugLogExporter.exportText("tech.mmarca.openvitals", exported),
+        )
+
+        PrivacySentinels.assertNoneIn(draft.body, except = setOf(PrivacySentinels.Value, PrivacySentinels.Name))
+        assertThat(draft.body).contains("W HealthConnectManager: refused")
+        assertThat(draft.body).contains("ActivityRepository: Skipping loadDailySteps missingCount=1")
+        assertThat(draft.body).contains("writtenLines=2")
+    }
+
+    @Test
+    fun `stored crash report includes app info, thread, the crash and the log`() {
         val report = CrashReportEmail.buildStoredCrashReport(
             appInfo = testAppInfo(),
             reportDetails = crashReportDetails(IllegalStateException("boom"), source = "test"),
             threadName = "main",
+            diagnosticsLog = "masked log lines",
             capturedAt = "2026-07-03T00:00:00Z",
         )
 
@@ -45,7 +70,7 @@ class CrashReportEmailTest {
         assertThat(report).contains("thread=main")
         assertThat(report).contains("Version: 1.7.4-nightly (107030328)")
         assertThat(report).contains("- Exception: java.lang.IllegalStateException")
-        assertThat(report).doesNotContain("diagnostics log")
+        assertThat(report).contains("Diagnostics log at the crash (masked):\nmasked log lines")
     }
 
     @Test
@@ -57,6 +82,7 @@ class CrashReportEmailTest {
             appInfo = testAppInfo(),
             reportDetails = crashReportDetails(crash, source = "test"),
             threadName = "main",
+            diagnosticsLog = "",
             capturedAt = "now",
         )
 
@@ -86,11 +112,13 @@ class CrashReportEmailTest {
         val withRecords = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),
             savedCrashReport = "",
+            diagnosticsLog = "",
             anrReports = "- At: 2026-09-18T19:51:02Z",
         )
         val without = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),
             savedCrashReport = "",
+            diagnosticsLog = "",
         )
 
         assertThat(withRecords.body).contains("- At: 2026-09-18T19:51:02Z")
@@ -102,6 +130,7 @@ class CrashReportEmailTest {
         val draft = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),
             savedCrashReport = "",
+            diagnosticsLog = "",
         )
 
         val shareText = CrashReportEmail.buildShareText(draft)

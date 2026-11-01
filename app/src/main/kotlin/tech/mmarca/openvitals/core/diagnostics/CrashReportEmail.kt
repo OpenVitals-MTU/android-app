@@ -63,10 +63,11 @@ internal data class CrashReportEmailDraft(
 internal object CrashReportEmail {
     private const val MaxEmailSectionChars = 80_000
 
-    // The draft carries no log; the error text below it is masked.
+    // The draft carries the masked log; the error text below it is masked the same way.
     private const val PrivacyNote =
-        "Please don't add health data (values, dates, names, files) to this email. The report below holds no log, " +
-            "and numbers, dates, addresses and identifiers in its error text are masked."
+        "Please don't add health data (values, dates, names, files) to this email. In the report below, " +
+            "numbers, dates, addresses and identifiers in the error text are masked, and the app's log has " +
+            "addresses, identifiers, file locations and dates masked and error messages masked whole."
 
     fun buildShareText(draft: CrashReportEmailDraft): String = buildString {
         appendLine("To: $CrashReportEmailRecipient")
@@ -78,6 +79,7 @@ internal object CrashReportEmail {
     fun buildDraft(
         appInfo: CrashReportAppInfo,
         savedCrashReport: String,
+        diagnosticsLog: String,
         anrReports: String = "",
     ): CrashReportEmailDraft {
         val hasCrash = savedCrashReport.isNotBlank()
@@ -112,6 +114,9 @@ internal object CrashReportEmail {
                 appendLine()
                 appendLine("Recent \"not responding\" records (stack traces only):")
                 appendLine(anrReports.ifBlank { "none" }.emailSection())
+                appendLine()
+                appendLine("Current diagnostics log (masked):")
+                appendLine(diagnosticsLog.ifBlank { "No diagnostics log available." }.emailSection())
             },
         )
     }
@@ -120,6 +125,7 @@ internal object CrashReportEmail {
         appInfo: CrashReportAppInfo,
         reportDetails: CrashReportDetails,
         threadName: String,
+        diagnosticsLog: String,
         capturedAt: String,
     ): String = buildString {
         appendLine("OpenVitals saved crash report")
@@ -131,6 +137,9 @@ internal object CrashReportEmail {
         appendLine()
         appendLine("Crash details:")
         appendCrashDetails(reportDetails)
+        appendLine()
+        appendLine("Diagnostics log at the crash (masked):")
+        appendLine(diagnosticsLog.ifBlank { "No diagnostics log available." }.emailSection())
     }
 
     private fun StringBuilder.appendAppInfo(appInfo: CrashReportAppInfo) {

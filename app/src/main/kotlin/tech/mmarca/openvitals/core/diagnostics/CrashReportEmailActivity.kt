@@ -54,6 +54,7 @@ class CrashReportEmailActivity : AppCompatActivity() {
                 CrashReportEmail.buildDraft(
                     appInfo = CrashReportStore.appInfo(appContext),
                     savedCrashReport = CrashReportStore.readFreshCrashReport(appContext),
+                    diagnosticsLog = CrashReportStore.captureDiagnosticsLog(appContext),
                     anrReports = AnrExitInfo.recent(appContext),
                 )
             }
