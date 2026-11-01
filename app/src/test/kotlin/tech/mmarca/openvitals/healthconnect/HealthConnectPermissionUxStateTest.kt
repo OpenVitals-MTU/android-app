@@ -14,7 +14,7 @@ class HealthConnectPermissionUxStateTest {
         val prefs = mockk<PreferencesRepository>(relaxed = true)
         every { prefs.healthConnectPermissionCancelCount } returnsMany listOf(0, 1, 2)
 
-        val state = HealthConnectPermissionUxState(prefs)
+        val state = HealthConnectPermissionUxState(prefs, mockk(relaxed = true))
 
         state.recordPermissionRequestCancelled()
         assertFalse(state.shouldShowDoubleCancelRecovery())
@@ -26,7 +26,7 @@ class HealthConnectPermissionUxStateTest {
     @Test
     fun `granted permissions reset cancel count`() {
         val prefs = mockk<PreferencesRepository>(relaxed = true)
-        val state = HealthConnectPermissionUxState(prefs)
+        val state = HealthConnectPermissionUxState(prefs, mockk(relaxed = true))
 
         state.recordPermissionRequestGranted()
 

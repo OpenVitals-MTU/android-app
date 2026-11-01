@@ -87,13 +87,18 @@ class HealthConnectManager @Inject constructor(
     private val foregroundGate: AppForegroundGate,
 ) {
     private val diagnostics = HealthConnectDiagnostics(context)
-    private val availabilityService = HealthConnectAvailabilityService(context, diagnostics)
+    private val availabilityService = HealthConnectAvailabilityService(
+        context = context,
+        diagnostics = diagnostics,
+        foregroundEpoch = { foregroundGate.foregroundEpoch },
+    )
     private val permissionService = HealthConnectPermissionService(
         context = context,
         clientProvider = ::client,
         availabilityService = availabilityService,
         diagnostics = diagnostics,
         mindfulnessIntegrationEnabled = { mindfulnessGate.isEnabled },
+        foregroundEpoch = { foregroundGate.foregroundEpoch },
     )
     private val readerSupport = HealthConnectReaderSupport(
         clientProvider = ::client,
@@ -771,8 +776,18 @@ class HealthConnectManager @Inject constructor(
         return block()
     }
 
+    /** Built once: below Android 14 `getOrCreate` makes a new service-backed client on every call. */
+    @Volatile
+    private var cachedClient: HealthConnectClient? = null
+
     private fun client(): HealthConnectClient =
-        HealthConnectClient.getOrCreate(context)
+        cachedClient ?: HealthConnectClient.getOrCreate(context).also { cachedClient = it }
+
+    /** After a permission request: the granted set and the provider status are asked again. */
+    fun invalidatePermissionCache() {
+        permissionService.invalidateGrantedPermissions()
+        availabilityService.invalidate()
+    }
 }
 
 private const val ImportedClientRecordIdPageSize = 500
