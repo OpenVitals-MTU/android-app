@@ -29,6 +29,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.data.repository.ActivityRepositoryImpl
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.CsvImportPreferencesRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -275,6 +276,7 @@ class CsvImportFlowTest {
             importService = CsvImportService(
                 AppleHealthImportRepository(hc = manager, dispatchers = DefaultDispatcherProvider),
                 InMemoryCycleJournal(),
+                ActivityRepositoryImpl(hc = manager),
             ),
             healthRepository = NothingGrantedHealthRepository,
             preferences = CsvImportPreferencesRepository(context),
