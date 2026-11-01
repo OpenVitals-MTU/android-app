@@ -711,8 +711,14 @@ class DashboardViewModel @Inject constructor(
         val targetIndex = current.indexOf(targetWidgetId)
         if (fromIndex == -1 || targetIndex == -1 || fromIndex == targetIndex) return
 
+        // The same list the grid lays out: an unsupported metric the user never placed is in the
+        // tray, not the rows. Counting it here put the section boundary one tile off the screen's.
+        val state = _uiState.value
         val fixedWidgetIds = dashboardWidgetIdsThatFitRows(
-            widgetIds = current.filterNot { it == DashboardWidgetId.WORKOUT },
+            widgetIds = current.filterNot {
+                it == DashboardWidgetId.WORKOUT ||
+                    (it in state.display.unsupportedIds && it !in state.placedDashboardWidgets)
+            },
             rows = DashboardFixedWidgetRows,
         )
         val fromFixedSection = widgetId in fixedWidgetIds
@@ -750,6 +756,7 @@ class DashboardViewModel @Inject constructor(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             loadingWidgets = loadingWidgets,
+            degradedWidgets = _uiState.value.degradedWidgets,
             bodyEnergySetupCompleted = prefs.bodyEnergyCalibration().setupCompleted,
             // From the registry, not ui state: a display built before the device
             // flow's first emission would drop the tile.
