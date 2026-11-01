@@ -100,7 +100,7 @@ The section also holds a Health Connect sync switch and a mindfulness integratio
 
 ## Data Importers And Sensors
 
-Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ/TCX route import, FIT activity/course/workout import, and CSV import of body measurements and vitals, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Route bulk import writes selected files directly after route import permissions are granted. CSV import runs its own mapping wizard; see [CSV import](csv-import.md). Import results can be copied or downloaded as a text report with summary, selected categories, logs, diagnostics, and failure details, holding counts, types and reasons and no record's value, time or source.
+Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ/TCX route import, FIT activity/course/workout import, and CSV import of body measurements, vitals and workouts, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Route bulk import writes selected files directly after route import permissions are granted. CSV import runs its own mapping wizard; see [CSV import](csv-import.md). Import results can be copied or downloaded as a text report with summary, selected categories, logs, diagnostics, and failure details, holding counts, types and reasons and no record's value, time or source.
 
 ## App Lock
 

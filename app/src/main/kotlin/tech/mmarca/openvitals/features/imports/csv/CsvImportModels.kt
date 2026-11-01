@@ -39,6 +39,18 @@ enum class CsvImportDiagnosticReason {
 
     /** The source app had marked the observation excluded, so it is left out on purpose. */
     EXCLUDED_IN_SOURCE,
+
+    /** The activity type named nothing the app knows, so the workout is stored as an "other" workout. The row still imports. */
+    ACTIVITY_TYPE_DEFAULTED,
+
+    /** A workout row with neither an end time nor a duration. Whole row. */
+    MISSING_END,
+
+    /** A total the activity type cannot carry, a distance on a yoga session. That total only. */
+    UNSUPPORTED_FOR_ACTIVITY_TYPE,
+
+    /** Active calories above the total, which Health Connect refuses. The active value only; the total is kept. */
+    ACTIVE_ABOVE_TOTAL_CALORIES,
 }
 
 /** One rejected row or metric, named well enough for the user to go find it. */
@@ -54,7 +66,10 @@ data class CsvImportDiagnostic(
 data class CsvImportProgress(
     val rowsRead: Int = 0,
 
-    /** Records handed to Health Connect. Includes upserts over existing records. */
+    /**
+     * Records handed to Health Connect. Includes upserts over existing records. For a
+     * workout export, sessions, one per row: the totals and series beside each are not counted.
+     */
     val written: Int = 0,
 
     /**
@@ -132,6 +147,9 @@ sealed interface CsvImportPlan {
     data class Columns(val mapping: CsvImportMapping) : CsvImportPlan
 
     data class Drip(val plan: DripImportPlan) : CsvImportPlan
+
+    /** The app's own workout export, one activity a row. */
+    data class Workouts(val plan: WorkoutImportPlan) : CsvImportPlan
 }
 
 /** The end of a run. */

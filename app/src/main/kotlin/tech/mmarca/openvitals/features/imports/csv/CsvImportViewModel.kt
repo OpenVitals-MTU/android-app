@@ -39,6 +39,8 @@ data class CsvImportState(
     val mapping: CsvImportMapping? = null,
     /** Set when the picked file is a drip export: the mapping step becomes its option switches. */
     val drip: DripImportPlan? = null,
+    /** Set when the picked file is the app's own workout export: the mapping step becomes its column summary. */
+    val workouts: WorkoutImportPlan? = null,
     val issues: List<CsvMappingIssue> = emptyList(),
     val isLoadingFile: Boolean = false,
     val isImporting: Boolean = false,
@@ -52,20 +54,25 @@ data class CsvImportState(
     /** The write permissions this device can ask for; the request set is intersected with it. */
     val supportedWritePermissions: Set<String> = emptySet(),
 ) {
-    /** Whether the mapping, or the drip options, say enough to import. */
+    /** Whether the mapping, the drip options, or a recognised workout export say enough to import. */
     val canContinue: Boolean
-        get() = drip?.importsAnything ?: (issues.isEmpty() && mapping?.importsAnything == true)
+        get() = drip?.importsAnything ?: (workouts != null || (issues.isEmpty() && mapping?.importsAnything == true))
 
     /** The write permissions this mapping needs, can ask for, and lacks. */
     val missingPermissions: Set<String>
         get() {
-            val required = drip?.requiredWritePermissions ?: mapping?.requiredWritePermissions ?: emptySet()
+            val required = drip?.requiredWritePermissions
+                ?: workouts?.requiredWritePermissions
+                ?: mapping?.requiredWritePermissions
+                ?: emptySet()
             return required.intersect(supportedWritePermissions) - granted
         }
 
     /** What the run reads rows with, or null before a file is understood. */
     val importPlan: CsvImportPlan?
-        get() = drip?.let { CsvImportPlan.Drip(it) } ?: mapping?.let { CsvImportPlan.Columns(it) }
+        get() = drip?.let { CsvImportPlan.Drip(it) }
+            ?: workouts?.let { CsvImportPlan.Workouts(it) }
+            ?: mapping?.let { CsvImportPlan.Columns(it) }
 
     /** Sampled rows, for validation and the preview table. */
     val sampleRows: List<List<String>> get() = sample?.dataRows ?: emptyList()
@@ -128,9 +135,10 @@ class CsvImportViewModel @Inject constructor(
                     return@launch
                 }
 
-                // A drip export needs no mapping: its columns are known by name.
+                // A known export needs no mapping: its columns are known by name.
                 val drip = detectDripExport(sample.headerRow)
-                val mapping = if (drip == null) {
+                val workouts = if (drip == null) detectWorkoutExport(sample.headerRow) else null
+                val mapping = if (drip == null && workouts == null) {
                     initialMapping(sample)
                 } else {
                     null
@@ -144,6 +152,7 @@ class CsvImportViewModel @Inject constructor(
                         sample = sample,
                         mapping = mapping,
                         drip = drip,
+                        workouts = workouts,
                         issues = mapping?.let { validateCsvMapping(it, sample.dataRows) } ?: emptyList(),
                         step = CsvImportStep.MAPPING,
                     )
@@ -264,7 +273,12 @@ class CsvImportViewModel @Inject constructor(
     }
 
     fun setDateTimeSettings(settings: CsvDateTimeSettings) {
-        val mapping = _uiState.value.mapping ?: return
+        val state = _uiState.value
+        state.workouts?.let { workouts ->
+            _uiState.update { it.copy(workouts = workouts.withDateTime(settings)) }
+            return
+        }
+        val mapping = state.mapping ?: return
         applyMapping(mapping.copy(dateTime = settings))
     }
 
@@ -331,13 +345,14 @@ class CsvImportViewModel @Inject constructor(
     fun reportText(): String? {
         val state = _uiState.value
         val result = state.result ?: return null
-        if (state.mapping == null && state.drip == null) return null
+        if (state.mapping == null && state.drip == null && state.workouts == null) return null
         return buildCsvImportReport(
             mapping = state.mapping,
             result = result,
             fieldDelimiter = state.sample?.dialect?.fieldDelimiter,
             hasHeaderRow = state.sample?.hasHeaderRow,
             drip = state.drip,
+            workouts = state.workouts,
         )
     }
 

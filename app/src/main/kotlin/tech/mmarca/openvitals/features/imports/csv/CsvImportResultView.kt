@@ -40,6 +40,8 @@ internal fun CsvImportResultView(
     onImportAnother: () -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    /** What the written count counts: Health Connect records, or workouts for the app's own export. */
+    @StringRes recordsTitleRes: Int = R.string.settings_csv_import_tally_records_title,
 ) {
     Column(modifier = modifier) {
         LazyColumn(
@@ -53,7 +55,7 @@ internal fun CsvImportResultView(
                             text = stringResource(outcomeTitleRes(result.outcome)),
                             style = MaterialTheme.typography.titleMedium,
                         )
-                        CsvImportTally(progress = result.progress)
+                        CsvImportTally(progress = result.progress, recordsTitleRes = recordsTitleRes)
                         if (result.wroteNothing) {
                             Text(
                                 text = stringResource(R.string.settings_csv_import_result_empty),
@@ -164,7 +166,7 @@ private fun outcomeTitleRes(outcome: CsvImportOutcome): Int = when (outcome) {
 
 /** Rows, records and, for a drip export, journal days, each as a labelled column of numbers. */
 @Composable
-private fun CsvImportTally(progress: CsvImportProgress) {
+private fun CsvImportTally(progress: CsvImportProgress, @StringRes recordsTitleRes: Int) {
     Column(modifier = Modifier.padding(top = Spacing.md)) {
         TallyTitle(stringResource(R.string.settings_csv_import_tally_rows_title))
         TallyRow(stringResource(R.string.settings_csv_import_tally_rows_read), progress.rowsRead)
@@ -174,7 +176,7 @@ private fun CsvImportTally(progress: CsvImportProgress) {
         TallyNote(stringResource(R.string.settings_csv_import_tally_rows_note))
 
         Spacer(Modifier.height(Spacing.md))
-        TallyTitle(stringResource(R.string.settings_csv_import_tally_records_title))
+        TallyTitle(stringResource(recordsTitleRes))
         TallyRow(stringResource(R.string.settings_csv_import_tally_records_written), progress.written)
         TallyRow(stringResource(R.string.settings_csv_import_tally_records_replaced), progress.alreadyPresent)
         if (progress.presenceUnchecked > 0) {

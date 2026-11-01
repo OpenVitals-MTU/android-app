@@ -141,12 +141,20 @@ internal fun ExerciseData.inferStoredActivityType(): ActivityEntryType {
         exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS && titleText.contains("trampoline") -> {
             DefaultActivityEntryTypes.first { it.id == "trampoline_jumping" }
         }
-        else -> DefaultActivityEntryTypes
-            .firstOrNull { it.exerciseType == exerciseType && !it.isRepetitionLike }
-            ?: DefaultActivityEntryTypes.firstOrNull { it.exerciseType == exerciseType }
-            ?: storedActivityType(exerciseType)
+        else -> activityEntryTypeForExerciseType(exerciseType)
     }
 }
+
+/**
+ * The form's plain entry for a Health Connect type: the non-repetition one when the type
+ * has several, else [storedActivityType] for a type the form does not list. What an import
+ * keeps for a type (distance, elevation) is what the edit form would show for it.
+ */
+internal fun activityEntryTypeForExerciseType(exerciseType: Int): ActivityEntryType =
+    DefaultActivityEntryTypes
+        .firstOrNull { it.exerciseType == exerciseType && !it.isRepetitionLike }
+        ?: DefaultActivityEntryTypes.firstOrNull { it.exerciseType == exerciseType }
+        ?: storedActivityType(exerciseType)
 
 /**
  * A type the form does not list: one Health Connect added after this build. The edit
@@ -271,7 +279,7 @@ internal fun inferActivityType(
  * fitPlainSportName emit is matched here. The specific comes before the general
  * it contains: "table tennis" before "tennis", "stair climbing" before "climb".
  */
-private fun matchExerciseType(sourceText: String): Int? =
+internal fun matchExerciseType(sourceText: String): Int? =
     when {
         sourceText.containsAny("treadmill") -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL
         sourceText.containsAny("strength", "weight lifting", "weightlifting") -> {
