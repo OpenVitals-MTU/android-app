@@ -70,6 +70,12 @@ class SyncSessionConfig(
     val supportedTypes: List<String>,
     /** Types the user chose to sync; defaults to all [supportedTypes]. */
     val selectedTypes: List<String>? = null,
+    /**
+     * Write the peer's records even when this phone already holds them. The
+     * dedup baseline is not read; a key arriving twice in one session is still
+     * written once. Local to this phone: the peer sends what it sends either way.
+     */
+    val rewriteExisting: Boolean = false,
     val hcProviderVersion: Long? = null,
     /** Records per batch (stop-and-wait unit). */
     val batchSize: Int = 200,
@@ -165,6 +171,7 @@ class SyncSession(
                 completed = true,
                 peerDeviceName = peer.deviceName,
                 negotiatedTypes = negotiated,
+                rewroteExisting = config.rewriteExisting,
             )
         } catch (e: SyncAborted) {
             sendAbort(e.reason)
@@ -174,6 +181,7 @@ class SyncSession(
                 peerDeviceName = receivedHello?.deviceName ?: "unknown",
                 negotiatedTypes = emptyList(),
                 abortReason = e.reason,
+                rewroteExisting = config.rewriteExisting,
             )
         } finally {
             readerJob.cancel()
@@ -260,8 +268,11 @@ class SyncSession(
         val types = negotiated.toSet()
         // Seed the dedup baseline from our own keys, so dedup is an in-memory
         // lookup. It also catches records held natively with no clientRecordId.
-        // Must be complete before the receiver writes its first batch.
-        store.readKeys(types).collect { key -> seenKeys += keyHasher.hash(key) }
+        // Must be complete before the receiver writes its first batch. With
+        // rewriteExisting the baseline stays empty: every peer record is written.
+        if (!config.rewriteExisting) {
+            store.readKeys(types).collect { key -> seenKeys += keyHasher.hash(key) }
+        }
         // Sender and receiver run concurrently over the one full-duplex link.
         coroutineScope {
             launch { runSender(types) }

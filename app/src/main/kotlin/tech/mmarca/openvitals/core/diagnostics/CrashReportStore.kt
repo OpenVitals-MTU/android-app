@@ -20,9 +20,22 @@ internal object CrashReportStore {
             appInfo = appInfo(appContext),
             reportDetails = crashReportDetails(throwable, source = "OpenVitals uncaught exception handler"),
             threadName = thread.name,
+            diagnosticsLog = captureDiagnosticsLog(appContext),
             capturedAt = Instant.now().toString(),
         )
         crashFile(appContext).write(reportText)
+    }
+
+    /** The masked log of this process, or a line saying why there is none. Never throws. */
+    fun captureDiagnosticsLog(context: Context): String {
+        if (!BuildConfig.OPENVITALS_DIAGNOSTICS) {
+            return "Diagnostics log unavailable in this build."
+        }
+        return runCatching {
+            PrivacySafeDebugLogExporter.currentProcessLogcatTextBlocking(context)
+        }.getOrElse { throwable ->
+            "Diagnostics log unavailable: ${throwable::class.java.simpleName}"
+        }
     }
 
     fun readFreshCrashReport(context: Context): String =

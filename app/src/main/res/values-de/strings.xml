@@ -2731,6 +2731,8 @@
     <string name="device_sync_medical_line">Medizinische Unterlagen: hinzugefügt %1$d, bereits vorhanden %2$d, übersprungen %3$d, nicht hinzugefügt %4$d</string>
     <string name="device_sync_medical_held_back">Medizinische Unterlagen wurden nicht synchronisiert. Die Einträge auf dem anderen Telefon nennen eine andere Person oder mehrere Personen. Um sie trotzdem zu übertragen, exportiere sie auf dem anderen Telefon und importiere sie hier.</string>
     <string name="device_sync_start_sync">Synchronisierung starten, %1$d ausgewählt</string>
+    <string name="device_sync_rewrite_title">Vorhandene Einträge überschreiben</string>
+    <string name="device_sync_rewrite_body">Einträge, die dieses Telefon bereits hat, werden erneut unter OpenVitals geschrieben. Nützlich, wenn Health Connect die Einträge anzeigt, aber nicht in die Summen einrechnet.</string>
     <string name="device_sync_progress_heading">Synchronisierung läuft</string>
     <string name="device_sync_phase_handshake">Handshake und Duplikatprüfung</string>
     <string name="device_sync_phase_exchanging">Datensätze werden ausgetauscht</string>
@@ -2741,6 +2743,7 @@
     <string name="device_sync_report_heading">%1$d Datensätze zusammengeführt</string>
     <string name="device_sync_imported">Importiert</string>
     <string name="device_sync_duplicates">Bereits vorhanden (übersprungen)</string>
+    <string name="device_sync_report_rewrote">Vorhandene Einträge wurden erneut geschrieben.</string>
     <string name="device_sync_done">Fertig</string>
     <string name="device_sync_copy_report">Bericht kopieren</string>
     <string name="device_sync_share_report">Bericht teilen</string>

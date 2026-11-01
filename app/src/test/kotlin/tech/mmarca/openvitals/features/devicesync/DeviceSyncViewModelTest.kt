@@ -110,6 +110,17 @@ class DeviceSyncViewModelTest {
     // The guest's dial.
 
     @Test
+    fun `overwrite existing records is off until the user ticks it`() = runTest {
+        val vm = viewModel()
+
+        assertFalse(vm.uiState.value.rewriteExisting)
+        vm.setRewriteExisting(true)
+        assertTrue(vm.uiState.value.rewriteExisting)
+        vm.setRewriteExisting(false)
+        assertFalse(vm.uiState.value.rewriteExisting)
+    }
+
+    @Test
     fun `picking a phone connects and moves on without asking for a code`() = runTest {
         val viewModel = viewModel().apply { startScanning() }
 

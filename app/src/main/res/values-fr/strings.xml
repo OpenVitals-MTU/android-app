@@ -2892,6 +2892,8 @@
     <string name="device_sync_medical_line">Dossiers médicaux : ajoutés %1$d, déjà présents %2$d, ignorés %3$d, non ajoutés %4$d</string>
     <string name="device_sync_medical_held_back">Les dossiers médicaux n\'ont pas été synchronisés. Les dossiers de l\'autre téléphone nomment une autre personne, ou plusieurs. Pour les transférer malgré tout, exportez-les sur ce téléphone et importez-les ici.</string>
     <string name="device_sync_start_sync">Démarrer la synchronisation, %1$d sélectionnés</string>
+    <string name="device_sync_rewrite_title">Écraser les enregistrements existants</string>
+    <string name="device_sync_rewrite_body">Les enregistrements que ce téléphone possède déjà sont réécrits sous OpenVitals. Utile quand Health Connect affiche les enregistrements mais ne les compte pas dans ses totaux.</string>
     <string name="device_sync_progress_heading">Synchronisation</string>
     <string name="device_sync_phase_handshake">Négociation et vérification des doublons</string>
     <string name="device_sync_phase_exchanging">Échange des enregistrements</string>
@@ -2902,6 +2904,7 @@
     <string name="device_sync_report_heading">%1$d enregistrements fusionnés</string>
     <string name="device_sync_imported">Importés</string>
     <string name="device_sync_duplicates">Déjà présents (ignorés)</string>
+    <string name="device_sync_report_rewrote">Les enregistrements existants ont été réécrits.</string>
     <string name="device_sync_done">Terminé</string>
     <string name="device_sync_copy_report">Copier le rapport</string>
     <string name="device_sync_share_report">Partager le rapport</string>

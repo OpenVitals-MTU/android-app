@@ -2770,6 +2770,8 @@
     <string name="device_sync_medical_line">Cartella clinica: aggiunti %1$d, già presenti %2$d, saltati %3$d, non aggiunti %4$d</string>
     <string name="device_sync_medical_held_back">La cartella clinica non è stata sincronizzata. I dati dell\'altro telefono indicano un\'altra persona, o più di una. Per trasferirli comunque, esportali su quel telefono e importali qui.</string>
     <string name="device_sync_start_sync">Avvia sincronizzazione, %1$d selezionati</string>
+    <string name="device_sync_rewrite_title">Sovrascrivi i record esistenti</string>
+    <string name="device_sync_rewrite_body">I record che questo telefono ha già vengono scritti di nuovo sotto OpenVitals. Usalo quando Health Connect mostra i record ma non li conta nei totali.</string>
     <string name="device_sync_progress_heading">Sincronizzazione</string>
     <string name="device_sync_phase_handshake">Handshake e controllo duplicati</string>
     <string name="device_sync_phase_exchanging">Scambio dei record</string>
@@ -2780,6 +2782,7 @@
     <string name="device_sync_report_heading">%1$d record uniti</string>
     <string name="device_sync_imported">Importati</string>
     <string name="device_sync_duplicates">Già presenti (saltati)</string>
+    <string name="device_sync_report_rewrote">I record esistenti sono stati scritti di nuovo.</string>
     <string name="device_sync_done">Fatto</string>
     <string name="device_sync_copy_report">Copia report</string>
     <string name="device_sync_share_report">Condividi report</string>

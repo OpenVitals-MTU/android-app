@@ -3238,6 +3238,8 @@
     <string name="device_sync_medical_line">Terveystiedot: lisätty %1$d, oli jo %2$d, ohitettu %3$d, ei lisätty %4$d</string>
     <string name="device_sync_medical_held_back">Terveystietoja ei synkronoitu. Toisen puhelimen tiedot koskevat eri henkilöä tai useampaa henkilöä. Jos haluat siirtää ne silti, vie ne siinä puhelimessa ja tuo ne tänne.</string>
     <string name="device_sync_start_sync">Aloita synkronointi, %1$d valittu</string>
+    <string name="device_sync_rewrite_title">Korvaa olemassa olevat tietueet</string>
+    <string name="device_sync_rewrite_body">Tietueet, jotka tällä puhelimella jo on, kirjoitetaan uudelleen OpenVitalsin nimiin. Käytä tätä, kun Health Connect näyttää tietueet mutta ei laske niitä summiin.</string>
     <string name="device_sync_progress_heading">Synkronoidaan</string>
     <string name="device_sync_phase_handshake">Kättely ja kaksoiskappaleiden tarkistus</string>
     <string name="device_sync_phase_confirming">Odotetaan, että toinen puhelin vahvistaa koodin</string>
@@ -3250,6 +3252,7 @@
     <string name="device_sync_report_heading">Yhdistetty %1$d tietuetta</string>
     <string name="device_sync_imported">Tuotu</string>
     <string name="device_sync_duplicates">Oli jo (ohitettu)</string>
+    <string name="device_sync_report_rewrote">Olemassa olevat tietueet kirjoitettiin uudelleen.</string>
     <string name="device_sync_refused">Ei hyväksytty (ei valittu tässä puhelimessa)</string>
     <string name="device_sync_done">Valmis</string>
     <string name="device_sync_copy_report">Kopioi raportti</string>

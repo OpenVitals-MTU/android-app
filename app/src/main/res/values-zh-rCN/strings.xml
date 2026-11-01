@@ -2890,6 +2890,8 @@
     <string name="device_sync_medical_line">医疗记录：已添加 %1$d，已有 %2$d，已跳过 %3$d，未添加 %4$d</string>
     <string name="device_sync_medical_held_back">医疗记录未同步。另一部手机上的记录属于其他人或多个人。如仍要转移，请在那部手机上导出，然后在这里导入。</string>
     <string name="device_sync_start_sync">开始同步，已选 %1$d 项</string>
+    <string name="device_sync_rewrite_title">覆盖已有记录</string>
+    <string name="device_sync_rewrite_body">这台手机已有的记录会以 OpenVitals 的名义重新写入。当 Health Connect 显示记录但未计入总数时使用。</string>
     <string name="device_sync_progress_heading">同步中</string>
     <string name="device_sync_phase_handshake">握手和查重</string>
     <string name="device_sync_phase_exchanging">交换记录</string>
@@ -2900,6 +2902,7 @@
     <string name="device_sync_report_heading">已合并 %1$d 条记录</string>
     <string name="device_sync_imported">已导入</string>
     <string name="device_sync_duplicates">已有（已跳过）</string>
+    <string name="device_sync_report_rewrote">已有记录已重新写入。</string>
     <string name="device_sync_done">完成</string>
     <string name="device_sync_copy_report">复制报告</string>
     <string name="device_sync_share_report">分享报告</string>

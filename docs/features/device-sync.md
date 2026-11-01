@@ -15,7 +15,7 @@ It is reached from Settings, Sync with another phone, which opens its own wizard
 1. **Choose a role.** One phone makes itself discoverable and becomes the host. The other looks for a phone and becomes the guest.
 2. **Connect.** The host waits. The guest scans and picks the host from the list of nearby phones. Already-paired phones appear in the list before the scan finishes.
 3. **Choose how far back.** The last 30 days, the last 6 months, the last year, or everything. The last year is the default.
-4. **Choose what to sync.** The picker lists data categories such as activity, workouts, heart, sleep, body measurements, vitals, nutrition, hydration, mindfulness, cycle tracking, and medical records. A category appears only when this phone can both read and write at least one of its record types, and everything supported is selected by default. Medical records ignore the range, and the picker says so.
+4. **Choose what to sync.** The picker lists data categories such as activity, workouts, heart, sleep, body measurements, vitals, nutrition, hydration, mindfulness, cycle tracking, and medical records. A category appears only when this phone can both read and write at least one of its record types, and everything supported is selected by default. Medical records ignore the range, and the picker says so. Below the categories, **Overwrite existing records**, off by default, makes this phone write the other phone's records even when it already has them; see [Re-Syncing Does Not Duplicate](#re-syncing-does-not-duplicate).
 5. **Start.** Each phone presses Start sync when its user is ready. The first one waits up to ten minutes for the other, and says so. If the other phone leaves the wizard, the wait ends at once.
 6. **Compare the codes.** Each phone then shows six digits. The user checks that they are the same and says so on both phones. No record moves before that.
 7. **Sync.** Progress shows the current phase and live sent, received, and written counts.
@@ -62,6 +62,12 @@ Each record is identified by a fingerprint computed from its own content: the re
 - A receiving phone re-derives the fingerprint from the record it decoded rather than trusting the identifier the other phone sent, so a sync cannot overwrite an unrelated record.
 
 Running the same sync twice therefore writes nothing new, and the two phones converge.
+
+### Overwrite Existing Records
+
+Health Connect can hold a record and still leave it out of its totals. Its activity sums count only the apps in its Data sources and priority list, and a record restored from a Health Connect backup or a phone transfer keeps the app that first wrote it as its source. When that app is not installed on the new phone, the record shows in Health Connect's own data browser and in the sync's "already had" count, but the dashboard reads zero steps for the day.
+
+Ticking **Overwrite existing records** on the "What to accept" step makes this phone skip the fingerprint check and write every record the other phone sends, under OpenVitals, which Health Connect does count. The choice is local: the other phone sends what it sends either way, and keeps its own check unless its user ticks the box too. A record arriving twice in one session is still written once. Records OpenVitals already owns are updated in place, not duplicated, because the written records carry a client record version above any earlier write. The report notes that existing records were written again, and its "already had" count then covers only repeats within the session.
 
 ## The Cycle Journal
 

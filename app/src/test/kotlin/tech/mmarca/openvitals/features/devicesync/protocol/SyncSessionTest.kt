@@ -50,6 +50,21 @@ class SyncSessionTest {
         }
     }
 
+    /** A [FakeRecordStore] that also lists every key handed to `writeItems`, in order. */
+    private class RecordingStore(initial: Iterable<SyncItem> = emptyList()) : SyncRecordStore {
+        private val inner = FakeRecordStore(initial)
+        val written = mutableListOf<String>()
+
+        override fun readKeys(types: Set<String>): Flow<String> = inner.readKeys(types)
+        override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
+            inner.readItemChunks(types, chunkSize)
+
+        override suspend fun writeItems(items: List<SyncItem>): Set<String> {
+            written += items.map { it.key }
+            return inner.writeItems(items)
+        }
+    }
+
     /** A store whose reads yield a caller-specified key list (allows dup keys). */
     private class DupReadingStore(private val keys: List<String>) : SyncRecordStore {
         override fun readKeys(types: Set<String>): Flow<String> = flow {
@@ -78,12 +93,14 @@ class SyncSessionTest {
         confirmCode: suspend (String) -> Boolean = { true },
         types: List<String> = listOf("StepsRecord", "HeartRateRecord"),
         selected: List<String>? = null,
+        rewriteExisting: Boolean = false,
     ) = SyncSessionConfig(
         role = role,
         confirmCode = confirmCode,
         deviceName = if (role == SyncRole.HOST) "Host phone" else "Guest phone",
         supportedTypes = types,
         selectedTypes = selected,
+        rewriteExisting = rewriteExisting,
         // Fixed, distinct nonces keep the test deterministic.
         nonce = ByteArray(SYNC_NONCE_BYTES) { if (role == SyncRole.HOST) 0x11 else 0x22 },
         handshakeTimeoutMillis = 5_000,
@@ -99,6 +116,7 @@ class SyncSessionTest {
         guestConfirms: suspend (String) -> Boolean = { true },
         hostSelected: List<String>? = null,
         guestSelected: List<String>? = null,
+        guestRewritesExisting: Boolean = false,
     ): Pair<SyncReport, SyncReport> {
         val (hostPipe, guestPipe) = SyncPipe.create()
         val host = SyncSession(
@@ -109,7 +127,12 @@ class SyncSessionTest {
         val guest = SyncSession(
             transport = guestPipe,
             store = guestStore,
-            config = configFor(SyncRole.GUEST, confirmCode = guestConfirms, selected = guestSelected),
+            config = configFor(
+                SyncRole.GUEST,
+                confirmCode = guestConfirms,
+                selected = guestSelected,
+                rewriteExisting = guestRewritesExisting,
+            ),
         )
         val reports = awaitAll(async { host.run() }, async { guest.run() })
         return reports[0] to reports[1]
@@ -265,6 +288,40 @@ class SyncSessionTest {
         assertEquals(2, guestReport.imported)
         assertEquals(1, guestReport.duplicateSkipped) // the repeated 'x'
         assertTrue(hostReport.completed)
+    }
+
+    // Overwrite existing records: the receiver's choice alone.
+
+    @Test
+    fun `overwrite existing writes what this phone already holds, and only this phone`() = runTest {
+        // Both phones hold 'a'; the host also has 'b', the guest 'c'.
+        val hostStore = RecordingStore(listOf(item("a"), item("b")))
+        val guestStore = RecordingStore(listOf(item("a"), item("c")))
+
+        val (hostReport, guestReport) = runPair(hostStore, guestStore, guestRewritesExisting = true)
+
+        // The guest wrote the host's 'a' again, and says so.
+        assertEquals(listOf("a", "b"), guestStore.written)
+        assertEquals(2, guestReport.imported)
+        assertEquals(0, guestReport.duplicateSkipped)
+        assertTrue(guestReport.rewroteExisting)
+        // The host kept its own check, and never read the guest's choice.
+        assertEquals(listOf("c"), hostStore.written)
+        assertEquals(1, hostReport.imported)
+        assertEquals(1, hostReport.duplicateSkipped)
+        assertFalse(hostReport.rewroteExisting)
+    }
+
+    @Test
+    fun `overwrite existing still writes a key sent twice in one session once`() = runTest {
+        val hostStore = DupReadingStore(listOf("x", "x"))
+        val guestStore = RecordingStore(listOf(item("x")))
+
+        val (_, guestReport) = runPair(hostStore, guestStore, guestRewritesExisting = true)
+
+        assertEquals(listOf("x"), guestStore.written)
+        assertEquals(1, guestReport.imported)
+        assertEquals(1, guestReport.duplicateSkipped)
     }
 
     // The compared code.
