@@ -7,6 +7,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.StateFlow
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
@@ -86,13 +87,18 @@ class HealthConnectManager @Inject constructor(
     private val foregroundGate: AppForegroundGate,
 ) {
     private val diagnostics = HealthConnectDiagnostics(context)
-    private val availabilityService = HealthConnectAvailabilityService(context, diagnostics)
+    private val availabilityService = HealthConnectAvailabilityService(
+        context = context,
+        diagnostics = diagnostics,
+        foregroundEpoch = { foregroundGate.foregroundEpoch },
+    )
     private val permissionService = HealthConnectPermissionService(
         context = context,
         clientProvider = ::client,
         availabilityService = availabilityService,
         diagnostics = diagnostics,
         mindfulnessIntegrationEnabled = { mindfulnessGate.isEnabled },
+        foregroundEpoch = { foregroundGate.foregroundEpoch },
     )
     private val readerSupport = HealthConnectReaderSupport(
         clientProvider = ::client,
@@ -173,6 +179,13 @@ class HealthConnectManager @Inject constructor(
     /** How much longer Health Connect is refusing reads, or 0. Screens use it to say why they are thin. */
     fun rateLimitRetryAfterMillis(): Long =
         HealthConnectRateLimitBackoff.remainingMillis()
+
+    /** Epoch millis the refusal ends at, 0 while none. A banner counts down from it. */
+    val rateLimitDeadlineEpochMillis: StateFlow<Long>
+        get() = HealthConnectRateLimitBackoff.deadlineEpochMillis
+
+    /** Calls made this process, by operation: counts only. For the report email and the diagnostics export. */
+    fun callCountersSummary(): List<String> = HealthConnectCallCounters.summaryLines()
 
     fun isMindfulnessSessionAvailable(): Boolean =
         permissionService.isMindfulnessSessionAvailable()
@@ -763,8 +776,18 @@ class HealthConnectManager @Inject constructor(
         return block()
     }
 
+    /** Built once: below Android 14 `getOrCreate` makes a new service-backed client on every call. */
+    @Volatile
+    private var cachedClient: HealthConnectClient? = null
+
     private fun client(): HealthConnectClient =
-        HealthConnectClient.getOrCreate(context)
+        cachedClient ?: HealthConnectClient.getOrCreate(context).also { cachedClient = it }
+
+    /** After a permission request: the granted set and the provider status are asked again. */
+    fun invalidatePermissionCache() {
+        permissionService.invalidateGrantedPermissions()
+        availabilityService.invalidate()
+    }
 }
 
 private const val ImportedClientRecordIdPageSize = 500

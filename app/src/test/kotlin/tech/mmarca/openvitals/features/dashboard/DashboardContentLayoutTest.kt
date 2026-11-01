@@ -30,11 +30,13 @@ class DashboardContentLayoutTest {
         id: DashboardWidgetId,
         hasData: Boolean,
         isLoading: Boolean = false,
+        degraded: Boolean = false,
     ) = DashboardWidgetDisplayModel(
         id = id,
         value = if (hasData) DisplayValue("1", "") else null,
         hasValue = hasData,
         isLoading = isLoading,
+        degraded = degraded,
         // The cardio-load tile reads its own field rather than `value`.
         weeklyCardioLoad = if (hasData && id == DashboardWidgetId.WEEKLY_CARDIO_LOAD) {
             DashboardWeeklyCardioLoad(
@@ -97,6 +99,32 @@ class DashboardContentLayoutTest {
                 DashboardWidgetId.SLEEP,
                 // …then the two empties, also in saved order.
                 DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.HYDRATION,
+            ),
+            visible,
+        )
+    }
+
+    @Test
+    fun `a tile Health Connect refused holds its place instead of sinking`() {
+        // "No data" from a refused read is not an answer. With every read refused, every tile sank,
+        // and the grid looked nothing like the one arranged in edit mode.
+        val display = DashboardDisplayState(
+            widgets = savedOrder.associateWith { id ->
+                widget(id, hasData = false, degraded = id == DashboardWidgetId.CALORIES_OUT)
+            },
+        ).withLastDemoted(emptyMap())
+
+        val visible = visibleIds(display = display)
+
+        assertEquals(
+            listOf(
+                DashboardWidgetId.STEPS,
+                DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+                // Refused, so it keeps its saved place ahead of the tiles that really are empty.
+                DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.DISTANCE,
+                DashboardWidgetId.SLEEP,
                 DashboardWidgetId.HYDRATION,
             ),
             visible,

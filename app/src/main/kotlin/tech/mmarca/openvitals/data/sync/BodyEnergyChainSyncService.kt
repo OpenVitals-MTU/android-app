@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
 import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
@@ -57,9 +58,15 @@ class BodyEnergyChainSyncService(
     private val elapsedMillis: () -> Long = { System.nanoTime() / 1_000_000L },
     /** False in the background without the background-read grant: reads then see our own records only. */
     private val readsOtherAppsData: suspend () -> Boolean = { true },
+    /** Days one pass computes at most. The walk resumes next pass; stored days are skipped. */
+    private val maxDaysPerPass: Long = MaxDaysPerPass,
 ) {
     /** Read per use: this singleton outlives a time zone change. */
     private val zone: ZoneId get() = zoneSource()
+
+    /** Set when Health Connect refused a pass: no pass starts before it. */
+    @Volatile
+    private var retryNotBeforeMillis: Long = 0L
 
     @Inject
     constructor(
@@ -114,6 +121,9 @@ class BodyEnergyChainSyncService(
 
     private suspend fun sync(force: Boolean) {
         try {
+            // A refused pass is not retried into the same refusal; a forced one neither.
+            if (elapsedMillis() < retryNotBeforeMillis) return
+            if (healthRepository.rateLimitRetryAfterMillis() > 0L) return
             if (healthRepository.availability() != HealthConnectAvailability.AVAILABLE) return
             val granted = healthRepository.grantedPermissions()
             if (ReadHeartRatePermission !in granted) return
@@ -154,17 +164,22 @@ class BodyEnergyChainSyncService(
             // Oldest first: each day's seed must be stored before its successor.
             val startedAt = elapsedMillis()
             var completed = true
+            var computed = 0L
             // Strict: a read that fails must end the pass. A day built from an empty read
             // would be stored as fresh, and the staleness rule never revisits a settled day.
             withStrictHealthConnectReads {
                 for (back in (windowDays - 1) downTo 1L) {
-                    if (elapsedMillis() - startedAt >= PassBudgetMillis) {
+                    // A cold chain is a dozen days of a dozen reads each. Spent in one go right
+                    // after the dashboard's own burst, that is what the standalone Health
+                    // Connect app refuses. A few days a pass; the rest on the next one.
+                    if (computed >= maxDaysPerPass || elapsedMillis() - startedAt >= PassBudgetMillis) {
                         completed = false
                         break
                     }
                     // Today is skipped: the foreground load owns it.
                     val date = today.minusDays(back)
                     if (date.toEpochDay() in freshEpochDays) continue
+                    computed += 1
                     repository.loadTimeline(
                         BodyEnergyTimelineQuery(
                             period = DatePeriod(date, date),
@@ -187,6 +202,12 @@ class BodyEnergyChainSyncService(
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (t: Throwable) {
+            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                // Not before the readers' backoff ends, and a while after: the screen's reads come first.
+                retryNotBeforeMillis = elapsedMillis() + healthRepository.rateLimitRetryAfterMillis() + RateLimitCooldownMillis
+                Log.w(TAG, "Body Energy warm pass refused by Health Connect, will retry later", t)
+                return
+            }
             Log.w(TAG, "Body Energy warm pass failed, will retry", t)
         }
     }
@@ -209,6 +230,12 @@ class BodyEnergyChainSyncService(
 
         /** A cold install walks the whole window at ~8 reads a day. A pass stops at the budget and resumes. */
         const val PassBudgetMillis = 90_000L
+
+        /** Days a pass computes at most. Three is a morning's worth of reads, not a fortnight's. */
+        const val MaxDaysPerPass = 3L
+
+        /** How long after the readers' backoff a refused pass waits before trying again. */
+        const val RateLimitCooldownMillis = 5L * 60_000L
 
         /** Every screen open calls `syncAll`; this keeps five opens from five walks. */
         val Throttle: Duration = Duration.ofMinutes(30)

@@ -1748,6 +1748,8 @@
     <string name="health_connect_access_double_cancel_body">Uprawnienia Health Connect nie zostały przyznane. Otwórz ustawienia Health Connect, aby wybrać dane udostępniane OpenVitals.</string>
     <string name="health_connect_sync_paused">Synchronizacja z Health Connect jest wstrzymana</string>
     <string name="health_connect_sync_in_progress">Synchronizacja z Health Connect…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect jest zajęty. Ponowna próba za %1$s</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect jest zajęty. Ponawianie…</string>
     <string name="health_connect_data_source_manage">Zarządzaj źródłami danych</string>
     <string name="data_source_synced_label">%1$s (zsynchronizowane)</string>
     <string name="dashboard_health_connect_sync_paused_body">Włącz ponownie synchronizację w Ustawieniach, aby odświeżyć podsumowanie.</string>

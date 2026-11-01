@@ -11,12 +11,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 
 /** [Recorder] captures the order the drains ran in and whether any two overlapped. */
 class HistorySyncSchedulerTest {
@@ -25,6 +27,7 @@ class HistorySyncSchedulerTest {
     fun setUp() {
         mockkStatic(Log::class)
         every { Log.w(any(), any<String>(), any()) } returns 0
+        every { Log.i(any(), any<String>()) } returns 0
     }
 
     @After
@@ -68,7 +71,41 @@ class HistorySyncSchedulerTest {
         coEvery { it.syncIncremental() } coAnswers { recorder.run("bmrEstimate") }
     }
 
-    private val scheduler = HistorySyncScheduler(vitals, bodyEnergy, stepDistance, bmrEstimate)
+    private var backoffRemaining = 0L
+    private val health = mockk<HealthRepository>().also {
+        every { it.rateLimitRetryAfterMillis() } answers { backoffRemaining }
+    }
+
+    private val scheduler = HistorySyncScheduler(vitals, bodyEnergy, stepDistance, bmrEstimate, health)
+
+    @Test
+    fun `a drain after a refused load is deferred and leaves the latch open for the next settled load`() = runTest {
+        // Started on top of a spent quota the drains only deepen the hole; the next resume's reads come first.
+        scheduler.drainIncrementalOnce(afterCleanLoad = false)
+        assertEquals(emptyList<String>(), recorder.started)
+
+        backoffRemaining = 30_000L
+        scheduler.drainIncrementalOnce(afterCleanLoad = true)
+        assertEquals(emptyList<String>(), recorder.started)
+
+        backoffRemaining = 0L
+        scheduler.drainIncrementalOnce()
+        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance", "bmrEstimate"), recorder.started)
+    }
+
+    @Test
+    fun `a refusal while the drains wait to start defers them too`() = runTest {
+        // The drains let the screen settle first; a refusal in that window means the screen is still short.
+        val drain = async { scheduler.drainIncrementalOnce() }
+        advanceTimeBy(10_000)
+        backoffRemaining = 60_000L
+        drain.await()
+        assertEquals(emptyList<String>(), recorder.started)
+
+        backoffRemaining = 0L
+        scheduler.drainIncrementalOnce()
+        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance", "bmrEstimate"), recorder.started)
+    }
 
     @Test
     fun `the drains run one after another, never at the same time`() = runTest {

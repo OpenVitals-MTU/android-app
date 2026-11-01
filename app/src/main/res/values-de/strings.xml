@@ -1160,6 +1160,8 @@
     <string name="health_connect_access_double_cancel_body">Health-Connect-Berechtigungen wurden nicht erteilt. Öffne die Health-Connect-Einstellungen, um auszuwählen, welche Daten du mit OpenVitals teilen möchtest.</string>
     <string name="health_connect_sync_paused">Health-Connect-Synchronisation pausiert</string>
     <string name="health_connect_sync_in_progress">Synchronisiere mit Health Connect…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect ist ausgelastet. Neuer Versuch in %1$s</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect ist ausgelastet. Neuer Versuch…</string>
     <string name="health_connect_data_source_manage">Datenquellen verwalten</string>
     <string name="dashboard_health_connect_sync_paused_body">Aktiviere die Synchronisation in den Einstellungen wieder, um dein Dashboard zu aktualisieren.</string>
     <string name="health_connect_promote_activity_title">Aktivitätseinblicke freischalten</string>

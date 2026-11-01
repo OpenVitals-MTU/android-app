@@ -1705,6 +1705,8 @@
     <string name="health_connect_access_double_cancel_body">Разрешения Health Connect не предоставлены. Откройте настройки Health Connect и выберите данные, которыми хотите делиться с OpenVitals.</string>
     <string name="health_connect_sync_paused">Синхронизация Health Connect приостановлена</string>
     <string name="health_connect_sync_in_progress">Синхронизация с Health Connect…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect занят. Повторная попытка через %1$s</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect занят. Повторная попытка…</string>
     <string name="health_connect_data_source_manage">Управление источниками данных</string>
     <string name="data_source_synced_label">%1$s (синхронизировано)</string>
     <string name="dashboard_health_connect_sync_paused_body">Снова включите синхронизацию в настройках, чтобы обновить панель мониторинга.</string>

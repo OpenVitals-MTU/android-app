@@ -15,6 +15,8 @@ data class HealthConnectScreenUxState(
     val showContextualPermissionPrompt: Boolean = false,
     val contextualPromptPermissions: Set<String> = emptySet(),
     val isLoading: Boolean = false,
+    /** When Health Connect's refusal ends, epoch millis, or null while it answers. The shell counts down to it. */
+    val rateLimitDeadlineEpochMillis: Long? = null,
 ) {
     val syncPaused: Boolean
         get() = availability == HealthConnectAvailability.AVAILABLE && !syncEnabled
@@ -29,6 +31,7 @@ fun buildHealthConnectScreenUxState(
     showDoubleCancelRecovery: Boolean,
     acknowledgedPermissions: Set<String> = emptySet(),
     isLoading: Boolean = false,
+    rateLimitDeadlineEpochMillis: Long? = null,
 ): HealthConnectScreenUxState {
     val required = feature.requiredReadPermissions(manager)
     val missing = required - grantedPermissions
@@ -64,5 +67,6 @@ fun buildHealthConnectScreenUxState(
         showContextualPermissionPrompt = showContextual,
         contextualPromptPermissions = if (showContextual) unacknowledgedMissing else emptySet(),
         isLoading = isLoading,
+        rateLimitDeadlineEpochMillis = rateLimitDeadlineEpochMillis,
     )
 }

@@ -94,6 +94,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 - **One foreground service at a time.** Activity recording, the Apple Health import, and phone sync contend for the single foreground slot and refuse rather than queue. The one service the app starts without a tap is the scale's 45-second `ScaleListeningService`, when Android reports the associated scale awake; it starts nothing while the app is already in the foreground.
 - **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. A lease is re-entrant per tag, so `SYNC` work (a sync, a file upload) also serialises on `GarminWatchSyncService.syncMutex`. A scan opens no link and takes no lease.
 - **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
+- **One Health Connect backoff, one pacer, one tally.** A refusal is process-wide state in `HealthConnectRateLimitBackoff`, read under the reader semaphore, climbing 1, 2, 5, 15 minutes; `HealthConnectCallPacer` spaces call starts; `HealthConnectCallCounters` counts every call by operation name for the report email. A screen read that is skipped or refused marks `HealthConnectReadOutcome`, and the dashboard reloads those tiles alone when the deadline passes. Never add a second backoff, a retry loop around a reader, or a toast for a rate limit.
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`. Medical records (FHIR) have no `clientRecordId`: they go through `healthconnect/MedicalRecordsWriter`, where a record's data source, type and id make a rewrite an update.
 - **Text that leaves the app is structure, not data.** Reports, the crash draft and the diagnostics log hold counts, types, reasons and masked error text, never a value, a record's time, a name or a file name. Exception text goes through `core/privacy/PrivacyRedactor`; a copy goes through `sensitiveTextClip`; a log line logs a count or passes the throwable, never a value. Seed `PrivacySentinels` in a test of any new report.
 - **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.
@@ -186,6 +187,7 @@ A grant missing for one part of a card (a write a sync skipped, a background rea
 - a universal chart abstraction that hides metric semantics
 - ad-hoc Health Connect permission UI outside the shared shell
 - a second FIT decoder, or a second radio-arbitration scheme
+- a second Health Connect rate-limit backoff, pacer or call tally; a permission check or feature status cached after it failed
 - opening a BLE connection without taking a lease
 - editing `values-*/strings.xml` by hand to make `verifyTranslations` pass
 

@@ -39,6 +39,8 @@ data class DashboardWidgetDisplayModel(
     val isNotSetUp: Boolean = false,
     /** The metric has records in its recent lookback, just none for the selected day. */
     val hasRecentHistory: Boolean = false,
+    /** Health Connect refused the tile's last read, so "no data" is not an answer; the tile holds its place. */
+    val degraded: Boolean = false,
 )
 
 @Immutable
@@ -122,9 +124,11 @@ data class BodyEnergyTileSubtitle(
  * Whether this tile may be sorted to the back. Only a tile empty today and
  * with nothing in its recent lookback: a sleep tile empty every morning must
  * hold its spot. A "not set up" tile is the entry point and is never demoted.
+ * Nor is a tile Health Connect refused: with every read refused, every tile
+ * sank, and the grid the user had arranged in edit mode looked nothing like it.
  */
 internal fun DashboardWidgetDisplayModel.isDemotableEmptyTile(): Boolean =
-    showsNoDataMessage() && !isNotSetUp && !hasRecentHistory
+    showsNoDataMessage() && !isNotSetUp && !hasRecentHistory && !degraded
 
 /**
  * Whether the tile sorts to the back. A loading tile is not empty, so it

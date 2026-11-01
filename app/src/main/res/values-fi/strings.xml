@@ -1776,6 +1776,8 @@
     <string name="health_connect_access_double_cancel_body">Health Connectin käyttöoikeuksia ei myönnetty. Avaa Health Connectin asetukset valitaksesi, mitä tietoja jaat OpenVitalsin kanssa.</string>
     <string name="health_connect_sync_paused">Health Connect -synkronointi on tauolla</string>
     <string name="health_connect_sync_in_progress">Synkronoidaan Health Connectin kanssa…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect on varattu. Yritetään uudelleen %1$s kuluttua</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect on varattu. Yritetään uudelleen…</string>
     <string name="health_connect_data_source_manage">Hallitse tietolähteitä</string>
     <string name="data_source_synced_label">%1$s (synkronoitu)</string>
     <string name="dashboard_health_connect_sync_paused_body">Kytke synkronointi takaisin päälle Asetuksissa päivittääksesi yhteenvedon.</string>

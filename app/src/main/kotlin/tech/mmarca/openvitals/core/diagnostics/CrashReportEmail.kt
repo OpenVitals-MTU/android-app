@@ -81,6 +81,7 @@ internal object CrashReportEmail {
         savedCrashReport: String,
         diagnosticsLog: String,
         anrReports: String = "",
+        healthConnectCalls: String = "",
     ): CrashReportEmailDraft {
         val hasCrash = savedCrashReport.isNotBlank()
         val subject = if (hasCrash) {
@@ -108,6 +109,10 @@ internal object CrashReportEmail {
                 appendLine()
                 appendLine("App/device:")
                 appendAppInfo(appInfo)
+                appendLine()
+                // Counts by operation name: how many calls a load made and how many were refused.
+                appendLine("Health Connect calls this process (counts only):")
+                appendLine(healthConnectCalls.ifBlank { "none" }.emailSection())
                 appendLine()
                 appendLine("Last saved OpenVitals crash report:")
                 appendLine(savedCrashReport.ifBlank { "No crash in the last seven days." }.emailSection())

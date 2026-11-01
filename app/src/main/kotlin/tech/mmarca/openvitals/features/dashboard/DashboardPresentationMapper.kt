@@ -33,6 +33,8 @@ object DashboardPresentationMapper {
         includeUnsupported: Boolean = false,
         watch: WatchWidgetDisplay? = null,
         medicalRecordsAvailable: Boolean = false,
+        /** Tiles whose last read Health Connect refused. They are not sorted as empty. */
+        degradedWidgets: Set<DashboardWidgetId> = emptySet(),
     ): DashboardDisplayState {
         val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
         val supportedMetrics = data.supportedMetrics
@@ -55,7 +57,7 @@ object DashboardPresentationMapper {
                     medicalRecordsAvailable = medicalRecordsAvailable,
                 ) ?: return@forEach
                 if (!isSupported) unsupportedIds += widgetId
-                put(widgetId, widget)
+                put(widgetId, if (widgetId in degradedWidgets) widget.copy(degraded = true) else widget)
             }
         }
 

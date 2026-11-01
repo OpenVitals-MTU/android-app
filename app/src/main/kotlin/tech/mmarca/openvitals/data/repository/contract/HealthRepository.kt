@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.data.repository.contract
 
 import androidx.activity.result.contract.ActivityResultContract
+import kotlinx.coroutines.flow.StateFlow
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.OnboardingPermissionCatalog
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
@@ -10,6 +11,9 @@ interface HealthRepository {
 
     /** Milliseconds left on the rate-limit backoff, or 0. Tells "no data" from "not allowed". */
     fun rateLimitRetryAfterMillis(): Long
+
+    /** Epoch millis the backoff ends at, 0 while none is armed. A screen counts down from it and reloads after it. */
+    val rateLimitDeadlineEpochMillis: StateFlow<Long>
 
     fun permissionContract(): ActivityResultContract<Set<String>, Set<String>>
 

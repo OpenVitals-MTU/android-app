@@ -1160,6 +1160,8 @@
     <string name="health_connect_access_double_cancel_body">Health Connecti lube ei antud. Ava Health Connecti seaded, et valida, milliseid andmeid OpenVitalsiga jagada.</string>
     <string name="health_connect_sync_paused">Health Connecti sünkroonimine on peatatud</string>
     <string name="health_connect_sync_in_progress">Sünkroonimine Health Connectiga…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect on hõivatud. Uus katse %1$s pärast</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect on hõivatud. Proovin uuesti…</string>
     <string name="health_connect_data_source_manage">Halda andmeallikaid</string>
     <string name="dashboard_health_connect_sync_paused_body">Lülita seadetes sünkroonimine tagasi sisse, et värskendada oma kokkuvõtet.</string>
     <string name="health_connect_promote_activity_title">Ava treeningu ülevaated</string>

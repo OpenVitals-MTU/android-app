@@ -15,6 +15,8 @@ class HealthRepositoryImpl @Inject constructor(
 
     override fun rateLimitRetryAfterMillis(): Long = hc.rateLimitRetryAfterMillis()
 
+    override val rateLimitDeadlineEpochMillis get() = hc.rateLimitDeadlineEpochMillis
+
     override fun permissionContract() = hc.permissionContract()
 
     override val phase1Permissions get() = hc.phase1Permissions

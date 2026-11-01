@@ -14,8 +14,18 @@ val HeartRateInsightBucketDuration: Duration = Duration.ofMinutes(5)
 /**
  * The most buckets one insight request may ask for. At
  * [HeartRateInsightBucketDuration] a day is 288, so a day costs two requests.
+ * The activity progress read carries several metrics a bucket and keeps this.
  */
 const val MaxInsightAggregateBuckets = 144L
+
+/**
+ * The most buckets one heart-rate insight request may ask for. The response
+ * is one Binder parcel; 360 buckets of four metrics were measured safe for
+ * the hourly reads, and a heart-rate insight bucket carries one. A day is
+ * 288 and a fortnight 4,032, so the dashboard's two-week heart-rate walk is
+ * a dozen requests, not thirty.
+ */
+const val MaxHeartRateInsightAggregateBuckets = 360L
 
 /** Workout-length ranges keep raw samples for finer chart resolution. */
 val HeartRateRawSampleMaxRange: Duration = Duration.ofHours(4)
