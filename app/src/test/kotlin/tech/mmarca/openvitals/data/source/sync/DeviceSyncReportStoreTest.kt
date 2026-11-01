@@ -7,6 +7,7 @@ import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +55,26 @@ class DeviceSyncReportStoreTest {
         assertTrue(text.contains("Already had (skipped): 2"))
         assertTrue(text.contains("WeightRecord: received 8, imported 6, skipped 2"))
         assertTrue(text.contains("2026-01-20T14:30"))
+        assertFalse(text.contains("Existing records written again"))
+    }
+
+    @Test
+    fun `says when existing records were written again`() {
+        val report = SyncReport(
+            completed = true,
+            peerDeviceName = "Galaxy S23",
+            negotiatedTypes = listOf("StepsRecord"),
+            itemsSent = 0,
+            itemsReceived = 3,
+            imported = 3,
+            duplicateSkipped = 0,
+            typeSummaries = emptyList(),
+            rewroteExisting = true,
+        )
+
+        val text = buildSyncReportText(report, generatedAt = at)
+
+        assertTrue(text.contains("Existing records written again: yes"))
     }
 
     @Test

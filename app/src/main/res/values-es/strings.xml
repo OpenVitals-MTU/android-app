@@ -2709,6 +2709,8 @@
     <string name="device_sync_medical_line">Historial médico: añadidos %1$d, ya existían %2$d, omitidos %3$d, no añadidos %4$d</string>
     <string name="device_sync_medical_held_back">El historial médico no se sincronizó. Los registros del otro teléfono nombran a otra persona, o a más de una. Para pasarlos de todos modos, expórtalos en ese teléfono e impórtalos aquí.</string>
     <string name="device_sync_start_sync">Empezar sincronización, %1$d seleccionados</string>
+    <string name="device_sync_rewrite_title">Sobrescribir registros existentes</string>
+    <string name="device_sync_rewrite_body">Los registros que este teléfono ya tiene se escriben de nuevo bajo OpenVitals. Úsalo cuando Health Connect muestra los registros pero no los cuenta en los totales.</string>
     <string name="device_sync_progress_heading">Sincronizando</string>
     <string name="device_sync_phase_handshake">Negociación y comprobación de duplicados</string>
     <string name="device_sync_phase_exchanging">Intercambiando registros</string>
@@ -2719,6 +2721,7 @@
     <string name="device_sync_report_heading">%1$d registros combinados</string>
     <string name="device_sync_imported">Importados</string>
     <string name="device_sync_duplicates">Ya existían (omitidos)</string>
+    <string name="device_sync_report_rewrote">Los registros existentes se escribieron de nuevo.</string>
     <string name="device_sync_done">Hecho</string>
     <string name="device_sync_copy_report">Copiar informe</string>
     <string name="device_sync_share_report">Compartir informe</string>

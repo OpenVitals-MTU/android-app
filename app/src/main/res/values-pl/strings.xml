@@ -3272,6 +3272,8 @@
     <string name="device_sync_medical_line">Dokumentacja medyczna: dodane %1$d, już były %2$d, pominięte %3$d, niedodane %4$d</string>
     <string name="device_sync_medical_held_back">Dokumentacja medyczna nie została zsynchronizowana. Dane na drugim telefonie dotyczą innej osoby lub kilku osób. Aby mimo to je przenieść, wyeksportuj je na tamtym telefonie i zaimportuj tutaj.</string>
     <string name="device_sync_start_sync">Rozpocznij synchronizację, wybrano %1$d</string>
+    <string name="device_sync_rewrite_title">Nadpisz istniejące rekordy</string>
+    <string name="device_sync_rewrite_body">Rekordy, które ten telefon już ma, zostaną zapisane ponownie jako OpenVitals. Użyj tego, gdy Health Connect pokazuje rekordy, ale nie wlicza ich do sum.</string>
     <string name="device_sync_progress_heading">Synchronizowanie</string>
     <string name="device_sync_phase_handshake">Uzgadnianie i sprawdzanie duplikatów</string>
     <string name="device_sync_phase_confirming">Oczekiwanie, aż drugi telefon potwierdzi kod</string>
@@ -3284,6 +3286,7 @@
     <string name="device_sync_report_heading">Scalono %1$d rekordów</string>
     <string name="device_sync_imported">Zaimportowano</string>
     <string name="device_sync_duplicates">Już były (pominięte)</string>
+    <string name="device_sync_report_rewrote">Istniejące rekordy zostały zapisane ponownie.</string>
     <string name="device_sync_refused">Nieprzyjęte (niewybrane na tym telefonie)</string>
     <string name="device_sync_done">Gotowe</string>
     <string name="device_sync_copy_report">Kopiuj raport</string>

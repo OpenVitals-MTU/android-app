@@ -189,10 +189,20 @@ fun encodeSyncRecordPayload(record: Record): ByteArray {
     return withDevice.toString().toByteArray(Charsets.UTF_8)
 }
 
-/** Reconstructs a [Record] from a [payload] produced by [encodeSyncRecordPayload]. */
-fun decodeSyncRecord(recordType: String, clientRecordId: String, payload: ByteArray): Record {
+/**
+ * Reconstructs a [Record] from a [payload] produced by [encodeSyncRecordPayload].
+ * [clientRecordVersion] above the one Health Connect holds makes the write an
+ * update of a record this app already owns; at 0 such a write is refused.
+ */
+fun decodeSyncRecord(
+    recordType: String,
+    clientRecordId: String,
+    payload: ByteArray,
+    clientRecordVersion: Long = 0,
+): Record {
     val json = CodecJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
-    return decode(recordType, syncMetadata(clientRecordId, decodeDevice(json["device"])), json)
+    val metadata = syncMetadata(clientRecordId, clientRecordVersion, decodeDevice(json["device"]))
+    return decode(recordType, metadata, json)
 }
 
 /**
@@ -207,11 +217,12 @@ fun syncRecordStartTime(payload: ByteArray): Instant? = runCatching {
 private val CodecJson = Json { ignoreUnknownKeys = true }
 private const val HEX_DIGITS = "0123456789abcdef"
 
-private fun syncMetadata(clientRecordId: String, device: Device?): Metadata =
+private fun syncMetadata(clientRecordId: String, clientRecordVersion: Long, device: Device?): Metadata =
     Metadata.manualEntry(
         // The sender's device when the wire carried one; older builds do not send it.
         device = device ?: Device(type = Device.TYPE_PHONE),
         clientRecordId = clientRecordId,
+        clientRecordVersion = clientRecordVersion,
     )
 
 /** The wire `device` object as a [Device], or null when absent/malformed. */

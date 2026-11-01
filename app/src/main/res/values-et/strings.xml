@@ -2755,6 +2755,8 @@
     <string name="device_sync_medical_line">Meditsiinilised andmed: lisatud %1$d, juba olemas %2$d, vahele jäetud %3$d, lisamata %4$d</string>
     <string name="device_sync_medical_held_back">Meditsiinilisi andmeid ei sünkroonitud. Teise telefoni andmetes on nimetatud teine inimene või mitu inimest. Kui soovid need siiski üle kanda, ekspordi need selles telefonis ja impordi siin.</string>
     <string name="device_sync_start_sync">Alusta sünkroonimist, %1$d valitud</string>
+    <string name="device_sync_rewrite_title">Kirjuta olemasolevad kirjed üle</string>
+    <string name="device_sync_rewrite_body">Kirjed, mis sellel telefonil juba on, kirjutatakse OpenVitalsi alla uuesti. Kasuta seda, kui Health Connect näitab kirjeid, kuid ei arvesta neid summadesse.</string>
     <string name="device_sync_progress_heading">Sünkroonimine</string>
     <string name="device_sync_phase_handshake">Ühenduse loomine ja duplikaatide kontroll</string>
     <string name="device_sync_phase_exchanging">Kirjete vahetamine</string>
@@ -2765,6 +2767,7 @@
     <string name="device_sync_report_heading">Liidetud %1$d kirjet</string>
     <string name="device_sync_imported">Imporditud</string>
     <string name="device_sync_duplicates">Juba olemas (vahele jäetud)</string>
+    <string name="device_sync_report_rewrote">Olemasolevad kirjed kirjutati uuesti.</string>
     <string name="device_sync_done">Valmis</string>
     <string name="device_sync_copy_report">Kopeeri raport</string>
     <string name="device_sync_share_report">Jaga raportit</string>

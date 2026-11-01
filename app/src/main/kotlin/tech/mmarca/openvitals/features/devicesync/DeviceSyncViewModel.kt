@@ -289,6 +289,8 @@ class DeviceSyncViewModel @Inject constructor(
         }
     }
 
+    fun setRewriteExisting(enabled: Boolean) = _uiState.update { it.copy(rewriteExisting = enabled) }
+
     fun goToTypes() = _uiState.update { it.copy(step = DeviceSyncStep.TYPES) }
 
     // Step 5: sync.
@@ -303,7 +305,11 @@ class DeviceSyncViewModel @Inject constructor(
             return
         }
         val gen = generation
-        Log.i(TAG, "startSync role=$role types=${state.selectedTypes.size} range=${state.range}")
+        Log.i(
+            TAG,
+            "startSync role=$role types=${state.selectedTypes.size} range=${state.range} " +
+                "rewriteExisting=${state.rewriteExisting}",
+        )
         _uiState.update { it.copy(step = DeviceSyncStep.SYNCING, error = null, progress = null) }
 
         syncJob = viewModelScope.launch {
@@ -327,6 +333,8 @@ class DeviceSyncViewModel @Inject constructor(
                 localPackageName = context.packageName,
                 windowStart = window.first,
                 windowEnd = window.second,
+                // Now in millis: above the version of any record an earlier sync wrote.
+                rewriteVersion = if (state.rewriteExisting) System.currentTimeMillis() else null,
             )
             val journalStore = CycleJournalSyncStore(
                 journal = cycleJournalRepository,
@@ -353,6 +361,7 @@ class DeviceSyncViewModel @Inject constructor(
                     deviceName = deviceName(),
                     supportedTypes = state.availableTypes.toList(),
                     selectedTypes = state.selectedTypes.toList(),
+                    rewriteExisting = state.rewriteExisting,
                     // Bigger batches cut stop-and-wait round trips; the store also caps
                     // by bytes. The timeout rides out a Health Connect rate-limit pause.
                     batchSize = 500,

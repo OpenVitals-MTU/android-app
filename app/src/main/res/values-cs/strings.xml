@@ -2891,6 +2891,8 @@
     <string name="device_sync_medical_line">Zdravotní záznamy: přidáno %1$d, již přítomno %2$d, přeskočeno %3$d, nepřidáno %4$d</string>
     <string name="device_sync_medical_held_back">Zdravotní záznamy nebyly synchronizovány. Záznamy v druhém telefonu uvádějí jinou osobu nebo více osob. Chcete-li je přesto přenést, exportujte je v tom telefonu a importujte je zde.</string>
     <string name="device_sync_start_sync">Spustit synchronizaci, vybráno %1$d</string>
+    <string name="device_sync_rewrite_title">Přepsat existující záznamy</string>
+    <string name="device_sync_rewrite_body">Záznamy, které tento telefon už má, se zapíší znovu pod OpenVitals. Použijte, když Health Connect záznamy zobrazuje, ale nezapočítává je do součtů.</string>
     <string name="device_sync_progress_heading">Synchronizuje se</string>
     <string name="device_sync_phase_handshake">Navázání spojení a kontrola duplicit</string>
     <string name="device_sync_phase_exchanging">Výměna záznamů</string>
@@ -2901,6 +2903,7 @@
     <string name="device_sync_report_heading">Sloučeno %1$d záznamů</string>
     <string name="device_sync_imported">Naimportováno</string>
     <string name="device_sync_duplicates">Již přítomno (přeskočeno)</string>
+    <string name="device_sync_report_rewrote">Existující záznamy byly zapsány znovu.</string>
     <string name="device_sync_done">Hotovo</string>
     <string name="device_sync_copy_report">Kopírovat zprávu</string>
     <string name="device_sync_share_report">Sdílet zprávu</string>

@@ -3234,6 +3234,8 @@
     <string name="device_sync_medical_line">医療記録: 追加 %1$d、既存 %2$d、スキップ %3$d、未追加 %4$d</string>
     <string name="device_sync_medical_held_back">医療記録は同期されませんでした。もう一方のスマートフォンの記録には別の人、または複数の人が記載されています。それでも移すには、そのスマートフォンでエクスポートし、ここでインポートしてください。</string>
     <string name="device_sync_start_sync">同期を開始（%1$d 件選択）</string>
+    <string name="device_sync_rewrite_title">既存の記録を上書き</string>
+    <string name="device_sync_rewrite_body">このスマートフォンにすでにある記録を OpenVitals として書き直します。Health Connect に記録は表示されるのに合計に含まれないときに使います。</string>
     <string name="device_sync_progress_heading">同期中</string>
     <string name="device_sync_phase_handshake">ハンドシェイクと重複チェック</string>
     <string name="device_sync_phase_exchanging">記録を交換中</string>
@@ -3244,6 +3246,7 @@
     <string name="device_sync_report_heading">%1$d 件の記録を統合</string>
     <string name="device_sync_imported">インポート</string>
     <string name="device_sync_duplicates">既存（スキップ）</string>
+    <string name="device_sync_report_rewrote">既存の記録を書き直しました。</string>
     <string name="device_sync_done">完了</string>
     <string name="device_sync_copy_report">レポートをコピー</string>
     <string name="device_sync_share_report">レポートを共有</string>

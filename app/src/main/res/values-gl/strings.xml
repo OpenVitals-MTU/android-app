@@ -3237,6 +3237,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="device_sync_medical_line">Historial médico: engadidos %1$d, xa existían %2$d, omitidos %3$d, non engadidos %4$d</string>
     <string name="device_sync_medical_held_back">O historial médico non se sincronizou. Os rexistros do outro teléfono nomean outra persoa, ou máis dunha. Para pasalos igualmente, expórtaos nese teléfono e impórtaos aquí.</string>
     <string name="device_sync_start_sync">Comezar sincronización, %1$d seleccionados</string>
+    <string name="device_sync_rewrite_title">Sobrescribir os rexistros existentes</string>
+    <string name="device_sync_rewrite_body">Os rexistros que este teléfono xa ten escríbense de novo baixo OpenVitals. Úsao cando Health Connect mostra os rexistros pero non os conta nos totais.</string>
     <string name="device_sync_progress_heading">Sincronizando</string>
     <string name="device_sync_phase_handshake">Negociación e comprobación de duplicados</string>
     <string name="device_sync_phase_exchanging">Intercambiando rexistros</string>
@@ -3247,6 +3249,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="device_sync_report_heading">%1$d rexistros combinados</string>
     <string name="device_sync_imported">Importados</string>
     <string name="device_sync_duplicates">Xa existían (omitidos)</string>
+    <string name="device_sync_report_rewrote">Os rexistros existentes escribíronse de novo.</string>
     <string name="device_sync_done">Feito</string>
     <string name="device_sync_copy_report">Copiar informe</string>
     <string name="device_sync_share_report">Compartir informe</string>

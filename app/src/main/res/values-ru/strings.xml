@@ -3193,6 +3193,8 @@
     <string name="device_sync_medical_line">Медицинские записи: добавлено %1$d, уже было %2$d, пропущено %3$d, не добавлено %4$d</string>
     <string name="device_sync_medical_held_back">Медицинские записи не синхронизированы. В записях на другом телефоне указан другой человек или несколько человек. Чтобы всё равно перенести их, экспортируйте их на том телефоне и импортируйте здесь.</string>
     <string name="device_sync_start_sync">Начать синхронизацию, выбрано: %1$d</string>
+    <string name="device_sync_rewrite_title">Перезаписать существующие записи</string>
+    <string name="device_sync_rewrite_body">Записи, которые уже есть на этом телефоне, будут записаны заново от имени OpenVitals. Используйте, когда Health Connect показывает записи, но не учитывает их в итогах.</string>
     <string name="device_sync_progress_heading">Синхронизация</string>
     <string name="device_sync_phase_handshake">Согласование и проверка дубликатов</string>
     <string name="device_sync_phase_exchanging">Обмен записями</string>
@@ -3203,6 +3205,7 @@
     <string name="device_sync_report_heading">Объединено записей: %1$d</string>
     <string name="device_sync_imported">Импортировано</string>
     <string name="device_sync_duplicates">Уже было (пропущено)</string>
+    <string name="device_sync_report_rewrote">Существующие записи были записаны заново.</string>
     <string name="device_sync_done">Готово</string>
     <string name="device_sync_copy_report">Копировать отчёт</string>
     <string name="device_sync_share_report">Поделиться отчётом</string>
