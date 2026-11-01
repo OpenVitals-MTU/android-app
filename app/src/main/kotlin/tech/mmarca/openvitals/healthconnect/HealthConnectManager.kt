@@ -7,6 +7,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.StateFlow
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
@@ -173,6 +174,13 @@ class HealthConnectManager @Inject constructor(
     /** How much longer Health Connect is refusing reads, or 0. Screens use it to say why they are thin. */
     fun rateLimitRetryAfterMillis(): Long =
         HealthConnectRateLimitBackoff.remainingMillis()
+
+    /** Epoch millis the refusal ends at, 0 while none. A banner counts down from it. */
+    val rateLimitDeadlineEpochMillis: StateFlow<Long>
+        get() = HealthConnectRateLimitBackoff.deadlineEpochMillis
+
+    /** Calls made this process, by operation: counts only. For the report email and the diagnostics export. */
+    fun callCountersSummary(): List<String> = HealthConnectCallCounters.summaryLines()
 
     fun isMindfulnessSessionAvailable(): Boolean =
         permissionService.isMindfulnessSessionAvailable()

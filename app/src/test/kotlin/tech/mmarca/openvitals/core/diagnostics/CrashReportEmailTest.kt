@@ -98,6 +98,22 @@ class CrashReportEmailTest {
     }
 
     @Test
+    fun `draft carries the Health Connect call counts, or says there are none`() {
+        val withCounts = CrashReportEmail.buildDraft(
+            appInfo = testAppInfo(),
+            savedCrashReport = "",
+            healthConnectCalls = "total: started=84 ok=61 failed=0 rateLimited=2 skipped=21",
+        )
+        val without = CrashReportEmail.buildDraft(
+            appInfo = testAppInfo(),
+            savedCrashReport = "",
+        )
+
+        assertThat(withCounts.body).contains("Health Connect calls this process (counts only):\ntotal: started=84")
+        assertThat(without.body).contains("(counts only):\nnone")
+    }
+
+    @Test
     fun `share text includes recipient subject and body`() {
         val draft = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),

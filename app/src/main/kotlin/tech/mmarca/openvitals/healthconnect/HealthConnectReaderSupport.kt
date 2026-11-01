@@ -47,6 +47,8 @@ internal class HealthConnectReaderSupport(
     private val syncEnabled: () -> Boolean = { true },
     /** Every read hops here. A test passes its own, so the whole read runs on test time. */
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    /** The clock the backoff is read with. A test binds it to the scheduler so a wait ends. */
+    private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     private val readSemaphore = Semaphore(MaxConcurrentReads)
 
@@ -78,30 +80,44 @@ internal class HealthConnectReaderSupport(
         var hasRetriedRateLimit = false
         while (true) {
             check(syncEnabled()) { "Health Connect access is paused" }
-            val backoffMillis = HealthConnectRateLimitBackoff.remainingMillis()
-            if (backoffMillis > 0L) {
+            // The deadline moves while this sleeps: another reader's hit escalates it.
+            var backoffMillis = HealthConnectRateLimitBackoff.remainingMillis(nowMillis())
+            while (backoffMillis > 0L) {
                 Log.w(TAG, "Waiting to retry $safeOperation after Health Connect rate limit")
                 delay(backoffMillis)
+                backoffMillis = HealthConnectRateLimitBackoff.remainingMillis(nowMillis())
             }
-            Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
+            var startedAt = 0L
             try {
                 return readSemaphore.withPermit {
+                    Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
+                    HealthConnectCallCounters.started(safeOperation)
+                    startedAt = nowMillis()
                     withContext(dispatchers.io) {
-                        block().also { Log.d(TAG, "Finished $safeOperation successfully") }
+                        block().also {
+                            Log.d(TAG, "Finished $safeOperation successfully")
+                            HealthConnectCallCounters.succeeded(safeOperation)
+                        }
                     }
                 }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
-                    val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                    HealthConnectCallCounters.rateLimited(safeOperation)
+                    val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(
+                        cause = t,
+                        messageForRetryAfter = rateLimitMessage,
+                        nowMillis = nowMillis(),
+                        readStartedAtMillis = startedAt,
+                    )
                     Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
                     if (!hasRetriedRateLimit) {
                         hasRetriedRateLimit = true
-                        delay(rateLimit.retryAfterMillis)
                         continue
                     }
                     throw rateLimit
                 }
+                HealthConnectCallCounters.failed(safeOperation)
                 Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
                 throw t
             }
@@ -112,6 +128,12 @@ internal class HealthConnectReaderSupport(
      * One attempt, bounded in how long it may wait. The backoff is process
      * global, so a read that would wait longer than [MaxRateLimitWaitMillis]
      * returns the fallback instead of holding the screen for minutes.
+     *
+     * The backoff is read under the permit. A dashboard queues dozens of reads
+     * behind two permits; when the first one is refused, the rest must see the
+     * refusal when their turn comes, not the clear state they were queued in.
+     * Checked outside the permit, each of them went on to call Health Connect,
+     * was refused in turn, and re-armed the minute: the toast said "1 min" forever.
      */
     private suspend fun <T> withRateLimitGuard(
         operation: String,
@@ -126,35 +148,47 @@ internal class HealthConnectReaderSupport(
             check(!strict) { "Health Connect access is paused" }
             return fallback
         }
-        val backoffMillis = HealthConnectRateLimitBackoff.remainingMillis()
-        if (backoffMillis > MaxRateLimitWaitMillis) {
-            Log.w(TAG, "Skipping $safeOperation - Health Connect rate limited for ${backoffMillis}ms more")
-            if (strict) HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
-            return fallback
-        }
-        if (backoffMillis > 0L) {
-            Log.w(TAG, "Waiting to retry $safeOperation after Health Connect rate limit")
-            delay(backoffMillis)
-        }
-        Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
-
-        return try {
-            readSemaphore.withPermit {
+        return readSemaphore.withPermit {
+            val backoffMillis = HealthConnectRateLimitBackoff.remainingMillis(nowMillis())
+            if (backoffMillis > MaxRateLimitWaitMillis) {
+                Log.w(TAG, "Skipping $safeOperation - Health Connect rate limited for ${backoffMillis}ms more")
+                HealthConnectCallCounters.skippedForBackoff(safeOperation)
+                if (strict) HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage, nowMillis())
+                return@withPermit fallback
+            }
+            if (backoffMillis > 0L) {
+                Log.w(TAG, "Waiting to retry $safeOperation after Health Connect rate limit")
+                delay(backoffMillis)
+            }
+            Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
+            HealthConnectCallCounters.started(safeOperation)
+            val startedAt = nowMillis()
+            try {
                 withContext(dispatchers.io) {
-                    block().also { Log.d(TAG, "Finished $safeOperation successfully") }
+                    block().also {
+                        Log.d(TAG, "Finished $safeOperation successfully")
+                        HealthConnectCallCounters.succeeded(safeOperation)
+                    }
                 }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                    HealthConnectCallCounters.rateLimited(safeOperation)
+                    val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(
+                        cause = t,
+                        messageForRetryAfter = rateLimitMessage,
+                        nowMillis = nowMillis(),
+                        readStartedAtMillis = startedAt,
+                    )
+                    Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
+                    if (strict) throw rateLimit
+                } else {
+                    HealthConnectCallCounters.failed(safeOperation)
+                    Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
+                    if (strict) throw t
+                }
+                fallback
             }
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
-                val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
-                Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
-                if (strict) throw rateLimit
-            } else {
-                Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
-                if (strict) throw t
-            }
-            fallback
         }
     }
 

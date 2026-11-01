@@ -10,6 +10,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -28,6 +29,7 @@ class HealthConnectReaderSupportTest {
     @Before
     fun setUp() {
         HealthConnectRateLimitBackoff.resetForTest()
+        HealthConnectCallCounters.resetForTest()
         mockkStatic(Log::class)
         every { Log.d(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0
@@ -76,7 +78,7 @@ class HealthConnectReaderSupportTest {
     }
 
     @Test fun `withLoggingOrThrow waits the backoff out rather than giving up`() = runTest {
-        val support = support()
+        val support = support(nowMillis = { testScheduler.currentTime })
         var attempts = 0
 
         // The sync path has no screen behind it, so resuming after a minute beats restarting.
@@ -90,6 +92,63 @@ class HealthConnectReaderSupportTest {
 
         assertEquals(42, result)
         assertEquals(2, attempts)
+    }
+
+    @Test fun `withLoggingOrThrow keeps waiting when the deadline moves while it sleeps`() = runTest {
+        val support = support(nowMillis = { testScheduler.currentTime })
+        support.withLogging("screen", fallback = 0) { throw quotaError() }
+        val deadlineAtFirstHit = HealthConnectRateLimitBackoff.deadlineEpochMillis.value
+        var ranAt = -1L
+
+        val sync = async {
+            support.withLoggingOrThrow("sync") { ranAt = testScheduler.currentTime; 1 }
+        }
+        // Another reader is refused while the sync sleeps: the deadline is now later than when it went to sleep.
+        advanceTimeBy(1_000)
+        HealthConnectRateLimitBackoff.markRateLimited(quotaError(), { "rate limited" }, nowMillis = testScheduler.currentTime)
+        sync.await()
+
+        // The first hit armed a minute; the second, inside the window, two. The sync waited for the second.
+        assertEquals(60_000L, deadlineAtFirstHit)
+        assertEquals(121_000L, ranAt)
+    }
+
+    @Test fun `reads queued behind the permit when a refusal lands return their fallback without calling`() = runTest {
+        // Eight reads behind two permits. The first is refused; the ones still waiting for a permit must not go out.
+        val support = support(nowMillis = { testScheduler.currentTime })
+        val calls = AtomicInteger(0)
+
+        val results = awaitAll(
+            *(0 until 8).map { index ->
+                async {
+                    support.withLogging("read-$index", fallback = -1) {
+                        calls.incrementAndGet()
+                        delay(50)
+                        if (index == 0) throw quotaError()
+                        index
+                    }
+                }
+            }.toTypedArray(),
+        )
+
+        // At most the two that held a permit when the refusal landed were sent.
+        assertTrue("calls=${calls.get()}", calls.get() <= 2)
+        assertEquals(7, results.count { it == -1 })
+        assertEquals(2L, HealthConnectCallCounters.snapshot().total.started)
+        assertEquals(1L, HealthConnectCallCounters.snapshot().total.rateLimited)
+        assertEquals(6L, HealthConnectCallCounters.snapshot().total.skippedForBackoff)
+    }
+
+    @Test fun `the counters tell a sent read from one skipped for the backoff`() = runTest {
+        val support = support(nowMillis = { testScheduler.currentTime })
+
+        support.withLogging("readSleep[2026]", fallback = 0) { 1 }
+        support.withLogging("readSleep[2027]", fallback = 0) { throw quotaError() }
+        support.withLogging("readSteps", fallback = 0) { 1 }
+
+        val counts = HealthConnectCallCounters.snapshot().counts
+        assertEquals(HealthConnectCallCount(started = 2, succeeded = 1, rateLimited = 1), counts.getValue("readSleep"))
+        assertEquals(HealthConnectCallCount(skippedForBackoff = 1), counts.getValue("readSteps"))
     }
 
     @Test fun `withLogging rethrows cancellation`() = runTest {
@@ -181,7 +240,12 @@ class HealthConnectReaderSupportTest {
         assertEquals("ipc failed", thrown?.message)
     }
 
-    private fun support(syncEnabled: () -> Boolean = { true }): HealthConnectReaderSupport {
+    private fun quotaError() = RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
+
+    private fun support(
+        syncEnabled: () -> Boolean = { true },
+        nowMillis: () -> Long = System::currentTimeMillis,
+    ): HealthConnectReaderSupport {
         val diagnostics = mockk<HealthConnectDiagnostics>()
         every { diagnostics.summary() } returns "diagnostics"
         return HealthConnectReaderSupport(
@@ -189,6 +253,7 @@ class HealthConnectReaderSupportTest {
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
             syncEnabled = syncEnabled,
+            nowMillis = nowMillis,
         )
     }
 }

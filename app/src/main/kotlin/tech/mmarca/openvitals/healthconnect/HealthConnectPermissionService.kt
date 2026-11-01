@@ -623,12 +623,20 @@ internal class HealthConnectPermissionService(
         block: () -> T,
     ): T = try {
         Log.d(TAG, "Starting $operation ${diagnostics.summary()}")
+        HealthConnectCallCounters.started(operation)
         block().also {
             Log.d(TAG, "Finished $operation successfully")
+            HealthConnectCallCounters.succeeded(operation)
         }
     } catch (t: CancellationException) {
         throw t
     } catch (t: Throwable) {
+        // On Android 13 these are calls into the standalone Health Connect app, and count against its quota.
+        if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+            HealthConnectCallCounters.rateLimited(operation)
+        } else {
+            HealthConnectCallCounters.failed(operation)
+        }
         Log.e(TAG, "Failed $operation ${diagnostics.summary()}", t)
         fallback
     }
