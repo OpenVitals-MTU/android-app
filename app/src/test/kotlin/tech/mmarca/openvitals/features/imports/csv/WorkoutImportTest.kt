@@ -151,12 +151,12 @@ class WorkoutImportTest {
         )
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY, runRow("activity_type" to "Biking_Stationary").request().exerciseType)
 
-        val unknown = runRow("activity_type" to "Kayak polo")
+        val unknown = runRow("activity_type" to "Zorbing")
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT, unknown.request().exerciseType)
         val reason = unknown.diagnostics.single()
         assertEquals(CsvImportDiagnosticReason.ACTIVITY_TYPE_DEFAULTED, reason.reason)
         assertEquals(Header.indexOf("activity_type"), reason.columnIndex)
-        assertEquals(PrivacyRedactor.shapeOf("Kayak polo"), reason.detail)
+        assertEquals(PrivacyRedactor.shapeOf("Zorbing"), reason.detail)
 
         val blank = runRow("activity_type" to "")
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT, blank.request().exerciseType)

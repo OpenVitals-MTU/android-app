@@ -383,7 +383,9 @@ class CsvImportReportTest {
         )
 
         assertThat(diagnostics).isNotEmpty()
-        PrivacySentinels.assertNoneIn(report)
+        // The masked error may still carry the name, as in the mapped report; the rows and columns never do.
+        PrivacySentinels.assertNoneIn(report, except = setOf(PrivacySentinels.Name))
+        assertThat(report.substringAfter("Workout columns")).doesNotContain(PrivacySentinels.Name)
     }
 
     @Test

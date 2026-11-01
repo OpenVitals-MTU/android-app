@@ -302,7 +302,7 @@ class CsvImportServiceTest {
         val start = Instant.parse("2026-05-01T08:00:00Z")
         val content = "$WorkoutHeader\n" +
             "Run,running,$start,${start.plusSeconds(3_600)},10000,,\n" +
-            "Paddle,kayak polo,${start.plusSeconds(86_400)},${start.plusSeconds(90_000)},,,\n" +
+            "Zorb,zorbing,${start.plusSeconds(86_400)},${start.plusSeconds(90_000)},,,\n" +
             "Lost,yoga,,${start.plusSeconds(3_600)},,,\n"
 
         val result = runWorkouts(harness, content)
