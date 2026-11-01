@@ -20,7 +20,7 @@ The dashboard can work with partial permissions. Activity and Sleep are a small 
 - Open Health Connect settings and confirm OpenVitals has the relevant read permissions.
 - Grant Health history access if older records outside the recent access window should be included.
 - For route previews, open Health Connect permissions manually and approve workout route access.
-- If Health Connect reports rate limiting, wait and try again later.
+- If Health Connect reports rate limiting, the dashboard counts down and fills the missing tiles by itself; leave it open rather than refreshing.
 
 ## Adding Entries
 

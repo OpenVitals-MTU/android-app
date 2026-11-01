@@ -53,7 +53,7 @@ Medical records need Android 14 or newer, with a Health Connect module that supp
 
 Health Connect may limit how much historical data an app can read unless Health history access is granted.
 
-OpenVitals can request Health history and background-read access where Android and Health Connect support them. Long reads may still be chunked or retried to avoid Health Connect rate limits.
+OpenVitals can request Health history and background-read access where Android and Health Connect support them. Long reads are chunked and spaced out to stay inside Health Connect's rate limits. When Health Connect does refuse a read, the dashboard says so in a banner, counts down, and asks again for the tiles it could not fill; a refusal that repeats makes it wait longer each time. On Android 13, where Health Connect is a separate app with a stricter limit, a fresh install may take a few minutes to fill every tile.
 
 ## Routes
 
