@@ -44,6 +44,10 @@ internal object HealthConnectRateLimitBackoff {
     /** Epoch millis the backoff ends at, or 0 while none is armed. A screen counts down from it. */
     val deadlineEpochMillis: StateFlow<Long> = deadline
 
+    /** True once this process has been refused at all. The pacer keeps a wider gap from then on. */
+    val hasBeenRateLimited: Boolean
+        get() = hasHit
+
     fun throwIfActive(
         messageForRetryAfter: (Long) -> String,
         nowMillis: Long = System.currentTimeMillis(),

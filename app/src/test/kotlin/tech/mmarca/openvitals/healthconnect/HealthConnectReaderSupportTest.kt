@@ -10,6 +10,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -18,6 +19,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import java.util.concurrent.atomic.AtomicInteger
 
 /** Matches HealthConnectRateLimitBackoff's own backoff, which is not public. */
@@ -240,11 +243,35 @@ class HealthConnectReaderSupportTest {
         assertEquals("ipc failed", thrown?.message)
     }
 
+    @Test fun `call starts keep the pacing gap, and a wider one once a refusal has been seen`() = runTest {
+        // A hundred calls in three seconds spend a window quota; the same hundred spaced out do not.
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val dispatchers = object : DispatcherProvider {
+            override val main = dispatcher
+            override val io = dispatcher
+            override val default = dispatcher
+        }
+        val support = support(nowMillis = { testScheduler.currentTime }, dispatchers = dispatchers, pacingGapMillis = 150L)
+        val starts = mutableListOf<Long>()
+
+        awaitAll(*(0 until 4).map { async { support.withLogging("read", fallback = 0) { starts += testScheduler.currentTime; 1 } } }.toTypedArray())
+        assertEquals(listOf(0L, 150L, 300L, 450L), starts.sorted())
+
+        starts.clear()
+        support.withLogging("read", fallback = 0) { throw quotaError() }
+        advanceTimeBy(DEFAULT_BACKOFF_MILLIS + 1)
+        awaitAll(*(0 until 3).map { async { support.withLogging("read", fallback = 0) { starts += testScheduler.currentTime; 1 } } }.toTypedArray())
+        val gaps = starts.sorted().zipWithNext { a, b -> b - a }
+        assertEquals(listOf(250L, 250L), gaps)
+    }
+
     private fun quotaError() = RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
 
     private fun support(
         syncEnabled: () -> Boolean = { true },
         nowMillis: () -> Long = System::currentTimeMillis,
+        dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+        pacingGapMillis: Long = 0L,
     ): HealthConnectReaderSupport {
         val diagnostics = mockk<HealthConnectDiagnostics>()
         every { diagnostics.summary() } returns "diagnostics"
@@ -253,7 +280,9 @@ class HealthConnectReaderSupportTest {
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
             syncEnabled = syncEnabled,
+            dispatchers = dispatchers,
             nowMillis = nowMillis,
+            pacingGapMillis = pacingGapMillis,
         )
     }
 }

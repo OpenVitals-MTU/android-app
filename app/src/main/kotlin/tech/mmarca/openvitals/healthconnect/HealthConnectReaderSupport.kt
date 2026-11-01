@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.os.Build
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.aggregate.AggregationResult
@@ -49,8 +50,15 @@ internal class HealthConnectReaderSupport(
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     /** The clock the backoff is read with. A test binds it to the scheduler so a wait ends. */
     private val nowMillis: () -> Long = System::currentTimeMillis,
+    /** Gap between call starts, in ms. Zero on the platform provider; the standalone app gets a breath. */
+    pacingGapMillis: Long = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        HealthConnectCallPacer.StandaloneProviderGapMillis
+    } else {
+        0L
+    },
 ) {
     private val readSemaphore = Semaphore(MaxConcurrentReads)
+    private val pacer = HealthConnectCallPacer(nowMillis, pacingGapMillis)
 
     fun client(): HealthConnectClient = clientProvider()
 
@@ -90,6 +98,7 @@ internal class HealthConnectReaderSupport(
             var startedAt = 0L
             try {
                 return readSemaphore.withPermit {
+                    delay(pacer.reserve(HealthConnectRateLimitBackoff.hasBeenRateLimited))
                     Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
                     HealthConnectCallCounters.started(safeOperation)
                     startedAt = nowMillis()
@@ -160,6 +169,7 @@ internal class HealthConnectReaderSupport(
                 Log.w(TAG, "Waiting to retry $safeOperation after Health Connect rate limit")
                 delay(backoffMillis)
             }
+            delay(pacer.reserve(HealthConnectRateLimitBackoff.hasBeenRateLimited))
             Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
             HealthConnectCallCounters.started(safeOperation)
             val startedAt = nowMillis()
