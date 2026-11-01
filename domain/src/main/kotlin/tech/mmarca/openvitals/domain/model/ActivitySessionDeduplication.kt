@@ -25,8 +25,14 @@ fun deduplicateExerciseSessions(sessions: List<ExerciseData>): List<ExerciseData
     return kept.sortedByDescending { it.endTime }
 }
 
+/**
+ * Two sessions covering the same span are one workout. A second app, or a
+ * second watch, may file it under another type (a walk on one wrist, a hike
+ * on the other), so a type mismatch only separates sessions from the same
+ * source, where two overlapping entries are two deliberate records.
+ */
 private fun ExerciseData.isDuplicateOf(other: ExerciseData): Boolean {
-    if (exerciseType != other.exerciseType) return false
+    if (exerciseType != other.exerciseType && source == other.source) return false
 
     val shorterDuration = min(durationMs.coerceAtLeast(0L), other.durationMs.coerceAtLeast(0L))
     if (shorterDuration <= 0L) return false

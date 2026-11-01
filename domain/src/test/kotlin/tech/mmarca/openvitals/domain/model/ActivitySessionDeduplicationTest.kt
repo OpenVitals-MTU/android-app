@@ -48,6 +48,49 @@ class ActivitySessionDeduplicationTest {
         assertEquals(listOf("evening", "morning"), result.map { it.id })
     }
 
+    @Test fun `two sources filing one walk under different types are one session`() {
+        // One walk, two wrists: the Garmin calls it a walk, the band a hike.
+        val garmin = exercise(
+            id = "garmin",
+            source = "tech.mmarca.openvitals",
+            exerciseType = 79,
+            start = "2026-10-25T09:00:00Z",
+            end = "2026-10-25T12:05:00Z",
+            distanceMeters = 15_000.0,
+            heartRateBpm = 110L,
+        )
+        val band = exercise(
+            id = "band",
+            source = "nodomain.freeyourgadget.gadgetbridge",
+            exerciseType = 37,
+            start = "2026-10-25T09:02:00Z",
+            end = "2026-10-25T12:03:00Z",
+            distanceMeters = 14_800.0,
+        )
+
+        assertEquals(listOf("garmin"), deduplicateExerciseSessions(listOf(band, garmin)).map { it.id })
+    }
+
+    @Test fun `one source keeps two overlapping sessions of different types`() {
+        // Yoga and stretching logged over the same hour by hand are two records on purpose.
+        val yoga = exercise(
+            id = "yoga",
+            source = "tech.mmarca.openvitals",
+            exerciseType = 83,
+            start = "2026-10-25T18:00:00Z",
+            end = "2026-10-25T19:00:00Z",
+        )
+        val stretching = exercise(
+            id = "stretching",
+            source = "tech.mmarca.openvitals",
+            exerciseType = 68,
+            start = "2026-10-25T18:00:00Z",
+            end = "2026-10-25T19:00:00Z",
+        )
+
+        assertEquals(2, deduplicateExerciseSessions(listOf(yoga, stretching)).size)
+    }
+
     @Test fun `the most recently edited of two identical duplicates wins`() {
         val older = exercise(
             id = "older",
@@ -74,6 +117,7 @@ class ActivitySessionDeduplicationTest {
         source: String,
         start: String,
         end: String,
+        exerciseType: Int = 1,
         distanceMeters: Double? = null,
         heartRateBpm: Long? = null,
         routePoints: Int = 0,
@@ -84,7 +128,7 @@ class ActivitySessionDeduplicationTest {
         return ExerciseData(
             id = id,
             title = null,
-            exerciseType = 1,
+            exerciseType = exerciseType,
             startTime = startTime,
             endTime = endTime,
             durationMs = Duration.between(startTime, endTime).toMillis(),
