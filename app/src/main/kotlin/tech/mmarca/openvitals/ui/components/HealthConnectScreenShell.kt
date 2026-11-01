@@ -117,10 +117,11 @@ fun HealthConnectScreenShell(
         modifier = modifier,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (showInlineSyncBanner && (uxState.syncPaused || uxState.isLoading)) {
+            if (showInlineSyncBanner && (uxState.syncPaused || uxState.isLoading || uxState.rateLimitDeadlineEpochMillis != null)) {
                 HealthConnectSyncStatusBanner(
                     syncPaused = uxState.syncPaused,
                     syncInProgress = uxState.isLoading && !uxState.syncPaused,
+                    rateLimitDeadlineEpochMillis = uxState.rateLimitDeadlineEpochMillis,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)

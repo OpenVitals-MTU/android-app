@@ -1775,6 +1775,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="health_connect_access_double_cancel_body">Non se concederon os permisos de Health Connect. Abre os axustes de Health Connect para escoller que datos compartir con OpenVitals.</string>
     <string name="health_connect_sync_paused">A sincronización con Health Connect está en pausa</string>
     <string name="health_connect_sync_in_progress">Sincronizando con Health Connect…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect está ocupado. Tentarase de novo en %1$s</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect está ocupado. Tentando de novo…</string>
     <string name="health_connect_data_source_manage">Xestionar fontes de datos</string>
     <string name="data_source_synced_label">%1$s (sincronizado)</string>
     <string name="dashboard_health_connect_sync_paused_body">Volve activar a sincronización en Axustes para actualizar o teu panel.</string>

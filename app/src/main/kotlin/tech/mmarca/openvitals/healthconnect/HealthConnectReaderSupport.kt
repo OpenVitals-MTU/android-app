@@ -9,6 +9,7 @@ import java.time.Instant
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
@@ -40,6 +41,41 @@ internal class StrictHealthConnectReads private constructor() :
 
 internal suspend fun <T> withStrictHealthConnectReads(block: suspend CoroutineScope.() -> T): T =
     withContext(StrictHealthConnectReads.Element, block)
+
+/**
+ * Collects whether any guarded read under it came back degraded: skipped for
+ * the backoff, or refused and answered with its fallback. A screen read never
+ * throws for a refusal, so without this a tile cannot tell "no data" from
+ * "Health Connect would not say"; with it, the dashboard knows which tiles
+ * to ask for again once the backoff ends.
+ */
+internal class HealthConnectReadOutcome : AbstractCoroutineContextElement(HealthConnectReadOutcome) {
+    companion object Key : CoroutineContext.Key<HealthConnectReadOutcome>
+
+    private val degradedFlag = AtomicBoolean(false)
+
+    val degraded: Boolean
+        get() = degradedFlag.get()
+
+    fun markDegraded() {
+        degradedFlag.set(true)
+    }
+}
+
+/** [block]'s value and whether a read under it was degraded. Child coroutines inherit the outcome. */
+internal class HealthConnectReadResult<T>(val value: T, val degraded: Boolean)
+
+internal suspend fun <T> withHealthConnectReadOutcome(
+    block: suspend CoroutineScope.() -> T,
+): HealthConnectReadResult<T> {
+    val outcome = HealthConnectReadOutcome()
+    val value = withContext(outcome, block)
+    return HealthConnectReadResult(value, outcome.degraded)
+}
+
+private suspend fun markReadDegraded() {
+    currentCoroutineContext()[HealthConnectReadOutcome]?.markDegraded()
+}
 
 internal class HealthConnectReaderSupport(
     private val clientProvider: () -> HealthConnectClient,
@@ -163,6 +199,7 @@ internal class HealthConnectReaderSupport(
                 Log.w(TAG, "Skipping $safeOperation - Health Connect rate limited for ${backoffMillis}ms more")
                 HealthConnectCallCounters.skippedForBackoff(safeOperation)
                 if (strict) HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage, nowMillis())
+                markReadDegraded()
                 return@withPermit fallback
             }
             if (backoffMillis > 0L) {
@@ -192,6 +229,7 @@ internal class HealthConnectReaderSupport(
                     )
                     Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
                     if (strict) throw rateLimit
+                    markReadDegraded()
                 } else {
                     HealthConnectCallCounters.failed(safeOperation)
                     Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)

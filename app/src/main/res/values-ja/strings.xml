@@ -1772,6 +1772,8 @@
     <string name="health_connect_access_double_cancel_body">Health Connect の権限が許可されませんでした。Health Connect の設定を開き、OpenVitals と共有するデータを選んでください。</string>
     <string name="health_connect_sync_paused">Health Connect の同期は一時停止中</string>
     <string name="health_connect_sync_in_progress">Health Connect と同期中…</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect が混雑しています。%1$s 後に再試行します</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect が混雑しています。再試行中…</string>
     <string name="health_connect_data_source_manage">データソースを管理</string>
     <string name="data_source_synced_label">%1$s（同期済み）</string>
     <string name="dashboard_health_connect_sync_paused_body">ダッシュボードを更新するには、設定で同期をオンに戻してください。</string>

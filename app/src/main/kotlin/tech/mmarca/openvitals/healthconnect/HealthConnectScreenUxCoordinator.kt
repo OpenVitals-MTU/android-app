@@ -40,6 +40,7 @@ class HealthConnectScreenUxCoordinator @Inject constructor(
             showDoubleCancelRecovery = permissionUxState.shouldShowDoubleCancelRecovery(),
             acknowledgedPermissions = preferencesRepository.acknowledgedPermissionsFor(feature),
             isLoading = isLoading,
+            rateLimitDeadlineEpochMillis = healthConnectManager.rateLimitDeadlineEpochMillis.value.takeIf { it > 0L },
         )
     }
 

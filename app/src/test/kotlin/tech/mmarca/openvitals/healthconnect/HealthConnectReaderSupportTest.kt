@@ -243,6 +243,23 @@ class HealthConnectReaderSupportTest {
         assertEquals("ipc failed", thrown?.message)
     }
 
+    @Test fun `a skipped or refused read marks the outcome degraded, a successful one does not`() = runTest {
+        // A screen read never throws for a refusal, so this is how a tile tells "no data" from "would not say".
+        val support = support(nowMillis = { testScheduler.currentTime })
+
+        val clean = withHealthConnectReadOutcome { support.withLogging("read", fallback = 0) { 1 } }
+        val refused = withHealthConnectReadOutcome { support.withLogging("read", fallback = 0) { throw quotaError() } }
+        val skipped = withHealthConnectReadOutcome {
+            async { support.withLogging("read", fallback = 0) { 1 } }.await()
+        }
+
+        assertEquals(1, clean.value)
+        assertFalse(clean.degraded)
+        assertTrue(refused.degraded)
+        // Skipped for the backoff, in a child coroutine: the outcome reaches it.
+        assertTrue(skipped.degraded)
+    }
+
     @Test fun `call starts keep the pacing gap, and a wider one once a refusal has been seen`() = runTest {
         // A hundred calls in three seconds spend a window quota; the same hundred spaced out do not.
         val dispatcher = StandardTestDispatcher(testScheduler)

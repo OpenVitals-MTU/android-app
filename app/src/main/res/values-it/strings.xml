@@ -1163,6 +1163,8 @@
     <string name="health_connect_access_double_cancel_body">I permessi Health Connect non sono stati concessi. Apri le impostazioni Health Connect per scegliere quali dati condividere con OpenVitals.</string>
     <string name="health_connect_sync_paused">La sincronizzazione Health Connect è in pausa</string>
     <string name="health_connect_sync_in_progress">Sincronizza con Health Connect</string>
+    <string name="health_connect_rate_limited_retrying_in">Health Connect è occupato. Nuovo tentativo tra %1$s</string>
+    <string name="health_connect_rate_limited_retrying">Health Connect è occupato. Nuovo tentativo…</string>
     <string name="health_connect_data_source_manage">Gestisci fonti dati</string>
     <string name="dashboard_health_connect_sync_paused_body">Riattiva la sincronizzazione nelle Impostazioni per aggiornare la tua dashboard.</string>
     <string name="health_connect_promote_activity_title">Sblocca informazioni sulle attività</string>
