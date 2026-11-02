@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -95,6 +96,7 @@ class WatchDeviceViewModelTest {
     private val garminLocalData = mockk<tech.mmarca.openvitals.devices.garmin.GarminLocalData>(relaxed = true)
     private val healthConnectManager = mockk<tech.mmarca.openvitals.healthconnect.HealthConnectManager>(relaxed = true)
     private val notificationBridge = mockk<tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge>(relaxed = true)
+    private val wearOsLinkStore = WearOsLinkStore(FakeSharedPreferences())
 
     /** The scheduler owns the stored interval and the WorkManager side, so it is one stub that remembers. */
     private lateinit var autoSyncScheduler: WatchAutoSyncScheduler
@@ -162,7 +164,7 @@ class WatchDeviceViewModelTest {
         // The cleanup after a removal runs on the default dispatcher. Here it runs at once.
         dispatchers = mainDispatcherRule.dispatcherProvider,
         wearOsCompanionManager = wearOsCompanionManager,
-        wearOsLinkStore = WearOsLinkStore(FakeSharedPreferences()),
+        wearOsLinkStore = wearOsLinkStore,
     )
 
     @Test
@@ -333,6 +335,25 @@ class WatchDeviceViewModelTest {
         assertTrue(stateStore.syncedFileKeys(watch.id).isEmpty())
         assertTrue(stateStore.capabilities(watch.id).isEmpty())
         assertNull(vm.uiState.value.device)
+    }
+
+    @Test
+    fun `forgetting a Wear OS watch drops its link token, so adding it again asks on the watch`() = runTest {
+        val watch = repo.addDevice(
+            displayName = "Galaxy Watch8",
+            address = "4A:F1:89:49:3C:85",
+            bluetoothName = "Galaxy Watch8 (89FZ)",
+            capabilities = emptySet(),
+            kind = BleDeviceKind.WATCH,
+            integration = DeviceIntegration.WEAROS,
+        )
+        val token = wearOsLinkStore.tokenFor(watch.address, "A8:D1:62:BE:3A:3B")
+        val vm = viewModel(watch.id)
+
+        vm.removeDevice()
+
+        assertTrue(repo.devices.isEmpty())
+        assertNotEquals(token, wearOsLinkStore.tokenFor(watch.address, "A8:D1:62:BE:3A:3B"))
     }
 
     @Test

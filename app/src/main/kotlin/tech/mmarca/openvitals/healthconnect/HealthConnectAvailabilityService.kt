@@ -17,7 +17,16 @@ internal class HealthConnectAvailabilityService(
     private val packageInstalledProvider: (String) -> Boolean = { packageName ->
         packageInstalled(context, packageName)
     },
+    /** Monotonic clock for the status cache, off the JVM so a test needs no Android stub. */
+    private val elapsedMillis: () -> Long = { System.nanoTime() / 1_000_000L },
+    /** The app's foreground epoch; a status read in an earlier one is stale (the provider may have been installed). */
+    private val foregroundEpoch: () -> Int = { 0 },
 ) {
+    private class CachedStatus(val status: Int, val atMillis: Long, val epoch: Int)
+
+    @Volatile
+    private var cachedStatus: CachedStatus? = null
+
     fun availability(): HealthConnectAvailability {
         if (unsupportedProfileProvider()) {
             Log.w(TAG, "Health Connect unavailable in current profile: ${diagnosticsSummaryProvider()}")
@@ -29,7 +38,7 @@ internal class HealthConnectAvailabilityService(
             return HealthConnectAvailability.NEEDS_PLAY_STORE
         }
 
-        val sdkStatus = sdkStatusProvider(context)
+        val sdkStatus = sdkStatusCached()
         val availability = when (sdkStatus) {
             HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.AVAILABLE
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED ->
@@ -40,6 +49,27 @@ internal class HealthConnectAvailabilityService(
         return availability
     }
 
+    /** Forgets the cached status: the next call asks again. */
+    fun invalidate() {
+        cachedStatus = null
+    }
+
+    /**
+     * A dashboard load asks this some thirty times. The answer is a package
+     * query that changes only with an install, so it is kept for a while and
+     * dropped when the app comes back to the foreground.
+     */
+    private fun sdkStatusCached(): Int {
+        val now = elapsedMillis()
+        val epoch = foregroundEpoch()
+        cachedStatus
+            ?.takeIf { it.epoch == epoch && now - it.atMillis <= SdkStatusCacheMillis }
+            ?.let { return it.status }
+        return sdkStatusProvider(context).also { status ->
+            cachedStatus = CachedStatus(status, now, epoch)
+        }
+    }
+
     private fun standaloneHealthConnectNeedsPlayStore(): Boolean =
         sdkIntProvider() <= Build.VERSION_CODES.TIRAMISU &&
             packageInstalledProvider(HC_PACKAGE) &&
@@ -47,6 +77,7 @@ internal class HealthConnectAvailabilityService(
 
     private companion object {
         private const val TAG = "HealthConnectAvailability"
+        private const val SdkStatusCacheMillis = 30_000L
         private const val HC_PACKAGE = "com.google.android.apps.healthdata"
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
     }

@@ -21,7 +21,7 @@ import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
 import androidx.health.connect.client.units.Volume
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
-import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
+import tech.mmarca.openvitals.domain.model.MaxHeartRateInsightAggregateBuckets
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
@@ -600,7 +600,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest(testDispatcher) {
+    fun `readHeartRateSamplesForInsights splits a long range into budgeted requests`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(1)
         val client = seeded(heartRate(firstDay, 9, 61L), heartRate(date, 15, 88L))
@@ -613,10 +613,11 @@ class HealthConnectAggregateReadTest {
 
         // A whole day of one-minute buckets in one request hit TransactionTooLargeException
         // and degraded to empty, so cardio load fell back to step estimates.
-        val budget = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
+        val budget = HeartRateInsightBucketDuration.multipliedBy(MaxHeartRateInsightAggregateBuckets)
         assertThat(widestRequest(client)).isAtMost(budget)
-        // Two days, more than one request each.
-        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(2)
+        // Two days of five-minute buckets are 576: more than one request, and no more than the two the budget needs.
+        // Thirty calls for the dashboard's fortnight was what the standalone Health Connect app refused.
+        assertThat(client.groupByDurationRequestRanges.size).isEqualTo(2)
         assertThat(samples.map { it.beatsPerMinute }).containsExactly(61L, 88L).inOrder()
     }
 

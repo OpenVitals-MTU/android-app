@@ -46,8 +46,10 @@ import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityIntradayBucketDuration
 import tech.mmarca.openvitals.domain.model.ActivityRecordSource
+import tech.mmarca.openvitals.domain.model.ActivityWriteLimits
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.OwnActivityMetrics
+import tech.mmarca.openvitals.domain.model.importSessionClientRecordId
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
@@ -818,6 +820,10 @@ internal class ActivityHealthReader(
                 .takeIf { it.isNotEmpty() }?.sumOf { it.energy.inKilocalories },
             totalCaloriesKcal = own(TotalCaloriesBurnedRecord::class, "total_calories")
                 .takeIf { it.isNotEmpty() }?.sumOf { it.energy.inKilocalories },
+            floorsClimbed = own(FloorsClimbedRecord::class, "floors")
+                .takeIf { it.isNotEmpty() }?.sumOf { it.floors },
+            wheelchairPushes = own(WheelchairPushesRecord::class, "wheelchair_pushes")
+                .takeIf { it.isNotEmpty() }?.sumOf { it.count },
         )
     }
 
@@ -951,6 +957,30 @@ internal class ActivityHealthReader(
                         endZoneOffset = endOffset,
                         count = steps,
                         metadata = metricMetadata("steps", startTime),
+                    )
+                )
+            }
+            floorsClimbed?.let { floors ->
+                add(
+                    FloorsClimbedRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        floors = floors,
+                        metadata = metricMetadata("floors", startTime),
+                    )
+                )
+            }
+            wheelchairPushes?.let { pushes ->
+                add(
+                    WheelchairPushesRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        count = pushes,
+                        metadata = metricMetadata("wheelchair_pushes", startTime),
                     )
                 )
             }
@@ -1176,7 +1206,7 @@ internal class ActivityHealthReader(
 
     /** Random for an entry, a function of the file for an import: see [ActivityWriteRequest.importKey]. */
     private fun ActivityWriteRequest.sessionClientRecordId(): String =
-        "openvitals_activity_${startTime.toEpochMilli()}_${importKey ?: UUID.randomUUID()}"
+        importSessionClientRecordId() ?: "openvitals_activity_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
 
     private fun ActivityWriteRequest.metricMetadata(kind: String, startTime: Instant): Metadata =
         recordMetadata(manualActivityMetricIdPrefix(kind, startTime) + (importKey ?: UUID.randomUUID()))
@@ -1199,11 +1229,25 @@ internal class ActivityHealthReader(
 
     private fun validateActivityWriteRequest(request: ActivityWriteRequest) {
         require(request.startTime.isBefore(request.endTime)) { "Activity start must be before end." }
-        request.distanceMeters?.let { require(it > 0.0 && it <= MaxActivityDistanceMeters) { "Distance must be greater than 0 m." } }
-        request.elevationGainedMeters?.let { require(it >= 0.0 && it <= MaxActivityElevationMeters) { "Elevation gain is out of range." } }
-        request.activeCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Active calories are out of range." } }
-        request.totalCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Total calories are out of range." } }
-        request.stepsCount?.let { require(it > 0L && it <= MaxActivitySteps) { "Steps are out of range." } }
+        request.distanceMeters?.let {
+            require(it > 0.0 && it <= ActivityWriteLimits.MaxDistanceMeters) { "Distance must be greater than 0 m." }
+        }
+        request.elevationGainedMeters?.let {
+            require(it >= 0.0 && it <= ActivityWriteLimits.MaxElevationMeters) { "Elevation gain is out of range." }
+        }
+        request.activeCaloriesKcal?.let {
+            require(it > 0.0 && it <= ActivityWriteLimits.MaxCaloriesKcal) { "Active calories are out of range." }
+        }
+        request.totalCaloriesKcal?.let {
+            require(it > 0.0 && it <= ActivityWriteLimits.MaxCaloriesKcal) { "Total calories are out of range." }
+        }
+        request.stepsCount?.let { require(it > 0L && it <= ActivityWriteLimits.MaxSteps) { "Steps are out of range." } }
+        request.floorsClimbed?.let {
+            require(it > 0.0 && it <= ActivityWriteLimits.MaxFloors) { "Floors climbed are out of range." }
+        }
+        request.wheelchairPushes?.let {
+            require(it > 0L && it <= ActivityWriteLimits.MaxWheelchairPushes) { "Wheelchair pushes are out of range." }
+        }
         val sortedPauses = request.pauseIntervals.sortedBy { it.startTime }
         sortedPauses.forEach { interval ->
             require(interval.startTime.isBefore(interval.endTime)) { "Pause start must be before pause end." }
@@ -1241,7 +1285,7 @@ internal class ActivityHealthReader(
                 "Exercise laps must be inside the activity time range."
             }
             lap.lengthMeters?.let { meters ->
-                require(meters >= 0.0 && meters <= MaxActivityDistanceMeters) { "Lap length is out of range." }
+                require(meters >= 0.0 && meters <= ActivityWriteLimits.MaxDistanceMeters) { "Lap length is out of range." }
             }
         }
         sortedLaps.zipWithNext { previous, next ->
@@ -1268,13 +1312,18 @@ internal class ActivityHealthReader(
     private class ManualMetricKind<T : Record>(val recordType: KClass<T>, val kind: String)
 
     private companion object {
-        /** Values the entry form shows and owns. An edit replaces them. */
+        /**
+         * Totals stored beside the session. An edit replaces the ones the form shows and keeps
+         * the rest, floors and pushes, which only an import writes; a delete sweeps them all.
+         */
         private val FormOwnedMetricKinds: List<ManualMetricKind<out Record>> = listOf(
             ManualMetricKind(StepsRecord::class, "steps"),
             ManualMetricKind(DistanceRecord::class, "distance"),
             ManualMetricKind(ElevationGainedRecord::class, "elevation"),
             ManualMetricKind(ActiveCaloriesBurnedRecord::class, "active_calories"),
             ManualMetricKind(TotalCaloriesBurnedRecord::class, "total_calories"),
+            ManualMetricKind(FloorsClimbedRecord::class, "floors"),
+            ManualMetricKind(WheelchairPushesRecord::class, "wheelchair_pushes"),
         )
 
         /** Recorded or imported samples. The form never loads them, so an edit must not drop them. */
@@ -1290,10 +1339,6 @@ internal class ActivityHealthReader(
         private const val TAG = "HealthConnectManager"
         private const val MinRoutePointCount = 2
         private const val MaxRouteShrinkAttempts = 3
-        private const val MaxActivityDistanceMeters = 1_000_000.0
-        private const val MaxActivityElevationMeters = 1_000_000.0
-        private const val MaxActivityCaloriesKcal = 1_000_000.0
-        private const val MaxActivitySteps = 1_000_000L
     }
 }
 

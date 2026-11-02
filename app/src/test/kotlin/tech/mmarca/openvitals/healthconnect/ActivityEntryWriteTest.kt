@@ -6,9 +6,11 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -33,6 +35,7 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleHeartRateSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
+import tech.mmarca.openvitals.domain.model.importSessionClientRecordId
 
 /** Write, edit and delete of an activity entry, on Google's fake client. */
 class ActivityEntryWriteTest {
@@ -159,8 +162,14 @@ class ActivityEntryWriteTest {
     fun `importing the same file twice stores the workout once`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
-        val imported = request(T10_00, T11_00, distanceMeters = 5_000.0, heartRate = listOf(T10_10 to 140L))
-            .copy(importKey = "9f2c1a7b3e5d4f60a1b2c3d4", source = ActivityRecordSource.WATCH)
+        val imported = request(
+            T10_00,
+            T11_00,
+            distanceMeters = 5_000.0,
+            heartRate = listOf(T10_00 to 140L, T11_00.minusSeconds(1) to 140L),
+            floors = 3.0,
+            pushes = 120L,
+        ).copy(importKey = "9f2c1a7b3e5d4f60a1b2c3d4", source = ActivityRecordSource.FILE)
 
         reader.writeActivityEntries(listOf(imported))
         reader.writeActivityEntries(listOf(imported))
@@ -169,6 +178,55 @@ class ActivityEntryWriteTest {
         assertThat(client.all(ExerciseSessionRecord::class)).hasSize(1)
         assertThat(client.all(DistanceRecord::class)).hasSize(1)
         assertThat(client.all(HeartRateRecord::class)).hasSize(1)
+        assertThat(client.all(FloorsClimbedRecord::class)).hasSize(1)
+        assertThat(client.all(WheelchairPushesRecord::class)).hasSize(1)
+        // The id an importer can look the session up by is the one the reader wrote.
+        assertThat(client.all(ExerciseSessionRecord::class).single().metadata.clientRecordId)
+            .isEqualTo(imported.importSessionClientRecordId())
+    }
+
+    @Test
+    fun `floors and pushes are written beside the session and deleted with it`() = onTheTestClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, floors = 12.0, pushes = 340L))
+
+        val floors = client.all(FloorsClimbedRecord::class).single()
+        assertThat(floors.floors).isEqualTo(12.0)
+        assertThat(floors.startTime).isEqualTo(T10_00)
+        assertThat(floors.endTime).isEqualTo(T11_00)
+        assertThat(client.all(WheelchairPushesRecord::class).single().count).isEqualTo(340L)
+        assertThat(reader.readOwnActivityMetrics(client.sessionIdAt(T10_00)))
+            .isEqualTo(OwnActivityMetrics(floorsClimbed = 12.0, wheelchairPushes = 340L))
+
+        reader.deleteActivityEntry(client.sessionIdAt(T10_00))
+
+        assertThat(client.all(FloorsClimbedRecord::class)).isEmpty()
+        assertThat(client.all(WheelchairPushesRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `an edit that has no field for floors or pushes keeps them, and they move with the window`() = onTheTestClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0, floors = 12.0, pushes = 340L))
+
+        // The form edits the distance only; it never carries floors or pushes.
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_10, T11_00, distanceMeters = 5_500.0).copy(editedMetrics = setOf(ActivityFormMetric.DISTANCE)),
+        )
+
+        val floors = client.all(FloorsClimbedRecord::class).single()
+        assertThat(floors.floors).isEqualTo(12.0)
+        assertThat(floors.startTime).isEqualTo(T10_10)
+        assertThat(client.all(WheelchairPushesRecord::class).single().count).isEqualTo(340L)
+        assertThat(client.all(DistanceRecord::class).single().distance.inMeters).isEqualTo(5_500.0)
+
+        // The next delete still finds them under the new start.
+        reader.deleteActivityEntry(client.sessionIdAt(T10_10))
+        assertThat(client.all(FloorsClimbedRecord::class)).isEmpty()
+        assertThat(client.all(WheelchairPushesRecord::class)).isEmpty()
     }
 
     @Test
@@ -320,6 +378,8 @@ class ActivityEntryWriteTest {
         steps: Long? = null,
         heartRate: List<Pair<Instant, Long>> = emptyList(),
         title: String? = null,
+        floors: Double? = null,
+        pushes: Long? = null,
     ) = ActivityWriteRequest(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
         startTime = start,
@@ -327,6 +387,8 @@ class ActivityEntryWriteTest {
         title = title,
         distanceMeters = distanceMeters,
         stepsCount = steps,
+        floorsClimbed = floors,
+        wheelchairPushes = pushes,
         bleSamples = BleRecordingSampleBuffer(
             heartRateSamples = heartRate.map { (time, bpm) -> BleHeartRateSample(time, bpm) },
         ),

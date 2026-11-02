@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.devices.wearos
 
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -15,17 +16,28 @@ class WearOsLinkStoreTest {
     private val store = WearOsLinkStore(prefs)
 
     @Test
-    fun `one token per watch, stable across calls and restarts, until forgotten`() {
-        val token = store.tokenFor("a8:d1:62:be:3a:3b")
+    fun `one token per added watch, kept across a new pairing and restarts, new once the watch is removed`() {
+        val token = store.tokenFor("7f:12:34:56:78:9a", "A8:D1:62:BE:3A:3B")
 
         assertTrue(WearLinkToken.isWellFormed(token))
-        assertEquals(token, store.tokenFor("A8:D1:62:BE:3A:3B"))
-        assertEquals(token, WearOsLinkStore(prefs).tokenFor("A8:D1:62:BE:3A:3B"))
-        assertNotEquals(token, store.tokenFor("11:22:33:44:55:66"))
+        // Paired again, the bond is listed under another address.
+        assertEquals(token, store.tokenFor("7F:12:34:56:78:9A", "4A:F1:89:49:3C:85"))
+        assertEquals(token, WearOsLinkStore(prefs).tokenFor("7F:12:34:56:78:9A", "A8:D1:62:BE:3A:3B"))
+        assertNotEquals(token, store.tokenFor("11:22:33:44:55:66", "A8:D1:62:BE:3A:3B"))
 
-        store.forgetToken("A8:D1:62:BE:3A:3B")
+        store.clear("watch-1", "7F:12:34:56:78:9A")
 
-        assertNotEquals(token, store.tokenFor("A8:D1:62:BE:3A:3B"))
+        assertNotEquals(token, store.tokenFor("7F:12:34:56:78:9A", "A8:D1:62:BE:3A:3B"))
+    }
+
+    @Test
+    fun `a token kept per bond address is adopted once by the watch reached through it`() {
+        val allowed = WearLinkToken.generate()
+        prefs.edit().putString("token_4A:F1:89:49:3C:85", allowed).apply()
+
+        assertEquals(allowed, store.tokenFor("4A:F1:89:49:3C:85", "4a:f1:89:49:3c:85"))
+        assertEquals(allowed, store.tokenFor("4A:F1:89:49:3C:85", "A8:D1:62:BE:3A:3B"))
+        assertFalse(prefs.contains("token_4A:F1:89:49:3C:85"))
     }
 
     @Test

@@ -146,5 +146,9 @@ internal fun csvDiagnosticReasonLabel(reason: CsvImportDiagnosticReason): String
         CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC -> R.string.settings_csv_import_reason_systolic_not_above_diastolic
         CsvImportDiagnosticReason.WRITE_FAILED -> R.string.settings_csv_import_reason_write_failed
         CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> R.string.settings_csv_import_reason_excluded_in_source
+        CsvImportDiagnosticReason.ACTIVITY_TYPE_DEFAULTED -> R.string.settings_csv_import_reason_activity_type_defaulted
+        CsvImportDiagnosticReason.MISSING_END -> R.string.settings_csv_import_reason_missing_end
+        CsvImportDiagnosticReason.UNSUPPORTED_FOR_ACTIVITY_TYPE -> R.string.settings_csv_import_reason_unsupported_for_activity_type
+        CsvImportDiagnosticReason.ACTIVE_ABOVE_TOTAL_CALORIES -> R.string.settings_csv_import_reason_active_above_total_calories
     },
 )

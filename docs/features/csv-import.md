@@ -6,9 +6,9 @@
 > **Navigation:** `Screen.SettingsDataImport`, then `Screen.SettingsCsvImport`.
 > **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Body metrics](body-metrics.md), [Apple Health import](apple-health-import.md).
 
-CSV import brings body measurements, vitals, blood pressure, steps and nutrition from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a blood pressure monitor's log, a temperature log, a glucose export, a pedometer's step history, or a spreadsheet of meals copied from nutrition labels.
+CSV import brings body measurements, vitals, blood pressure, steps, nutrition and workouts from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a blood pressure monitor's log, a temperature log, a glucose export, a pedometer's step history, a spreadsheet of meals copied from nutrition labels, or a workout history rebuilt by hand from other apps' exports.
 
-There is one vendor preset, the drip cycle tracker's export, recognised by its header; see [drip Export](#drip-export). Every other file is read through the column mapping: the user says what each column means, which is why a file OpenVitals has never seen still imports.
+There are two presets, recognised by their header: the drip cycle tracker's export, see [drip Export](#drip-export), and OpenVitals' own workout export, see [OpenVitals Workout Export](#openvitals-workout-export). Every other file is read through the column mapping: the user says what each column means, which is why a file OpenVitals has never seen still imports.
 
 ## Import Flow
 
@@ -55,7 +55,7 @@ Most supported measurements are a single value at a single instant, because that
 
 ## What Is Not Supported
 
-- **Interval records beyond steps and nutrition are not supported.** Sleep and workouts need stages or sub-records as well as a start and an end, so they are out of scope for the current mapping model. Steps and nutrition are the exceptions, carried by the single optional "End date and time" column.
+- **Interval records beyond steps and nutrition are not mapped.** Sleep needs stages as well as a start and an end, so it is out of scope for the column mapping. Steps and nutrition are the exceptions, carried by the single optional "End date and time" column. Workouts come in through the [workout export preset](#openvitals-workout-export), not through the mapping.
 - **Meal type is not mapped.** An imported food has no breakfast, lunch, dinner or snack label.
 
 ## drip Export
@@ -75,6 +75,28 @@ The journal needs no Health Connect permission: it is written to this phone's cy
 Every row of the export is accounted for in the result and the report: a row is imported (it produced a record or a journal entry), rejected (it produced only a diagnostic), or has nothing to import, and the three add up to the rows read. Records written counts Health Connect records, of which a day can make up to four, so it is not a row count, and the records that replaced an earlier import are a part of it, not an addition. Journal days counts the rows that carried a journal entry, and says how many of them changed on this phone; on a second run of the same file that is none. A temperature, mucus or cervix observation marked excluded in drip is left out on purpose and listed under rejections as "Excluded in the source app", with the values it held. A row that produced nothing at all, such as a day cleared in drip, a mucus observation of "nothing", or only an "other" switch under sex, pain or mood, is counted under "Rows with nothing to import".
 
 Re-importing a drip export replaces its records like any other CSV, since a day's record of each kind resolves to the same identifier. A day that changes kind between exports, from flow to spotting, leaves the earlier record in place.
+
+## OpenVitals Workout Export
+
+The activity detail screen exports a workout as a CSV with one header row and one data row: English snake_case headers, SI units, ISO-8601 times. The CSV importer recognises that header and reads each row as a workout, so a file the app wrote imports back with the type it had, and a history rebuilt by hand from other apps' exports, with the same headers and as many rows as there were workouts, imports the same way. This is the route for someone who lost their old phone and has only CSVs left.
+
+The header is recognised when it has `activity_type`, `start_time`, and `end_time` or `duration_seconds`; case and order do not matter and extra columns are allowed. The mapping step is replaced by a summary of the columns that will be imported and the ones that will not, plus the date and time settings, because a hand-made file often carries local times with no offset. A time that carries its own offset or ends in `Z` wins, as elsewhere. The time zone choice resolves each instant; the stored record keeps this phone's offset, as every activity OpenVitals writes does.
+
+What each column becomes:
+
+- **`activity_type`.** The export's own names (`running`, `biking_stationary`, `strength_training`, ...) first; otherwise the words the route importer understands, with `_` read as a space, so `Outdoor Run` and `functional_strength_training` land on the right type. A type that names nothing is stored as an "other" workout and counted under "Activity type not recognised", so the row is accounted for; a blank cell does the same. Correct the cell and import again to replace it.
+- **`start_time`.** Required; a row without a readable start is rejected.
+- **`end_time`, `duration_seconds`.** The end column when it holds something, else the start plus the duration. A row with neither is rejected, as is one whose end is not after its start or whose span is over seven days.
+- **`title`, `notes`.** Trimmed; a blank is left out.
+- **`distance_meters`, `elevation_gained_meters`, `steps`, `total_calories_kcal`, `active_calories_kcal`, `floors_climbed`, `wheelchair_pushes`.** Each becomes the record OpenVitals writes beside a session, over the session's span. A blank or a zero is a gap; a value that is not a number, is negative or is past what an activity can hold costs that total only. A distance or an elevation on a type that cannot carry one (a yoga session) is dropped with "Not kept for this activity type", so what the import keeps is what the edit form shows for that type. Active calories above the total are dropped and the total kept, since Health Connect refuses the pair.
+- **`average_heart_rate_bpm`.** Health Connect has no average on a session, so the figure becomes a flat two-sample heart-rate series, one sample at the start and one a second before the end, both at the average. The workout's heart-rate chart then shows a line at the figure the file gave. An average outside 1 to 255 is rejected.
+- **`max_heart_rate_bpm`, `average_speed_meters_per_second`, `average_power_watts`, `average_steps_cadence_spm`, `average_cycling_cadence_rpm`, `source`.** Not imported: a session has no field for them, and a series cannot honestly be invented from an average. The options and confirm steps name them.
+
+Imported workouts are OpenVitals' own: they appear in the activity list and detail screen, can be edited and deleted there, and are stored as recorded by an unknown device, like a route or FIT file picked by hand. An edit in the activity form keeps the floors, pushes and the heart-rate series it has no field for.
+
+A workout is identified by its start instant, as a measurement is by its type and instant, deliberately not by its values: a re-import of the same file replaces every workout and reports them as having replaced an earlier import; a corrected distance, title or type replaces the earlier record. Two workouts starting at the same instant collapse into one, and a row deleted from the file leaves its workout in place until it is deleted in the app. The presence count needs the exercise read permission; without it the workouts are written all the same and reported as not checked first.
+
+The confirm step asks for the session write permission and, for each total column in the file, that total's write permission. Workouts are written through the same path as the route and FIT bulk import, in batches, with the same quota pauses; a refused batch is retried one row at a time so one bad row costs one row. The result's "Workouts" tally counts sessions, one per row, not the totals and the series beside them.
 
 ## Nutrition
 

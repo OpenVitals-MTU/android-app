@@ -1693,6 +1693,39 @@ class ActivityEntryViewModelTest {
         assertNull(vm.uiState.value.editedMetrics())
     }
 
+    @Test fun `floors and pushes are never among the edited totals, so an edit keeps what an import stored`() = runTest {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val workout = ExerciseData(
+            id = "activity-id",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            durationMs = 45 * 60 * 1000,
+            source = "tech.mmarca.openvitals",
+            title = "Morning run",
+            totalDistanceMeters = 10_500.0,
+            isOpenVitalsEntry = true,
+        )
+        val repo = activityRepo(canWrite = true, workout = workout)
+        val units = ActivityEntryUnits.uniform(UnitSystem.METRIC)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+            editActivityId = "activity-id",
+        )
+        advanceUntilIdle()
+        vm.loadEditEntry(units)
+        advanceUntilIdle()
+
+        // The form has no field for either, so no edit can name them as changed.
+        vm.updateDistance("11")
+        vm.updateTitle("Evening run")
+        val edited = vm.uiState.value.editedMetrics()!!
+        assertEquals(setOf(ActivityFormMetric.DISTANCE), edited)
+        assertFalse(ActivityFormMetric.FLOORS in edited)
+        assertFalse(ActivityFormMetric.WHEELCHAIR_PUSHES in edited)
+    }
+
     @Test fun `editing a recovery test keeps the mark where the effort stopped`() = runTest {
         // The trailing REST segment is what puts the session on the recovery screen.
         val start = Instant.parse("2026-05-26T08:30:00Z")

@@ -6,8 +6,9 @@ import java.time.Instant
 
 /**
  * The one crash report kept on the phone, for "Report an issue" to attach. It
- * holds masked error text only, and goes once it has been handed to an email,
- * a copy or a file, or after [MaxAge] either way.
+ * holds masked error text and the masked log of the crashed process, and goes
+ * once it has been handed to an email, a copy or a file, or after [MaxAge]
+ * either way.
  */
 internal class CrashReportFile(
     private val directory: File,
@@ -51,6 +52,7 @@ internal class CrashReportFile(
         const val FileName = "last-crash.txt"
 
         // Written before reports were masked: it holds the raw log and the error text as thrown.
+        // Deleted on sight, never read.
         const val LegacyFileName = "last-crash-report.txt"
     }
 }

@@ -8,7 +8,7 @@ import tech.mmarca.openvitals.wearlink.WearLinkTrustStore
  * The phones the wearer has allowed, with the token each presents, and the
  * phones the wearer has blocked. Plain preferences: a few entries, keyed by
  * the phone's Bluetooth address. The server consults it on every hello;
- * the screen's Allow, Block and Forget write to it.
+ * Allow and Block, on the screen and on the request notification, write to it.
  */
 class WearTrustStore(
     private val prefs: SharedPreferences,
@@ -32,7 +32,7 @@ class WearTrustStore(
 
     override fun notePending(peerAddress: String, token: String, peerName: String) {
         val now = clock()
-        val pending = PendingPhone(peerAddress, token, peerName, now)
+        val pending = PendingPhone(peerAddress, token, peerName, now, newKey = tokenFor(peerAddress) != null)
         // The same phone asking again keeps its first request; another phone replaces it.
         val current = state.pendingIfFresh(now)
         if (current != null && current.address == peerAddress && current.token == token) return
@@ -40,11 +40,7 @@ class WearTrustStore(
         onPending?.invoke(pending)
     }
 
-    override fun noteMismatch(peerAddress: String, peerName: String) {
-        state.update { it.copy(refused = RefusedPhone(peerAddress, peerName, clock())) }
-    }
-
-    /** The wearer allowed [address] with [token]. Clears a pending request or refusal for it. */
+    /** The wearer allowed [address] with [token], replacing any token it had. Clears a pending request for it. */
     fun trust(address: String, token: String, name: String) {
         prefs.edit()
             .putString(tokenKey(address), token)
@@ -52,12 +48,7 @@ class WearTrustStore(
             .putLong(trustedAtKey(address), clock())
             .putStringSet(BLOCKED, (blocked() - address).toMutableSet())
             .apply()
-        state.update {
-            it.copy(
-                pending = it.pending?.takeUnless { p -> p.address == address },
-                refused = it.refused?.takeUnless { r -> r.address == address },
-            )
-        }
+        state.update { it.copy(pending = it.pending?.takeUnless { p -> p.address == address }) }
         publish()
     }
 
@@ -77,8 +68,6 @@ class WearTrustStore(
     fun forget(address: String) {
         forgetEntry(address)
         unblock(address)
-        state.update { it.copy(refused = it.refused?.takeUnless { r -> r.address == address }) }
-        publish()
     }
 
     fun trusted(): List<TrustedPhone> = prefs.all.keys

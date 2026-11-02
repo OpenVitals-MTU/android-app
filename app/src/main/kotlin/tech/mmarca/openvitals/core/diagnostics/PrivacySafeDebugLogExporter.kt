@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import tech.mmarca.openvitals.core.privacy.maskLogcat
+import tech.mmarca.openvitals.healthconnect.HealthConnectCallCounters
 
 data class DebugLogExportResult(
     val writtenLines: Int,
@@ -34,6 +35,26 @@ object PrivacySafeDebugLogExporter {
 
     /** For callers already on a background thread. */
     internal fun writeCurrentProcessLogcatBlocking(context: Context, outputStream: OutputStream): DebugLogExportResult {
+        val exported = currentProcessLogcatExport()
+        outputStream.writer(Charsets.UTF_8).use { writer ->
+            writer.append(exportText(context.packageName, exported))
+            // This logcat is the live process only. A frozen, killed process left its trace with the system.
+            writer.appendLine()
+            writer.appendLine("Recent \"not responding\" records (stack traces only):")
+            writer.appendLine(AnrExitInfo.recent(context).ifBlank { "none" })
+        }
+        return DebugLogExportResult(writtenLines = exported.writtenLines, droppedLines = exported.droppedLines)
+    }
+
+    /**
+     * The masked log as text, for the crash draft and the saved crash report.
+     * Those have their own "not responding" section, so this leaves it out.
+     * For callers already on a background thread.
+     */
+    internal fun currentProcessLogcatTextBlocking(context: Context): String =
+        exportText(context.packageName, currentProcessLogcatExport())
+
+    private fun currentProcessLogcatExport(): ExportedLogcat {
         check(BuildConfig.OPENVITALS_DIAGNOSTICS) {
             "Debug log export is only available in diagnostics builds."
         }
@@ -41,22 +62,28 @@ object PrivacySafeDebugLogExporter {
             .getOrElse { throwable ->
                 listOf("E/OpenVitalsDiagnostics: logcat capture failed type=${throwable::class.java.simpleName}")
             }
-        val exported = exportLogcat(rawLines)
-        outputStream.writer(Charsets.UTF_8).use { writer ->
-            writer.appendLine("OpenVitals diagnostics log export")
-            writer.appendLine("package=${context.packageName}")
-            writer.appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-            writer.appendLine(PrivacyHeader)
-            writer.appendLine("writtenLines=${exported.writtenLines}")
-            writer.appendLine("droppedLines=${exported.droppedLines}")
-            writer.appendLine()
-            exported.lines.forEach(writer::appendLine)
-            // This logcat is the live process only. A frozen, killed process left its trace with the system.
-            writer.appendLine()
-            writer.appendLine("Recent \"not responding\" records (stack traces only):")
-            writer.appendLine(AnrExitInfo.recent(context).ifBlank { "none" })
-        }
-        return DebugLogExportResult(writtenLines = exported.writtenLines, droppedLines = exported.droppedLines)
+        return exportLogcat(rawLines)
+    }
+
+    /**
+     * The export's header and its masked lines. [healthConnectCalls] are counts
+     * by operation name, nothing else: what this process asked Health Connect
+     * and what it refused.
+     */
+    internal fun exportText(
+        packageName: String,
+        exported: ExportedLogcat,
+        healthConnectCalls: List<String> = HealthConnectCallCounters.summaryLines(),
+    ): String = buildString {
+        appendLine("OpenVitals diagnostics log export")
+        appendLine("package=$packageName")
+        appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        appendLine(PrivacyHeader)
+        healthConnectCalls.forEach { line -> appendLine("healthConnectCalls: $line") }
+        appendLine("writtenLines=${exported.writtenLines}")
+        appendLine("droppedLines=${exported.droppedLines}")
+        appendLine()
+        exported.lines.forEach(::appendLine)
     }
 
     /** The [MaxLines] most recent lines, masked. [droppedLines] counts the trimmed ones; masking drops none. */

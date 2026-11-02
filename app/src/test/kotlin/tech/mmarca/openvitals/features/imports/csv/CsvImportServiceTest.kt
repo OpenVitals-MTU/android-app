@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
 import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.WeightRecord
@@ -17,9 +18,13 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.domain.model.ActivityRecordSource
+import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.importSessionClientRecordId
 
 private val Dialect = CsvDialect(fieldDelimiter = ",", eol = "\n")
 
@@ -49,12 +54,26 @@ private class RepositoryHarness(
     rateLimitRefusals: Int? = null,
     /** Record types whose presence lookup fails, as a missing read permission would make it. */
     unreadableTypes: Set<kotlin.reflect.KClass<out Record>> = emptySet(),
+    /** Workouts: refuse every batch, so the service writes them one by one. */
+    failWorkoutBatch: Boolean = false,
+    /** Workouts: refuse this one when it is written on its own. */
+    rejectWorkoutWhere: ((ActivityWriteRequest) -> Boolean)? = null,
+    /** Workouts: every batch after this many is refused for quota, for ever. */
+    rateLimitWorkoutsAfterBatches: Int? = null,
+    /** Workouts: the repository refuses before writing, as it does for a missing permission. */
+    denyActivityPermission: Boolean = false,
 ) {
     val inserted = mutableListOf<Record>()
     var batchCalls = 0
         private set
 
     val repository: AppleHealthImportRepository = mockk()
+
+    /** The workouts the activity repository was asked to write, batch or single. */
+    val writtenWorkouts = mutableListOf<ActivityWriteRequest>()
+    var workoutBatchCalls = 0
+        private set
+    val activityRepository: ActivityRepository = mockk()
 
     /** The cycle journal, as a map: what a drip import writes beside Health Connect. */
     val journalEntries = mutableMapOf<LocalDate, CycleJournalEntry>()
@@ -88,6 +107,38 @@ private class RepositoryHarness(
             }
             inserted.addAll(records)
         }
+        coEvery { activityRepository.writeActivityEntries(any()) } answers {
+            val requests = arg<List<ActivityWriteRequest>>(0)
+            workoutBatchCalls++
+            if (denyActivityPermission) throw SecurityException("Missing Health Connect activity write permission.")
+            if (rateLimitWorkoutsAfterBatches != null && workoutBatchCalls > rateLimitWorkoutsAfterBatches) {
+                throw IllegalStateException("Quota has been exceeded")
+            }
+            if (failWorkoutBatch) throw IllegalStateException("batch refused")
+            writtenWorkouts.addAll(requests)
+            requests.map { it.importKey.orEmpty() }
+        }
+        coEvery { activityRepository.writeActivityEntry(any()) } answers {
+            val request = arg<ActivityWriteRequest>(0)
+            if (denyActivityPermission) throw SecurityException("Missing Health Connect activity write permission.")
+            if (rejectWorkoutWhere?.invoke(request) == true) throw IllegalStateException("workout refused")
+            writtenWorkouts.add(request)
+            request.importKey.orEmpty()
+        }
+    }
+}
+
+/** The app's own export, narrowed to the columns these runs need. */
+private const val WorkoutHeader = "title,activity_type,start_time,end_time,distance_meters,average_heart_rate_bpm,notes"
+
+private val WorkoutPlan: CsvImportPlan = CsvImportPlan.Workouts(detectWorkoutExport(WorkoutHeader.split(","))!!)
+
+/** [rows] daily runs from 2026-05-01, each an hour long. */
+private fun workoutCsvOf(rows: Int, type: String = "running"): String = buildString {
+    append(WorkoutHeader).append('\n')
+    repeat(rows) { index ->
+        val start = Instant.parse("2026-05-01T08:00:00Z").plusSeconds(index * 86_400L)
+        append("Run $index,$type,$start,${start.plusSeconds(3_600)},10000,150,\n")
     }
 }
 
@@ -110,7 +161,165 @@ class CsvImportServiceTest {
     private val pauses = mutableListOf<Long>()
 
     private fun service(harness: RepositoryHarness): CsvImportService =
-        CsvImportService(harness.repository, harness.journal, waitMillis = { millis -> pauses += millis })
+        CsvImportService(harness.repository, harness.journal, harness.activityRepository, waitMillis = { millis -> pauses += millis })
+
+    private suspend fun runWorkouts(
+        harness: RepositoryHarness,
+        content: String,
+        cancellation: CsvImportCancellation? = null,
+        onProgress: (CsvImportProgress) -> Unit = {},
+    ): CsvImportResult = service(harness).run(
+        source = sourceOf(content),
+        totalBytes = content.length.toLong(),
+        dialect = Dialect,
+        plan = WorkoutPlan,
+        cancellation = cancellation,
+        onProgress = onProgress,
+    )
+
+    @Test
+    fun `a workout export writes a session a row, in batches, through the activity repository`() = runTest {
+        val harness = RepositoryHarness()
+
+        val result = runWorkouts(harness, workoutCsvOf(60))
+
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(60, result.progress.rowsRead)
+        assertEquals(60, result.progress.rowsImported)
+        // Sessions, one per row, not the distance and heart-rate records beside them.
+        assertEquals(60, result.progress.written)
+        assertEquals(0, result.progress.rejected)
+        assertEquals(3, harness.workoutBatchCalls)
+        assertEquals(60, harness.writtenWorkouts.size)
+        // Nothing goes through the record path.
+        assertTrue(harness.inserted.isEmpty())
+        val first = harness.writtenWorkouts.first()
+        assertEquals("Run 0", first.title)
+        assertEquals(10_000.0, first.distanceMeters!!, 1e-9)
+        assertEquals(2, first.bleSamples.heartRateSamples.size)
+        assertEquals(ActivityRecordSource.FILE, first.source)
+        assertNotNull(first.importKey)
+    }
+
+    @Test
+    fun `workouts already in Health Connect are counted as replaced, and an unreadable session type as unchecked`() = runTest {
+        val content = workoutCsvOf(3)
+        val probe = RepositoryHarness()
+        runWorkouts(probe, content)
+        val existing = probe.writtenWorkouts.mapTo(mutableSetOf()) { it.importSessionClientRecordId()!! }
+
+        val again = RepositoryHarness(existingIds = existing)
+        val result = runWorkouts(again, content)
+        assertEquals(3, result.progress.written)
+        assertEquals(3, result.progress.alreadyPresent)
+        assertEquals(0, result.progress.presenceUnchecked)
+
+        val unreadable = RepositoryHarness(unreadableTypes = setOf(ExerciseSessionRecord::class))
+        val unchecked = runWorkouts(unreadable, content)
+        assertEquals(3, unchecked.progress.written)
+        assertEquals(0, unchecked.progress.alreadyPresent)
+        assertEquals(3, unchecked.progress.presenceUnchecked)
+    }
+
+    @Test
+    fun `a refused workout batch is written one by one and only the bad row is rejected`() = runTest {
+        val harness = RepositoryHarness(failWorkoutBatch = true, rejectWorkoutWhere = { it.title == "Run 3" })
+
+        val result = runWorkouts(harness, workoutCsvOf(30))
+
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(29, result.progress.written)
+        assertEquals(1, result.progress.rejected)
+        assertEquals(29, harness.writtenWorkouts.size)
+        val failed = result.diagnostics.single()
+        assertEquals(CsvImportDiagnosticReason.WRITE_FAILED, failed.reason)
+        // Row 3 of the data is line 5 of the file: the header, then rows 0, 1, 2.
+        assertEquals(5, failed.rowNumber)
+        assertTrue(failed.detail!!.startsWith("ExerciseSessionRecord:"))
+    }
+
+    @Test
+    fun `a rate-limited workout batch pauses, and a quota that never refills stops the run`() = runTest {
+        val harness = RepositoryHarness(rateLimitWorkoutsAfterBatches = 1)
+
+        val result = runWorkouts(harness, workoutCsvOf(60))
+
+        assertEquals(CsvImportOutcome.RATE_LIMITED, result.outcome)
+        // The first batch landed; the second was refused through the whole pause budget.
+        assertEquals(25, result.progress.written)
+        assertEquals(25, harness.writtenWorkouts.size)
+        assertTrue(result.progress.quotaPauses > 0)
+        assertTrue(pauses.isNotEmpty())
+        assertNotNull(result.error)
+    }
+
+    @Test
+    fun `cancelling during a workout quota pause ends the run as cancelled`() = runTest {
+        val harness = RepositoryHarness(rateLimitWorkoutsAfterBatches = 1)
+        val cancellation = CsvImportCancellation()
+
+        val result = runWorkouts(harness, workoutCsvOf(60), cancellation = cancellation) { progress ->
+            if (progress.resumingInSeconds != null && progress.resumingInSeconds!! <= 12) cancellation.cancel()
+        }
+
+        assertEquals(CsvImportOutcome.CANCELLED, result.outcome)
+        assertEquals(25, result.progress.written)
+    }
+
+    @Test
+    fun `a missing activity write permission fails the run at once, with no row-by-row retry`() = runTest {
+        val harness = RepositoryHarness(denyActivityPermission = true)
+
+        val result = runWorkouts(harness, workoutCsvOf(30))
+
+        assertEquals(CsvImportOutcome.FAILED, result.outcome)
+        assertNotNull(result.error)
+        assertEquals(0, result.progress.written)
+        assertTrue(harness.writtenWorkouts.isEmpty())
+        // The batch was refused once; the single writes were never tried.
+        assertEquals(1, harness.workoutBatchCalls)
+        assertTrue(result.diagnostics.isEmpty())
+    }
+
+    @Test
+    fun `a row that repeats a start is written once and both rows count as imported`() = runTest {
+        val harness = RepositoryHarness()
+        val start = Instant.parse("2026-05-01T08:00:00Z")
+        val content = "$WorkoutHeader\n" +
+            "Run,running,$start,${start.plusSeconds(3_600)},10000,,\n" +
+            "Same run,running,$start,${start.plusSeconds(3_000)},9000,,\n"
+
+        val result = runWorkouts(harness, content)
+
+        assertEquals(1, harness.writtenWorkouts.size)
+        assertEquals(1, result.progress.written)
+        assertEquals(2, result.progress.rowsImported)
+    }
+
+    @Test
+    fun `an unknown type imports as a workout with one rejection, and the rows partition`() = runTest {
+        val harness = RepositoryHarness()
+        val start = Instant.parse("2026-05-01T08:00:00Z")
+        val content = "$WorkoutHeader\n" +
+            "Run,running,$start,${start.plusSeconds(3_600)},10000,,\n" +
+            "Zorb,zorbing,${start.plusSeconds(86_400)},${start.plusSeconds(90_000)},,,\n" +
+            "Lost,yoga,,${start.plusSeconds(3_600)},,,\n"
+
+        val result = runWorkouts(harness, content)
+
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(3, result.progress.rowsRead)
+        assertEquals(2, result.progress.rowsImported)
+        assertEquals(1, result.progress.rowsRejected)
+        assertEquals(0, result.progress.emptyRows)
+        assertEquals(2, result.progress.rejected)
+        assertEquals(2, result.progress.written)
+        assertEquals(
+            mapOf(CsvImportDiagnosticReason.ACTIVITY_TYPE_DEFAULTED to 1, CsvImportDiagnosticReason.MISSING_TIMESTAMP to 1),
+            result.diagnosticCounts,
+        )
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT, harness.writtenWorkouts.last().exerciseType)
+    }
 
     @Test
     fun `every row of a clean file is written and the run completes`() = runTest {

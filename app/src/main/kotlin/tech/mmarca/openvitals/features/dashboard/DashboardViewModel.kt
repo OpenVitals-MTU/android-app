@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.dashboard
 
-import java.time.Instant
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +11,7 @@ import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.ScreenError
@@ -24,9 +24,7 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
-import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
-import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
@@ -45,6 +43,7 @@ import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import java.time.LocalDate
 import tech.mmarca.openvitals.features.watches.DeviceSyncController
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import tech.mmarca.openvitals.healthconnect.withHealthConnectReadOutcome
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -65,7 +64,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlin.math.ceil
 
 @Immutable
 data class DashboardUiState(
@@ -92,8 +90,10 @@ data class DashboardUiState(
     val minimumPermissionsGranted: Boolean = true,
     val display: DashboardDisplayState = DashboardDisplayState(),
     val loadingWidgets: Set<DashboardWidgetId> = emptySet(),
-    /** Minutes until Health Connect serves this app again after a rate limit. */
-    val rateLimitedRetryAfterMinutes: Long? = null,
+    /** Tiles whose last read Health Connect refused or the backoff skipped. Reloaded alone when it ends. */
+    val degradedWidgets: Set<DashboardWidgetId> = emptySet(),
+    /** When Health Connect's refusal ends, epoch millis, or null while it is answering. */
+    val rateLimitDeadlineEpochMillis: Long? = null,
     val watch: WatchWidgetDisplay? = null,
     val sensorStatus: DashboardSensorStatus = DashboardSensorStatus(),
 )
@@ -160,6 +160,7 @@ class DashboardViewModel @Inject constructor(
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
     private val chainSyncService: BodyEnergyChainSyncService? = null,
     private val medicalRecords: MedicalRecordsRepository? = null,
+    private val foregroundGate: AppForegroundGate? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
@@ -202,7 +203,33 @@ class DashboardViewModel @Inject constructor(
     init {
         observeSensorStatus()
         observeBodyEnergyRebuild()
+        observeRateLimit()
         load(_uiState.value.selectedDate)
+    }
+
+    /** The banner counts down from the deadline; when it passes, the degraded tiles are asked for again. */
+    private fun observeRateLimit() {
+        viewModelScope.launch {
+            repository.rateLimitDeadlineEpochMillis.collect { deadline ->
+                _uiState.update { state -> state.copy(rateLimitDeadlineEpochMillis = deadline.takeIf { it > 0L }) }
+            }
+        }
+        DashboardRateLimitRecovery(
+            deadlines = repository.rateLimitDeadlineEpochMillis,
+            canReload = {
+                _uiState.value.degradedWidgets.isNotEmpty() &&
+                    inFlightLoadDate == null &&
+                    foregroundGate?.isForeground != false
+            },
+            reload = ::reloadDegradedWidgets,
+        ).start(viewModelScope)
+    }
+
+    /** Reloads only the tiles whose reads were refused; the others keep what they have. */
+    private fun reloadDegradedWidgets() {
+        val degraded = _uiState.value.degradedWidgets
+        if (degraded.isEmpty()) return
+        forceLoad(_uiState.value.selectedDate, RefreshMode.NORMAL, onlyWidgets = degraded)
     }
 
     private fun observeBodyEnergyRebuild() {
@@ -340,6 +367,8 @@ class DashboardViewModel @Inject constructor(
     private fun forceLoad(
         date: LocalDate,
         refreshMode: RefreshMode,
+        /** A partial pass: only these tiles are read and marked loading. Null reads the whole day. */
+        onlyWidgets: Set<DashboardWidgetId>? = null,
     ) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         // The date flips before any read, so the navigator answers instantly.
@@ -355,6 +384,7 @@ class DashboardViewModel @Inject constructor(
                     clampedDate = clampedDate,
                     refreshMode = refreshMode,
                     generation = generation,
+                    onlyWidgets = onlyWidgets,
                 )
             } finally {
                 // A superseded job must not clear the newer load's marker.
@@ -367,6 +397,7 @@ class DashboardViewModel @Inject constructor(
         clampedDate: LocalDate,
         refreshMode: RefreshMode,
         generation: Long,
+        onlyWidgets: Set<DashboardWidgetId>? = null,
     ) {
         val sleepWindow = prefs.sleepWindow
         val activityWeekMode = prefs.activityWeekMode
@@ -393,7 +424,8 @@ class DashboardViewModel @Inject constructor(
             minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
             loadingWidgets = emptySet(),
         )
-        val widgets = _uiState.value.dashboardWidgets
+        // A partial pass reads the tiles it was given and leaves the others as they are.
+        val widgets = _uiState.value.dashboardWidgets.filter { onlyWidgets == null || it in onlyWidgets }
         // Widget order is load order: first-screen tiles read first.
         val orderedMetrics = widgets.mapNotNull { it.toDashboardMetricOrNull() }.distinct()
         val groups = dashboardMetricLoadGroups(orderedMetrics)
@@ -405,8 +437,8 @@ class DashboardViewModel @Inject constructor(
         val existingData = current.data?.takeIf { it.date == clampedDate }
         val hadExistingData = existingData != null
         val seed = (existingData ?: DashboardData(date = clampedDate))
-            // A reload re-establishes these; the merge can only add to the set.
-            .copy(missingPermissions = emptySet())
+            // A reload re-establishes these; the merge can only add to the set. A partial pass keeps them.
+            .let { if (onlyWidgets == null) it.copy(missingPermissions = emptySet()) else it }
         publishDashboardData(
             data = seed,
             loadingWidgets = metricWidgetIds + listOfNotNull(
@@ -445,7 +477,7 @@ class DashboardViewModel @Inject constructor(
         if (!isCurrent) return
         // One metric failing is that tile's problem. Every metric failing is the screen's.
         val firstFailure = failures.filterNotNull().firstOrNull()
-        if (firstFailure != null && failures.size == groups.size && failures.none { it == null }) {
+        if (onlyWidgets == null && firstFailure != null && failures.size == groups.size && failures.none { it == null }) {
             _uiState.value = _uiState.value.copy(
                 error = firstFailure.toScreenError(R.string.screen_error_generic),
                 // Nothing shown before: the error is the whole screen. Otherwise a toast.
@@ -454,11 +486,13 @@ class DashboardViewModel @Inject constructor(
                 isRefreshing = false,
             )
         }
-        // Once per app open, after the load settles: the background passes.
+        // Once per app open, after the load settles: the background passes. Not after a
+        // load Health Connect refused; those reads come first when it answers again.
         historySyncScheduler?.let { scheduler ->
+            val cleanLoad = failures.all { it == null } && repository.rateLimitRetryAfterMillis() == 0L
             viewModelScope.launch {
                 // Three services in a row. Their bookkeeping stays off Main.
-                runCatching { withContext(dispatchers.default) { scheduler.drainIncrementalOnce() } }
+                runCatching { withContext(dispatchers.default) { scheduler.drainIncrementalOnce(cleanLoad) } }
             }
         }
         // The home screen shows today, so a settled read of today is its cue.
@@ -490,8 +524,11 @@ class DashboardViewModel @Inject constructor(
             includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in metrics,
         )
         var failure: Throwable? = null
+        var degraded = false
         val loaded = try {
-            loadDashboardDayUseCase(query)
+            withHealthConnectReadOutcome { loadDashboardDayUseCase(query) }
+                .also { degraded = it.degraded }
+                .value
         } catch (error: CancellationException) {
             if (!currentCoroutineContext().isActive) throw error
             failure = error
@@ -500,7 +537,7 @@ class DashboardViewModel @Inject constructor(
             failure = error
             null
         }
-        publishMerged(generation = generation, date = date, clearing = widgetIds) { current ->
+        publishMerged(generation = generation, date = date, clearing = widgetIds, degraded = degraded) { current ->
             if (loaded == null) current else current.mergeLoaded(loaded)
         }
         return failure
@@ -512,14 +549,17 @@ class DashboardViewModel @Inject constructor(
         generation: Long,
     ) {
         val repository = bodyEnergyRepository ?: return
+        var degraded = false
         val timeline = try {
-            repository.loadTimeline(
-                BodyEnergyTimelineQuery(
-                    period = DatePeriod(date, date),
-                    range = TimeRange.DAY,
-                    refreshMode = refreshMode,
-                )
-            ).latestDay
+            withHealthConnectReadOutcome {
+                repository.loadTimeline(
+                    BodyEnergyTimelineQuery(
+                        period = DatePeriod(date, date),
+                        range = TimeRange.DAY,
+                        refreshMode = refreshMode,
+                    )
+                ).latestDay
+            }.also { degraded = it.degraded }.value
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -529,16 +569,18 @@ class DashboardViewModel @Inject constructor(
             generation = generation,
             date = date,
             clearing = setOf(DashboardWidgetId.BODY_ENERGY),
+            degraded = degraded,
         ) { current ->
             if (timeline == null) current else current.copy(bodyEnergyTimeline = timeline)
         }
     }
 
-    /** Merges one finished pass into the state under [publishMutex]. */
+    /** Merges one finished pass into the state under [publishMutex]. [degraded]: its reads were refused. */
     private suspend fun publishMerged(
         generation: Long,
         date: LocalDate,
         clearing: Set<DashboardWidgetId>,
+        degraded: Boolean = false,
         merge: (DashboardData) -> DashboardData,
     ) {
         publishMutex.withLock {
@@ -546,6 +588,9 @@ class DashboardViewModel @Inject constructor(
             val state = _uiState.value
             if (state.selectedDate != date) return
             val currentData = state.data?.takeIf { it.date == date } ?: return
+            _uiState.update {
+                it.copy(degradedWidgets = if (degraded) it.degradedWidgets + clearing else it.degradedWidgets - clearing)
+            }
             publishDashboardData(
                 data = merge(currentData),
                 loadingWidgets = state.loadingWidgets - clearing,
@@ -581,15 +626,8 @@ class DashboardViewModel @Inject constructor(
             dailyGoals = goals,
             display = display,
             loadingWidgets = loadingWidgets,
-            rateLimitedRetryAfterMinutes = rateLimitedRetryAfterMinutes(),
         )
     }
-
-    /** Minutes Health Connect is refusing reads for, or null. */
-    private fun rateLimitedRetryAfterMinutes(): Long? =
-        repository.rateLimitRetryAfterMillis()
-            .takeIf { it > 0L }
-            ?.let { millis -> ceil(millis / 60_000.0).toLong().coerceAtLeast(1L) }
 
     fun previousDay() {
         val date = _uiState.value.selectedDate.minusDays(1)
@@ -673,8 +711,14 @@ class DashboardViewModel @Inject constructor(
         val targetIndex = current.indexOf(targetWidgetId)
         if (fromIndex == -1 || targetIndex == -1 || fromIndex == targetIndex) return
 
+        // The same list the grid lays out: an unsupported metric the user never placed is in the
+        // tray, not the rows. Counting it here put the section boundary one tile off the screen's.
+        val state = _uiState.value
         val fixedWidgetIds = dashboardWidgetIdsThatFitRows(
-            widgetIds = current.filterNot { it == DashboardWidgetId.WORKOUT },
+            widgetIds = current.filterNot {
+                it == DashboardWidgetId.WORKOUT ||
+                    (it in state.display.unsupportedIds && it !in state.placedDashboardWidgets)
+            },
             rows = DashboardFixedWidgetRows,
         )
         val fromFixedSection = widgetId in fixedWidgetIds
@@ -712,6 +756,7 @@ class DashboardViewModel @Inject constructor(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             loadingWidgets = loadingWidgets,
+            degradedWidgets = _uiState.value.degradedWidgets,
             bodyEnergySetupCompleted = prefs.bodyEnergyCalibration().setupCompleted,
             // From the registry, not ui state: a display built before the device
             // flow's first emission would drop the tile.
@@ -727,68 +772,3 @@ class DashboardViewModel @Inject constructor(
             .withLastDemoted(_uiState.value.display.lastDemoted)
     }
 }
-
-/** The watch tile: the most recently synced watch, others behind a count. Bike computers excluded. */
-internal fun List<BleSensorDevice>.toWatchWidgetDisplay(
-    syncingDeviceId: String? = null,
-    live: GarminRealtimeState = GarminRealtimeState(),
-    now: Instant = Instant.now(),
-): WatchWidgetDisplay? {
-    val watches = filter { it.isWatch }
-    // The watch being synced owns the tile; failing that, the most recently synced.
-    val primary = watches.firstOrNull { it.id == syncingDeviceId }
-        ?: watches.maxByOrNull { it.lastSyncedAt?.toEpochMilli() ?: Long.MIN_VALUE }
-        ?: return null
-    return WatchWidgetDisplay(
-        deviceId = primary.id,
-        name = primary.displayName,
-        batteryPercent = primary.batteryPercent,
-        lastSyncedAt = primary.lastSyncedAt,
-        additionalCount = watches.size - 1,
-        isSyncing = primary.id == syncingDeviceId,
-        // Only one watch can hold a link, so the live values belong to it or nothing.
-        liveHeartRateBpm = live.freshHeartRate(now),
-        liveSteps = live.freshSteps(now),
-    )
-}
-
-/**
- * The paired BLE devices the Sensors & devices screen lists. Watches are
- * excluded: they live under Settings and skewed the lowest-battery figure.
- */
-internal fun List<BleSensorDevice>.toDashboardSensorStatus(
-    connectionStatuses: List<BleDeviceConnectionStatus>,
-): DashboardSensorStatus {
-    val statusesById = connectionStatuses.associateBy { it.deviceId }
-    val statusesByAddress = connectionStatuses.associateBy { it.address }
-    return DashboardSensorStatus(
-        devices = filter { it.isLiveSensorCapable }.map { device ->
-            val liveStatus = statusesById[device.id] ?: statusesByAddress[device.address]
-            DashboardSensorDeviceStatus(
-                id = device.id,
-                displayName = device.displayName,
-                enabled = device.enabled,
-                connectionStatus = liveStatus?.status ?: BleConnectionStatus.DISCONNECTED,
-                batteryPercent = liveStatus?.batteryPercent ?: device.batteryPercent,
-            )
-        },
-    )
-}
-
-private fun PreferencesRepository.dashboardDailyGoals(): DashboardDailyGoals =
-    DashboardDailyGoals(
-        steps = dailyGoalFor(MetricDailyGoalKey.STEPS),
-        distanceMeters = dailyGoalFor(MetricDailyGoalKey.DISTANCE_METERS),
-        caloriesOutKcal = dailyGoalFor(MetricDailyGoalKey.CALORIES_OUT_KCAL),
-        activeCaloriesKcal = dailyGoalFor(MetricDailyGoalKey.ACTIVE_CALORIES_KCAL),
-        floors = dailyGoalFor(MetricDailyGoalKey.FLOORS),
-        elevationMeters = dailyGoalFor(MetricDailyGoalKey.ELEVATION_METERS),
-        wheelchairPushes = dailyGoalFor(MetricDailyGoalKey.WHEELCHAIR_PUSHES),
-        sleepHours = dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
-        hydrationLiters = hydrationDailyGoalLiters,
-        caloriesInKcal = dailyGoalFor(MetricDailyGoalKey.CALORIES_IN_KCAL),
-        proteinGrams = dailyGoalFor(MetricDailyGoalKey.PROTEIN_GRAMS),
-        carbsGrams = dailyGoalFor(MetricDailyGoalKey.CARBS_GRAMS),
-        fatGrams = dailyGoalFor(MetricDailyGoalKey.FAT_GRAMS),
-        mindfulnessMinutes = dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
-    )

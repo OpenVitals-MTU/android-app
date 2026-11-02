@@ -73,19 +73,48 @@ class HealthConnectAvailabilityServiceTest {
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, service.availability())
     }
 
+    @Test fun `the sdk status is asked once within the window, and again after it or a new foreground`() {
+        var now = 0L
+        var epoch = 0
+        var asked = 0
+        val service = service(sdkStatusProvider = { asked += 1; HealthConnectClient.SDK_AVAILABLE }, now = { now }, epoch = { epoch })
+
+        // A dashboard load asks some thirty times; the package query answers once.
+        repeat(30) { service.availability() }
+        assertEquals(1, asked)
+
+        now = 31_000L
+        service.availability()
+        assertEquals(2, asked)
+
+        // Coming back from another app, the provider may have been installed meanwhile.
+        epoch = 1
+        service.availability()
+        assertEquals(3, asked)
+
+        service.invalidate()
+        service.availability()
+        assertEquals(4, asked)
+    }
+
     private fun service(
         sdkStatus: Int = HealthConnectClient.SDK_AVAILABLE,
         sdkInt: Int = Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
         unsupportedProfile: Boolean = false,
         packageInstalled: (String) -> Boolean = { true },
+        sdkStatusProvider: (Context) -> Int = { sdkStatus },
+        now: () -> Long = { 0L },
+        epoch: () -> Int = { 0 },
     ) = HealthConnectAvailabilityService(
         context = mockk<Context>(),
         diagnostics = HealthConnectDiagnostics(mockk()),
-        sdkStatusProvider = { sdkStatus },
+        sdkStatusProvider = sdkStatusProvider,
         diagnosticsSummaryProvider = { "diagnostics" },
         unsupportedProfileProvider = { unsupportedProfile },
         sdkIntProvider = { sdkInt },
         packageInstalledProvider = packageInstalled,
+        elapsedMillis = now,
+        foregroundEpoch = epoch,
     )
 
     private companion object {

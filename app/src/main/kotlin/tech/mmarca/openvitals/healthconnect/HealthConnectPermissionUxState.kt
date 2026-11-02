@@ -7,13 +7,17 @@ import javax.inject.Singleton
 @Singleton
 class HealthConnectPermissionUxState @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
+    private val healthConnectManager: HealthConnectManager,
 ) {
+    /** Every permission request's result lands here, so this is where the granted set is forgotten. */
     fun recordPermissionRequestCancelled() {
+        healthConnectManager.invalidatePermissionCache()
         preferencesRepository.healthConnectPermissionCancelCount =
             preferencesRepository.healthConnectPermissionCancelCount + 1
     }
 
     fun recordPermissionRequestGranted() {
+        healthConnectManager.invalidatePermissionCache()
         preferencesRepository.healthConnectPermissionCancelCount = 0
     }
 

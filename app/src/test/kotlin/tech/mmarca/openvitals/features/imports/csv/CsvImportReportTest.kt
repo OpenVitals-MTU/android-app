@@ -54,16 +54,27 @@ private fun runResult(
 )
 
 private fun report(
-    mapping: CsvImportMapping = reportMapping(),
+    mapping: CsvImportMapping? = reportMapping(),
     result: CsvImportResult = runResult(),
     delimiter: String? = ",",
     hasHeader: Boolean? = true,
+    workouts: WorkoutImportPlan? = null,
 ): String = buildCsvImportReport(
     mapping = mapping,
     result = result,
     fieldDelimiter = delimiter,
     hasHeaderRow = hasHeader,
+    workouts = workouts,
 )
+
+/** The export header with one column the app has never heard of. */
+private val WorkoutHeader = listOf(
+    "title", "activity_type", "start_time", "end_time", "distance_meters", "average_heart_rate_bpm",
+    "max_heart_rate_bpm", "my secret column", "notes",
+)
+
+private fun workoutPlan(): WorkoutImportPlan =
+    detectWorkoutExport(WorkoutHeader, CsvDateTimeSettings(zone = CsvTimeZoneMode.UTC))!!
 
 class CsvImportReportTest {
 
@@ -306,6 +317,77 @@ class CsvImportReportTest {
         assertThat(report(result = result)).contains("Quota pauses:        3 (waited 1 min 45 s)")
         assertThat(report()).doesNotContain("Quota pauses")
     }
+    @Test
+    fun `a workout export is reported by format, column indexes and sessions written, never by its header text`() {
+        val report = report(mapping = null, workouts = workoutPlan())
+
+        assertThat(report).contains("Format:     OpenVitals workout export")
+        assertThat(report).contains("Date format: auto")
+        assertThat(report).contains("Time zone:   UTC")
+        assertThat(report).contains("Workouts written:    118, of which 4 replaced an earlier import")
+        assertThat(report).doesNotContain("Records written")
+        assertThat(report).contains("Workout columns")
+        assertThat(report).contains("[0] -> title")
+        assertThat(report).contains("[1] -> activity type")
+        assertThat(report).contains("[2] -> start date and time")
+        assertThat(report).contains("[4] -> distance (meters)")
+        assertThat(report).contains("[5] -> average heart rate (beatsPerMinute, as a flat series)")
+        assertThat(report).contains("[6] -> not imported (max_heart_rate_bpm)")
+        assertThat(report).contains("[7] -> not imported\n")
+        assertThat(report).contains("[8] -> notes")
+        assertThat(report).doesNotContain("my secret column")
+        assertThat(report).doesNotContain("Column mapping")
+    }
+
+    @Test
+    fun `the workout reasons read as sentences`() {
+        val counts = mapOf(
+            CsvImportDiagnosticReason.ACTIVITY_TYPE_DEFAULTED to 2,
+            CsvImportDiagnosticReason.MISSING_END to 1,
+            CsvImportDiagnosticReason.UNSUPPORTED_FOR_ACTIVITY_TYPE to 3,
+            CsvImportDiagnosticReason.ACTIVE_ABOVE_TOTAL_CALORIES to 1,
+        )
+
+        val report = report(mapping = null, workouts = workoutPlan(), result = runResult(counts = counts))
+
+        assertThat(report).contains("activity type not recognised, stored as a workout: 2")
+        assertThat(report).contains("no end time or duration: 1")
+        assertThat(report).contains("not kept for this activity type: 3")
+        assertThat(report).contains("active calories above total calories: 1")
+    }
+
+    @Test
+    fun `a workout row's title, notes, type and values never reach the report`() {
+        val plan = workoutPlan()
+        val rows = listOf(
+            // A fine row with health data in every text cell: it produces no diagnostic, so nothing of it is reported.
+            CsvRow(2, listOf(PrivacySentinels.Name, "running", PrivacySentinels.Instant, "2026-05-26T09:30:00Z", "10000", "150", "", "", PrivacySentinels.Sentence)),
+            // The type is health data and not a type: its shape is reported, never the text.
+            CsvRow(3, listOf("", PrivacySentinels.Name, PrivacySentinels.Instant, "2026-05-26T09:30:00Z", "", "", "", "", "")),
+            // A start that will not read, carrying a name.
+            CsvRow(4, listOf("", "yoga", "when ${PrivacySentinels.Name}", "", "", "", "", "", "")),
+            // A value that is not a number, in the distance column.
+            CsvRow(5, listOf("", "running", PrivacySentinels.Instant, "2026-05-26T09:30:00Z", "${PrivacySentinels.Value} km", "", "", "", "")),
+        )
+        val diagnostics = rows.flatMap { convertWorkoutRow(it, plan).diagnostics }
+
+        val report = report(
+            mapping = null,
+            workouts = plan,
+            result = runResult(
+                diagnostics = diagnostics,
+                counts = diagnostics.groupingBy { it.reason }.eachCount(),
+                outcome = CsvImportOutcome.FAILED,
+                error = PrivacyRedactor.maskMessage(PrivacySentinels.Sentence),
+            ),
+        )
+
+        assertThat(diagnostics).isNotEmpty()
+        // The masked error may still carry the name, as in the mapped report; the rows and columns never do.
+        PrivacySentinels.assertNoneIn(report, except = setOf(PrivacySentinels.Name))
+        assertThat(report.substringAfter("Workout columns")).doesNotContain(PrivacySentinels.Name)
+    }
+
     @Test
     fun `cells and errors carrying health data come out as shapes, reasons and masked text`() {
         val cell = "${PrivacySentinels.Value} kg ${PrivacySentinels.Date}"

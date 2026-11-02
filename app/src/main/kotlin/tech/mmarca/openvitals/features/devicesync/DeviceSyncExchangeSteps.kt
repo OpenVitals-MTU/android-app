@@ -96,6 +96,7 @@ private fun SyncRange.labelRes(): Int = when (this) {
 internal fun DeviceSyncTypesStep(
     state: DeviceSyncState,
     onToggleType: (String) -> Unit,
+    onSetRewriteExisting: (Boolean) -> Unit,
     onStartSync: () -> Unit,
 ) {
     LazyColumn {
@@ -140,6 +141,32 @@ internal fun DeviceSyncTypesStep(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+            }
+        }
+        item {
+            // Off by default: a re-sync normally writes nothing it already has.
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = state.rewriteExisting,
+                    onCheckedChange = onSetRewriteExisting,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.device_sync_rewrite_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = stringResource(R.string.device_sync_rewrite_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -328,6 +355,16 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
         if (report.refused > 0) {
             item {
                 DeviceSyncStatRow(stringResource(R.string.device_sync_refused), report.refused)
+            }
+        }
+        if (report.rewroteExisting) {
+            item {
+                Text(
+                    text = stringResource(R.string.device_sync_report_rewrote),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
             }
         }
         medicalReportItems(report, state.medicalHeldBack)

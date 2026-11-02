@@ -193,6 +193,8 @@ data class DeviceSyncState(
     /** The syncable types this device can read and write. The picker offers only these. */
     val availableTypes: Set<String> = emptySet(),
     val selectedTypes: Set<String> = emptySet(),
+    /** Write the other phone's records even when this phone already has them. Off by default. */
+    val rewriteExisting: Boolean = false,
     val progress: SyncProgress? = null,
     val report: SyncReport? = null,
     /** Set when the Patient check held back the other phone's medical records. */

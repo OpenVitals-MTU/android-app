@@ -35,6 +35,13 @@ class HealthConnectSyncStore(
     /** The inclusive sync window the user chose ("how far back"). */
     private val windowStart: Instant,
     private val windowEnd: Instant,
+    /**
+     * Set when the user chose to write records this phone already has: the
+     * clientRecordVersion every written record carries. The sync's start in
+     * epoch millis, so it is above any earlier write and Health Connect updates
+     * a record this app owns instead of refusing it. Null writes at version 0.
+     */
+    private val rewriteVersion: Long? = null,
     /** Overridable so a test can hit the byte cap without megabyte fixtures. */
     private val chunkPayloadByteCap: Int = ChunkPayloadByteCap,
 ) : SyncRecordStore {
@@ -178,10 +185,12 @@ class HealthConnectSyncStore(
      * a hostile peer cannot address an unrelated record through the key.
      */
     private fun ownedRecord(item: SyncItem): Record {
+        val version = rewriteVersion ?: 0L
         val decoded = decodeSyncRecord(
             recordType = item.recordType,
             clientRecordId = item.key,
             payload = item.payload,
+            clientRecordVersion = version,
         )
         val ownKey = syncFingerprint(decoded)
         if (ownKey == item.key) return decoded
@@ -189,6 +198,7 @@ class HealthConnectSyncStore(
             recordType = item.recordType,
             clientRecordId = ownKey,
             payload = item.payload,
+            clientRecordVersion = version,
         )
     }
 

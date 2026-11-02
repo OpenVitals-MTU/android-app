@@ -423,7 +423,8 @@ class WatchDeviceViewModel @Inject constructor(
             deviceRepository.devices.any { it.id == deviceId && it.isGarminGfdi }
 
     /**
-     * Removes the watch: registry row, Garmin state, and the OS-level bond, fire and forget.
+     * Removes the watch: registry row, Garmin state or a Wear OS watch's link token, and the
+     * OS-level bond or association, fire and forget.
      * With the last Garmin watch go its file copies and sleep minutes, and, when the user
      * ticked it, the watch-only history ([deleteWatchHistory]).
      */
@@ -446,6 +447,7 @@ class WatchDeviceViewModel @Inject constructor(
                 }
             }
         } else if (device.isWearosWatch) {
+            wearOsLinkStore.clear(deviceId, device.address)
             housekeepingScope.launch {
                 runCatching { onboardWearOsWatch.forget(device.address) }
             }

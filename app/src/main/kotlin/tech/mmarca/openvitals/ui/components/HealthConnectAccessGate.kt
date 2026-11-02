@@ -15,9 +15,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -108,36 +115,65 @@ fun HealthConnectSyncStatusBanner(
     syncPaused: Boolean,
     syncInProgress: Boolean,
     modifier: Modifier = Modifier,
+    /** Epoch millis Health Connect's refusal ends at. The banner counts down to it, then says it is retrying. */
+    rateLimitDeadlineEpochMillis: Long? = null,
 ) {
     when {
-        syncPaused -> {
-            OpenVitalsCard(
-                modifier = modifier.fillMaxWidth(),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                Text(
-                    text = stringResource(R.string.health_connect_sync_paused),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                )
-            }
-        }
-        syncInProgress -> {
-            OpenVitalsCard(
-                modifier = modifier.fillMaxWidth(),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                Text(
-                    text = stringResource(R.string.health_connect_sync_in_progress),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                )
-            }
-        }
+        syncPaused -> SyncStatusCard(
+            text = stringResource(R.string.health_connect_sync_paused),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        rateLimitDeadlineEpochMillis != null -> SyncStatusCard(
+            text = rateLimitCountdownText(rateLimitDeadlineEpochMillis),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        syncInProgress -> SyncStatusCard(
+            text = stringResource(R.string.health_connect_sync_in_progress),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = modifier,
+        )
     }
 }
+
+@Composable
+private fun SyncStatusCard(text: String, color: Color, modifier: Modifier) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        )
+    }
+}
+
+/** "Retrying in m:ss", ticking once a second, then "Retrying…" while the reload waits its turn. */
+@Composable
+private fun rateLimitCountdownText(deadlineEpochMillis: Long): String {
+    var remainingSeconds by remember(deadlineEpochMillis) { mutableLongStateOf(secondsUntil(deadlineEpochMillis)) }
+    LaunchedEffect(deadlineEpochMillis) {
+        while (remainingSeconds > 0L) {
+            delay(1_000L)
+            remainingSeconds = secondsUntil(deadlineEpochMillis)
+        }
+    }
+    return if (remainingSeconds > 0L) {
+        stringResource(R.string.health_connect_rate_limited_retrying_in, formatCountdown(remainingSeconds))
+    } else {
+        stringResource(R.string.health_connect_rate_limited_retrying)
+    }
+}
+
+private fun secondsUntil(deadlineEpochMillis: Long): Long =
+    ((deadlineEpochMillis - System.currentTimeMillis() + 999L) / 1_000L).coerceAtLeast(0L)
+
+internal fun formatCountdown(seconds: Long): String =
+    "%d:%02d".format(seconds / 60L, seconds % 60L)
 
 private data class Quad(
     val titleRes: Int,

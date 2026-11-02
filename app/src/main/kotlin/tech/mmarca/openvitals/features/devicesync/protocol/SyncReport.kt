@@ -59,6 +59,8 @@ data class SyncReport(
     val typeSummaries: List<SyncTypeSummary>,
     /** Set when [completed] is false — why the session ended early. */
     val abortReason: String? = null,
+    /** True when this phone chose to write records it already held, so [duplicateSkipped] counts only repeats within the session. */
+    val rewroteExisting: Boolean = false,
 )
 
 /** Accumulates per-type tallies during a run and folds them into a [SyncReport]. */
@@ -103,6 +105,7 @@ class SyncReportBuilder {
         peerDeviceName: String,
         negotiatedTypes: List<String>,
         abortReason: String? = null,
+        rewroteExisting: Boolean = false,
     ): SyncReport = SyncReport(
         completed = completed,
         peerDeviceName = peerDeviceName,
@@ -114,6 +117,7 @@ class SyncReportBuilder {
         refused = refused,
         typeSummaries = byType.values.sortedBy { it.recordType },
         abortReason = abortReason,
+        rewroteExisting = rewroteExisting,
     )
 }
 
@@ -137,6 +141,7 @@ fun buildSyncReportText(report: SyncReport, generatedAt: Instant): String = buil
     appendLine("Imported: ${report.imported}")
     appendLine("Already had (skipped): ${report.duplicateSkipped}")
     appendLine("Not accepted (type or date not chosen here): ${report.refused}")
+    if (report.rewroteExisting) appendLine("Existing records written again: yes")
     appendLine()
     appendLine("By data type")
     if (report.typeSummaries.isEmpty()) {

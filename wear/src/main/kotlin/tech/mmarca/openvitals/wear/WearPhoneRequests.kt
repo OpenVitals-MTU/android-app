@@ -10,9 +10,9 @@ import android.content.Intent
 import android.util.Log
 
 /**
- * The wearer's answer to a phone that asked to be allowed: a notification
- * with Allow and Block, and the same two choices on the status screen. The
- * notification is posted at most once a minute per phone.
+ * The wearer's answer to a phone that asked to be allowed, new or with a
+ * new key: a notification with Allow and Block, and the same two choices on
+ * the status screen. The notification is posted at most once a minute per phone.
  */
 object WearPhoneRequests {
 
@@ -42,10 +42,12 @@ object WearPhoneRequests {
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val title = if (pending.newKey) R.string.status_phone_new_key else R.string.status_phone_pending
+        val body = if (pending.newKey) R.string.phone_new_key_reason else R.string.phone_request_body
         val notification = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(context.getString(R.string.status_phone_pending, pending.name))
-            .setContentText(context.getString(R.string.phone_request_body))
+            .setContentTitle(context.getString(title, pending.name))
+            .setContentText(context.getString(body))
             .setContentIntent(open)
             .setAutoCancel(true)
             .addAction(action(context, ACTION_ALLOW, R.string.action_allow, pending, 1))

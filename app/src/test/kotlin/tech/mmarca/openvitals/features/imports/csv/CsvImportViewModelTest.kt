@@ -25,8 +25,10 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CsvImportPreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -62,6 +64,15 @@ private const val FoodLogCsv =
         "2026-10-04 08:00:00,Oatmeal,1464,120\n" +
         "2026-10-04 12:30:00,Soup,753,800\n"
 
+/** Two rows in the app's own workout export shape, with local times a hand-made file would carry. */
+private const val WorkoutCsv =
+    "title,activity_type,start_time,duration_seconds,distance_meters,average_heart_rate_bpm,notes\n" +
+        "Morning run,running,2026-05-26 08:30:00,3600,10250.5,151,\n" +
+        "Stretch,yoga,2026-05-27 07:00:00,1800,,,easy\n"
+
+private val WorkoutWritePermissions: Set<String> =
+    detectWorkoutExport(WorkoutCsv.lineSequence().first().split(","))!!.requiredWritePermissions
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class CsvImportViewModelTest {
 
@@ -73,6 +84,8 @@ class CsvImportViewModelTest {
     private val importRepository = mockk<AppleHealthImportRepository>()
     private val healthRepository = mockk<HealthRepository>()
     private val inserted = mutableListOf<Record>()
+    private val activityRepository = mockk<ActivityRepository>()
+    private val writtenWorkouts = mutableListOf<ActivityWriteRequest>()
     private val preferences = InMemoryCsvImportPreferences()
     private val bloodPressureLabels = mockk<CsvBloodPressureLabelSource>()
 
@@ -82,7 +95,8 @@ class CsvImportViewModelTest {
     private val allWritePermissions: Set<String> =
         CsvMetricCatalog.values.mapTo(mutableSetOf()) { it.writePermission } +
             CsvNutritionWritePermission +
-            CsvBloodPressureWritePermission
+            CsvBloodPressureWritePermission +
+            WorkoutWritePermissions
 
     @Before
     fun setUp() {
@@ -93,6 +107,11 @@ class CsvImportViewModelTest {
         } returns emptySet()
         coEvery { importRepository.insertImportedRecords(any()) } answers {
             inserted.addAll(arg<List<Record>>(0))
+        }
+        coEvery { activityRepository.writeActivityEntries(any()) } answers {
+            val requests = arg<List<ActivityWriteRequest>>(0)
+            writtenWorkouts.addAll(requests)
+            requests.map { it.importKey.orEmpty() }
         }
         every { bloodPressureLabels.labels() } returns CsvBloodPressureLabels(
             bodyPositions = listOf(mapOf(BpRecordValues.BODY_POSITION_SITTING_DOWN to "Sitting")),
@@ -109,7 +128,7 @@ class CsvImportViewModelTest {
         every { manager.dataImportWritePermissions } returns (allWritePermissions - unsupported)
         return CsvImportViewModel(
             context = context,
-            importService = CsvImportService(importRepository, mockk(relaxed = true)),
+            importService = CsvImportService(importRepository, mockk(relaxed = true), activityRepository),
             healthRepository = healthRepository,
             preferences = preferences,
             bloodPressureLabels = bloodPressureLabels,
@@ -134,6 +153,69 @@ class CsvImportViewModelTest {
     }
 
     private fun withingsUri(): Uri = documentUri("withings.csv", WithingsCsv)
+
+    private fun workoutUri(): Uri = documentUri("workouts.csv", WorkoutCsv)
+
+    @Test
+    fun `picking a workout export skips the mapping and can continue at once`() = runTest {
+        val vm = viewModel()
+
+        vm.pickFile(workoutUri())
+
+        val state = vm.awaitLoaded()
+        assertEquals(CsvImportStep.MAPPING, state.step)
+        assertNotNull(state.workouts)
+        assertNull(state.mapping)
+        assertNull(state.drip)
+        assertTrue(state.canContinue)
+        assertEquals(listOf("title", "activity_type", "start_time", "duration_seconds", "distance_meters", "average_heart_rate_bpm", "notes"), state.workouts!!.recognisedColumns.keys.toList())
+    }
+
+    @Test
+    fun `a workout export asks for the session and the totals its columns need, and no more once granted`() = runTest {
+        val vm = viewModel()
+        vm.pickFile(workoutUri())
+        vm.awaitLoaded()
+
+        assertEquals(WorkoutWritePermissions, vm.uiState.value.missingPermissions)
+
+        granted = WorkoutWritePermissions
+        vm.refreshPermissions()
+        vm.uiState.first { it.granted == WorkoutWritePermissions }
+        assertTrue(vm.uiState.value.missingPermissions.isEmpty())
+    }
+
+    @Test
+    fun `the date and time settings of a workout export belong to its plan`() = runTest {
+        val vm = viewModel()
+        vm.pickFile(workoutUri())
+        vm.awaitLoaded()
+
+        vm.setDateTimeSettings(CsvDateTimeSettings(zone = CsvTimeZoneMode.UTC))
+
+        assertEquals(CsvTimeZoneMode.UTC, vm.uiState.value.workouts!!.dateTime.zone)
+        assertNull(vm.uiState.value.mapping)
+    }
+
+    @Test
+    fun `a workout import writes through the activity repository and reports the format`() = runTest {
+        val vm = viewModel(granted = WorkoutWritePermissions)
+        vm.pickFile(workoutUri())
+        vm.awaitLoaded()
+        vm.setDateTimeSettings(CsvDateTimeSettings(zone = CsvTimeZoneMode.UTC))
+
+        vm.startImport()
+        val state = vm.awaitDone()
+
+        assertEquals(2, writtenWorkouts.size)
+        assertTrue(inserted.isEmpty())
+        assertEquals(CsvImportOutcome.COMPLETED, state.result!!.outcome)
+        assertEquals(2, state.result!!.progress.written)
+        assertEquals("2026-05-26T08:30:00Z", writtenWorkouts.first().startTime.toString())
+        assertEquals("Morning run", writtenWorkouts.first().title)
+        assertEquals("easy", writtenWorkouts.last().notes)
+        assertTrue(vm.reportText()!!.contains("OpenVitals workout export"))
+    }
 
     private suspend fun CsvImportViewModel.awaitLoaded(): CsvImportState =
         uiState.first { !it.isLoadingFile }

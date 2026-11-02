@@ -91,19 +91,23 @@ fun CsvImportScreen(
                 state = state,
                 onPick = { filePicker.launch(CsvMimeTypes) },
             )
-            CsvImportStep.MAPPING -> if (state.drip != null) {
-                DripOptionsStep(state = state, viewModel = viewModel)
-            } else {
-                CsvMappingStep(state = state, viewModel = viewModel)
+            CsvImportStep.MAPPING -> when {
+                state.drip != null -> DripOptionsStep(state = state, viewModel = viewModel)
+                state.workouts != null -> WorkoutOptionsStep(state = state, viewModel = viewModel)
+                else -> CsvMappingStep(state = state, viewModel = viewModel)
             }
-            CsvImportStep.CONFIRM -> if (state.drip != null) {
-                DripConfirmStep(
+            CsvImportStep.CONFIRM -> when {
+                state.drip != null -> DripConfirmStep(
                     state = state,
                     viewModel = viewModel,
                     onGrantPermissions = { permissionLauncher.launch(state.missingPermissions) },
                 )
-            } else {
-                CsvConfirmStep(
+                state.workouts != null -> WorkoutConfirmStep(
+                    state = state,
+                    viewModel = viewModel,
+                    onGrantPermissions = { permissionLauncher.launch(state.missingPermissions) },
+                )
+                else -> CsvConfirmStep(
                     state = state,
                     viewModel = viewModel,
                     onGrantPermissions = { permissionLauncher.launch(state.missingPermissions) },
@@ -212,8 +216,8 @@ internal fun CsvMappingStep(
                 CsvPreviewTable(sample = sample)
                 Spacer(Modifier.height(Spacing.md))
                 CsvDateTimeSection(
-                    sample = sample,
-                    mapping = mapping,
+                    settings = mapping.dateTime,
+                    firstValue = mapping.timestampColumn?.let { sample.columnValues(it.columnIndex).firstOrNull() },
                     onSettingsChange = viewModel::setDateTimeSettings,
                 )
                 Spacer(Modifier.height(Spacing.md))
@@ -512,6 +516,11 @@ private fun CsvDoneStep(
 
     CsvImportResultView(
         result = result,
+        recordsTitleRes = if (state.workouts != null) {
+            R.string.settings_csv_import_tally_workouts_title
+        } else {
+            R.string.settings_csv_import_tally_records_title
+        },
         onCopyReport = {
             val text = viewModel.reportText() ?: return@CsvImportResultView
             scope.launch {

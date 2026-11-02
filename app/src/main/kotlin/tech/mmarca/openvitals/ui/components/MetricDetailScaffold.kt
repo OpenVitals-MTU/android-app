@@ -54,6 +54,8 @@ fun MetricDetailScaffold(
     periodTitle: @Composable ((DatePeriod) -> String)? = null,
     showTimeRangeSelector: Boolean = true,
     syncPaused: Boolean = false,
+    /** When Health Connect's refusal ends; the banner counts down to it. Null while it answers. */
+    rateLimitDeadlineEpochMillis: Long? = null,
     sectionListState: MetricDetailSectionListState? = null,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
@@ -118,11 +120,12 @@ fun MetricDetailScaffold(
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 headerItems()
-                if (syncPaused) {
+                if (syncPaused || rateLimitDeadlineEpochMillis != null) {
                     item {
                         HealthConnectSyncStatusBanner(
                             syncPaused = syncPaused,
                             syncInProgress = false,
+                            rateLimitDeadlineEpochMillis = rateLimitDeadlineEpochMillis,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     }

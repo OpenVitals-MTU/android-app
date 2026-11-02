@@ -33,6 +33,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.math.roundToLong
+import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
@@ -67,6 +68,8 @@ data class CsvRowConversion(
     val diagnostics: List<CsvImportDiagnostic> = emptyList(),
     /** The day's cycle journal entry, from a drip export; Room, not Health Connect. */
     val journalEntry: CycleJournalEntry? = null,
+    /** The workout a row of the app's own export describes; written through the activity repository. */
+    val activity: ActivityWriteRequest? = null,
 )
 
 /**
@@ -392,15 +395,19 @@ fun buildCsvClientRecordId(targetType: String, utc: Instant, occurrence: Int = 0
     } else {
         "$targetType|${utc.toEpochMilli()}|$occurrence"
     }
+    return "${CSV_CLIENT_RECORD_ID_NAMESPACE}_${toCsvStableIdSegment(targetType)}_${csvStableDigest(parts)}"
+}
+
+/** SHA-256 of [parts], its first 16 bytes as lowercase hex. The digest every CSV identity is built on. */
+internal fun csvStableDigest(parts: String): String {
     val bytes = MessageDigest.getInstance("SHA-256").digest(parts.toByteArray(Charsets.UTF_8))
-    val digest = buildString(32) {
+    return buildString(32) {
         for (index in 0 until 16) {
             val byte = bytes[index].toInt() and 0xFF
             append(HexDigits[byte ushr 4])
             append(HexDigits[byte and 0x0F])
         }
     }
-    return "${CSV_CLIENT_RECORD_ID_NAMESPACE}_${toCsvStableIdSegment(targetType)}_$digest"
 }
 
 private const val HexDigits = "0123456789abcdef"

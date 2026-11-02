@@ -32,6 +32,17 @@ class HeartRateAggregatedSamplesTest {
     }
 
     @Test
+    fun `a fortnight of heart-rate insight buckets is at most a dozen requests, each inside the parcel`() {
+        val bucketsInAFortnight = Duration.ofDays(14).toMinutes() / HeartRateInsightBucketDuration.toMinutes()
+        val requests = (bucketsInAFortnight + MaxHeartRateInsightAggregateBuckets - 1) / MaxHeartRateInsightAggregateBuckets
+
+        // The dashboard's weekly cardio walk is the dearest read on a cold install; it must not cost thirty calls.
+        assertTrue(requests <= 12)
+        // 360 buckets of four metrics were measured safe for the Binder parcel; a heart-rate insight bucket carries one.
+        assertTrue(MaxHeartRateInsightAggregateBuckets <= 360L)
+    }
+
+    @Test
     fun `heartRateSampleFromAggregateBucket maps bucket start and average bpm`() {
         val start = Instant.parse("2026-06-01T08:00:00Z")
 

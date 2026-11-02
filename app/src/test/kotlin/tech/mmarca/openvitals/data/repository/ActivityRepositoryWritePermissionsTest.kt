@@ -3,10 +3,12 @@ package tech.mmarca.openvitals.data.repository
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
@@ -97,6 +99,23 @@ class ActivityRepositoryWritePermissionsTest {
         )
 
         assertTrue(writeStepsCadence in permissions)
+    }
+
+    @Test
+    fun `floors and pushes are asked for only when an import carries them`() {
+        val writeFloors = HealthPermission.getWritePermission(FloorsClimbedRecord::class)
+        val writePushes = HealthPermission.getWritePermission(WheelchairPushesRecord::class)
+
+        val bare = repository.activityWritePermissions(request())
+        assertFalse(writeFloors in bare)
+        assertFalse(writePushes in bare)
+
+        val floors = repository.activityWritePermissions(request().copy(floorsClimbed = 12.0))
+        assertTrue(writeFloors in floors)
+        assertFalse(writePushes in floors)
+
+        val pushes = repository.activityWritePermissions(request().copy(wheelchairPushes = 340L))
+        assertTrue(writePushes in pushes)
     }
 
     private fun request(

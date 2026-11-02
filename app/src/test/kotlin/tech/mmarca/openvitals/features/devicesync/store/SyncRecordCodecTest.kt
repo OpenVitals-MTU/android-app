@@ -270,6 +270,27 @@ class SyncRecordCodecTest {
     }
 
     @Test
+    fun `a decoded record carries the version it was asked for, and 0 by default`() {
+        val original = samples.first()
+        val type = syncRecordTypeName(original)
+        val fingerprint = syncFingerprint(original)
+        val payload = encodeSyncRecordPayload(original)
+
+        val plain = decodeSyncRecord(recordType = type, clientRecordId = fingerprint, payload = payload)
+        val rewrite = decodeSyncRecord(
+            recordType = type,
+            clientRecordId = fingerprint,
+            payload = payload,
+            clientRecordVersion = 1_700_000_000_000L,
+        )
+
+        assertEquals(0L, plain.metadata.clientRecordVersion)
+        assertEquals(1_700_000_000_000L, rewrite.metadata.clientRecordVersion)
+        // The version is metadata: the fingerprint does not move with it.
+        assertEquals(fingerprint, syncFingerprint(rewrite))
+    }
+
+    @Test
     fun `every syncable type name resolves to a record class`() {
         samples.forEach { record ->
             val type = syncRecordTypeName(record)

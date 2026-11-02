@@ -49,16 +49,19 @@ class WearLinkLoopbackTest {
     }
 
     @Test
-    fun `a different token for a known phone is a mismatch, a blocked phone is blocked`() {
+    fun `a known phone with another token is asked about again and the old token still works, a blocked phone is blocked`() {
         val loopback = trusted()
-        val mismatch = loopback.connect()
-        assertEquals(
-            WearLinkOutcome.Unauthorized(WearLinkProtocol.UnauthorizedReason.MISMATCH),
-            WearLinkClient.hello(mismatch.clientConnection, hello(token = WearLinkToken.generate())),
-        )
-        mismatch.clientConnection.close()
-        assertEquals(WearLinkServer.Outcome.UNAUTHORIZED, mismatch.serverOutcome())
-        assertEquals(listOf(loopback.phoneAddress to "Pixel 6 Pro"), loopback.trust.mismatches)
+        val newToken = WearLinkToken.generate()
+        val reinstalled = loopback.connect()
+        assertEquals(WearLinkOutcome.Pending, WearLinkClient.hello(reinstalled.clientConnection, hello(token = newToken)))
+        reinstalled.clientConnection.close()
+        assertEquals(WearLinkServer.Outcome.PENDING, reinstalled.serverOutcome())
+        assertEquals(listOf(Triple(loopback.phoneAddress, newToken, "Pixel 6 Pro")), loopback.trust.pending)
+
+        val old = loopback.connect()
+        assertTrue(WearLinkClient.hello(old.clientConnection, hello()) is WearLinkOutcome.Ok)
+        old.clientConnection.close()
+        assertEquals(WearLinkServer.Outcome.SERVED, old.serverOutcome())
 
         loopback.trust.blocked += loopback.phoneAddress
         val blocked = loopback.connect()

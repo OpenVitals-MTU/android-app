@@ -48,7 +48,6 @@ internal fun WatchStatusScreen(
     onGrant: () -> Unit,
     onAllow: (PendingPhone) -> Unit,
     onBlock: (PendingPhone) -> Unit,
-    onForget: (String) -> Unit,
     onOpenBluetoothSettings: () -> Unit,
 ) {
     var latest by remember { mutableStateOf<WearLinkProtocol.HeartRateSample?>(null) }
@@ -131,7 +130,7 @@ internal fun WatchStatusScreen(
                 Text(stringResource(R.string.action_grant))
             }
         }
-        PhoneCards(link, onAllow, onBlock, onForget, onOpenBluetoothSettings)
+        PhoneCards(link, onAllow, onBlock, onOpenBluetoothSettings)
         if (link.ppgLogging) Line(stringResource(R.string.status_ppg_logging))
     }
 }

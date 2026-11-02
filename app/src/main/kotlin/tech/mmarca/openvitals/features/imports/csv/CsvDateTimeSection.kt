@@ -32,19 +32,19 @@ import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
-/** The date/time format, time-zone and live-echo controls for the mapping step. */
+/**
+ * The date/time format, time-zone and live-echo controls for the mapping step
+ * and the workout preset. [firstValue] is the first sampled timestamp, for the
+ * echo and to tell when the file carries its own offset.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun CsvDateTimeSection(
-    sample: CsvSample,
-    mapping: CsvImportMapping,
+    settings: CsvDateTimeSettings,
+    firstValue: String?,
     onSettingsChange: (CsvDateTimeSettings) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val settings = mapping.dateTime
-    val timestampColumn = mapping.timestampColumn
-
-    val firstValue = timestampColumn?.let { sample.columnValues(it.columnIndex).firstOrNull() }
     val fromFile = firstValue != null && csvTimestampHasExplicitOffset(firstValue)
     val resolved = firstValue?.let { resolveCsvInstant(it, settings) }
 

@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.wear
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -77,13 +76,19 @@ class WearTrustStoreTest {
     }
 
     @Test
-    fun `a mismatch is shown until the phone is forgotten`() {
+    fun `a trusted phone with a new key is pending as such, and allowing it replaces the key`() {
+        val newToken = WearLinkToken.generate()
         store.trust(phone, token, "Pixel")
-        store.noteMismatch(phone, "Pixel")
+        store.notePending(phone, newToken, "Pixel")
 
-        assertNotNull(WearLinkState.state.value.refused)
-        store.forget(phone)
-        assertNull(WearLinkState.state.value.refused)
+        assertEquals(PendingPhone(phone, newToken, "Pixel", now, newKey = true), WearLinkState.state.value.pending)
+        assertEquals(token, store.tokenFor(phone))
+
+        store.trust(phone, newToken, "Pixel")
+
+        assertEquals(newToken, store.tokenFor(phone))
+        assertNull(WearLinkState.state.value.pending)
+        assertEquals(1, store.trusted().size)
     }
 
     @Test

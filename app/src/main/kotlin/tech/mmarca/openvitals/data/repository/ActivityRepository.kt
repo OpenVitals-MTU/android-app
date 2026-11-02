@@ -89,6 +89,8 @@ class ActivityRepositoryImpl @Inject constructor(
     private val writeStepsCadencePermission = HealthPermission.getWritePermission(StepsCadenceRecord::class)
     private val writeCyclingCadencePermission = HealthPermission.getWritePermission(CyclingPedalingCadenceRecord::class)
     private val writeExerciseRoutePermission = HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE
+    private val writeFloorsPermission = HealthPermission.getWritePermission(FloorsClimbedRecord::class)
+    private val writeWheelchairPushesPermission = HealthPermission.getWritePermission(WheelchairPushesRecord::class)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -541,7 +543,11 @@ class ActivityRepositoryImpl @Inject constructor(
             setOf(readPlannedExercisePermission)
         } else {
             emptySet()
-        } + request.bleSamples.writePermissions()
+        } + request.bleSamples.writePermissions() + buildSet {
+            // Only an import carries these; the form never asks for them.
+            if (request.floorsClimbed != null) add(writeFloorsPermission)
+            if (request.wheelchairPushes != null) add(writeWheelchairPushesPermission)
+        }
 
     override fun plannedWorkoutWritePermissions(): Set<String> =
         if (hc.isPlannedExerciseAvailable()) {

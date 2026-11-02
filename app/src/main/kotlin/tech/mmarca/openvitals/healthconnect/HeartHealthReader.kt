@@ -13,7 +13,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
-import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
+import tech.mmarca.openvitals.domain.model.MaxHeartRateInsightAggregateBuckets
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.dayAverageBpm
@@ -52,44 +52,31 @@ internal class HeartHealthReader(
     /**
      * Heart-rate series dense enough for TRIMP and intensity-minute coverage.
      * Sliced at [HeartRateInsightBucketDuration], at most
-     * [MaxInsightAggregateBuckets] per request, one local day at a time.
+     * [MaxHeartRateInsightAggregateBuckets] per request, across the whole span: a
+     * fortnight is a dozen requests. It used to go a local day at a time, two
+     * requests each, and the dashboard's two-week walk alone was thirty calls
+     * on a quota that counts them. Five-minute buckets do not care about the
+     * hour of drift a DST change puts between them and local midnight; each
+     * chunk still retries alone.
      */
     suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> {
         if (!end.isAfter(start)) return emptyList()
-        val zone = ZoneId.systemDefault()
-        var day = start.atZone(zone).toLocalDate()
-        val lastDay = end.minusMillis(1).atZone(zone).toLocalDate()
-        val samples = mutableListOf<HeartRateSample>()
-        while (!day.isAfter(lastDay)) {
-            val windowStart = maxOf(start, day.atStartOfDay(zone).toInstant())
-            val windowEnd = minOf(end, day.plusDays(1).atStartOfDay(zone).toInstant())
-            if (windowEnd.isAfter(windowStart)) {
-                val dayRange = Duration.between(windowStart, windowEnd)
-                if (shouldUseAggregatedHeartRateSamples(dayRange)) {
-                    aggregateWindows(windowStart, windowEnd, HeartRateInsightBucketDuration).forEach { (chunkStart, chunkEnd) ->
-                        samples += support.withLogging(
-                            "readHeartRateSamplesForInsights[$chunkStart..$chunkEnd]",
-                            emptyList(),
-                        ) {
-                            readAggregatedHeartRateSamples(
-                                chunkStart,
-                                chunkEnd,
-                                HeartRateInsightBucketDuration,
-                            )
-                        }
-                    }
-                } else {
-                    samples += support.withLogging(
-                        "readHeartRateSamplesForInsights[$windowStart..$windowEnd]",
-                        emptyList(),
-                    ) {
-                        readRawOrAggregatedFallback(windowStart, windowEnd)
-                    }
-                }
+        if (!shouldUseAggregatedHeartRateSamples(Duration.between(start, end))) {
+            // Workout-length: the samples themselves, buckets only if a long record hides them.
+            return support.withLogging("readHeartRateSamplesForInsights[$start..$end]", emptyList()) {
+                readRawOrAggregatedFallback(start, end)
             }
-            day = day.plusDays(1)
         }
-        return samples
+        return aggregateWindows(
+            start,
+            end,
+            HeartRateInsightBucketDuration,
+            maxBuckets = MaxHeartRateInsightAggregateBuckets,
+        ).flatMap { (chunkStart, chunkEnd) ->
+            support.withLogging("readHeartRateSamplesForInsights[$chunkStart..$chunkEnd]", emptyList()) {
+                readAggregatedHeartRateSamples(chunkStart, chunkEnd, HeartRateInsightBucketDuration)
+            }
+        }
     }
 
     /**

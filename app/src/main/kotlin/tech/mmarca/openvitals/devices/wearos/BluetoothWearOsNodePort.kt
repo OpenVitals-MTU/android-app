@@ -224,7 +224,7 @@ class BluetoothWearOsNodePort @Inject constructor(
             val hello = WearLinkProtocol.Hello(
                 version = WearLinkProtocol.VERSION,
                 capabilities = setOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES, WearLinkProtocol.CAP_STEPS),
-                token = linkStore.tokenFor(match.address),
+                token = linkStore.tokenFor(registeredAddress, match.address),
                 name = localName(adapter),
             )
             val session = when (val outcome = WearLinkClient.hello(connection, hello)) {

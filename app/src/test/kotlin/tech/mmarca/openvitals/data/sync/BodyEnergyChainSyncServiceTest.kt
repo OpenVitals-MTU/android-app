@@ -58,6 +58,9 @@ private class RecordingRepository(
     val requested = mutableListOf<LocalDate>()
     var throwOnLoad = false
 
+    /** Health Connect refusing the read for quota, as the strict read reports it. */
+    var refuseForQuota = false
+
     /** Whether each load ran with strict Health Connect reads, where a failed read throws. */
     val loadedStrictly = mutableListOf<Boolean>()
 
@@ -68,6 +71,7 @@ private class RecordingRepository(
         if (throwOnLoad) error("health connect exploded")
         val date = query.period.start
         requested += date
+        if (refuseForQuota) throw RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
         loadedStrictly += currentCoroutineContext()[StrictHealthConnectReads] != null
         foregroundDayDuringWalk?.let { foreground ->
             foregroundDayDuringWalk = null
@@ -129,10 +133,14 @@ class BodyEnergyChainSyncServiceTest {
         unmockkStatic(Log::class)
     }
 
+    /** Monotonic time the service's budgets and cooldowns are read with. */
+    private var elapsed = 0L
+
     private fun service(
         windowDays: Long = 5L,
         readsOtherAppsData: Boolean = true,
         zoneSource: () -> ZoneId = { TestZone },
+        maxDaysPerPass: Long = Long.MAX_VALUE,
     ) = BodyEnergyChainSyncService(
         readsOtherAppsData = { readsOtherAppsData },
         repository = repository,
@@ -142,7 +150,58 @@ class BodyEnergyChainSyncServiceTest {
         clock = { now },
         zoneSource = zoneSource,
         windowDays = windowDays,
+        elapsedMillis = { elapsed },
+        maxDaysPerPass = maxDaysPerPass,
     )
+
+    @Test
+    fun `a cold chain is walked a few days a pass, and the next pass carries on where it stopped`() = runTest {
+        // A dozen days of a dozen reads each, right after the dashboard's burst, is what the
+        // standalone Health Connect app refuses. The cap spreads the walk over several passes.
+        val service = service(windowDays = 8L, maxDaysPerPass = 3L)
+
+        service.syncAll()
+        assertEquals(listOf(today.minusDays(7), today.minusDays(6), today.minusDays(5)), repository.requested)
+        // A capped pass is not a completed one: the throttle does not hold the rest back.
+        assertNull(store.lastPassAt())
+
+        repository.requested.clear()
+        service.syncAll()
+        assertEquals(listOf(today.minusDays(4), today.minusDays(3), today.minusDays(2)), repository.requested)
+
+        repository.requested.clear()
+        service.syncAll()
+        assertEquals(listOf(today.minusDays(1)), repository.requested)
+        assertNotNull(store.lastPassAt())
+    }
+
+    @Test
+    fun `a pass Health Connect refused is not tried again before its cooldown`() = runTest {
+        val service = service()
+        repository.refuseForQuota = true
+        service.syncAll()
+        assertEquals(1, repository.requested.size)
+        assertEquals("a refused day is not stored", 0, dao.countDays())
+
+        repository.refuseForQuota = false
+        repository.requested.clear()
+        elapsed += 60_000L
+        service.syncAll()
+        assertTrue("inside the cooldown nothing is read", repository.requested.isEmpty())
+
+        elapsed += 5 * 60_000L
+        service.syncAll()
+        assertEquals(4, repository.requested.size)
+    }
+
+    @Test
+    fun `while the readers' backoff is armed no pass starts`() = runTest {
+        every { health.rateLimitRetryAfterMillis() } returns 45_000L
+
+        service().syncAll()
+
+        assertTrue(repository.requested.isEmpty())
+    }
 
     @Test
     fun `a cold window is walked oldest first, and today is left alone`() = runTest {

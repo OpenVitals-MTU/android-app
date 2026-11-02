@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import kotlin.concurrent.thread
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.setSensitiveText
+import tech.mmarca.openvitals.healthconnect.HealthConnectCallCounters
 
 class CrashReportEmailActivity : AppCompatActivity() {
     private var fallbackDraft: CrashReportEmailDraft? = null
@@ -54,7 +55,9 @@ class CrashReportEmailActivity : AppCompatActivity() {
                 CrashReportEmail.buildDraft(
                     appInfo = CrashReportStore.appInfo(appContext),
                     savedCrashReport = CrashReportStore.readFreshCrashReport(appContext),
+                    diagnosticsLog = CrashReportStore.captureDiagnosticsLog(appContext),
                     anrReports = AnrExitInfo.recent(appContext),
+                    healthConnectCalls = HealthConnectCallCounters.summaryLines().joinToString("\n"),
                 )
             }
             if (openEmailDraft(draft)) {

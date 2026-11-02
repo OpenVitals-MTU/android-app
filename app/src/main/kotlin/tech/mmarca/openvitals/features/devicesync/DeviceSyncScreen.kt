@@ -111,6 +111,7 @@ fun DeviceSyncScreen(
             DeviceSyncStep.TYPES -> DeviceSyncTypesStep(
                 state = state,
                 onToggleType = viewModel::toggleType,
+                onSetRewriteExisting = viewModel::setRewriteExisting,
                 onStartSync = viewModel::startSync,
             )
             DeviceSyncStep.SYNCING -> DeviceSyncProgressStep(

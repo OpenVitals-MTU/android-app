@@ -20,7 +20,13 @@ Activity metric detail screens currently cover:
 - Elevation.
 - Wheelchair pushes.
 
-The workout/session area also covers activity lists, activity detail, route preview/export, routeless workout export (TCX/CSV/FIT), heart-rate charts for workouts, activity summaries, and cardio-load context.
+The workout/session area also covers activity lists, activity detail, route preview/export, routeless workout export (TCX/CSV/FIT), heart-rate charts for workouts, activity summaries, and cardio-load context. The CSV export imports back through the CSV importer, one workout a row; see [CSV import](csv-import.md#openvitals-workout-export).
+
+## One Workout, Two Writers
+
+Health Connect does not merge workouts. Two watches worn on one walk, or a watch and its vendor app, each file their own session, and the activity statistics would add both. OpenVitals folds such sessions into one before anything counts them: two sessions whose spans overlap by at least 85 percent and whose starts and ends lie within 15 minutes of each other are the same workout, and the one carrying more (a route, a distance, a heart rate, an OpenVitals entry over another app's) is kept. Two different apps may call the same outing different things, a walk on one wrist and a hike on the other, so between sources the exercise type is not compared. Within one source two overlapping sessions of different types are two deliberate records and are both kept.
+
+Steps and distance through the day are not touched by this: Health Connect itself keeps one app's data where several apps overlap, in the order its Data sources and priority setting lists them. That order ranks apps, not devices, so two devices syncing through the same app still add up there.
 
 ## Workout Distance
 

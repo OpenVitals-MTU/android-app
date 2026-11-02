@@ -12,33 +12,30 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 
 /**
- * The phones on the status screen: the one asking to be allowed, with
- * Allow and Block; a refused one, with Forget; the trusted ones; and the
- * trusted ones that are no longer paired, with a way to Bluetooth settings.
+ * The phones on the status screen: the one asking to be allowed, new or
+ * with a new key, with Allow and Block; the trusted ones; and the trusted
+ * ones that are no longer paired, with a way to Bluetooth settings.
  */
 @Composable
 internal fun PhoneCards(
     link: WearLinkUiState,
     onAllow: (PendingPhone) -> Unit,
     onBlock: (PendingPhone) -> Unit,
-    onForget: (String) -> Unit,
     onOpenBluetoothSettings: () -> Unit,
 ) {
     val pending = link.pending
     if (pending != null) {
-        Line(stringResource(R.string.status_phone_pending, pending.name), title = true)
+        if (pending.newKey) {
+            Line(stringResource(R.string.status_phone_new_key, pending.name), title = true)
+            Line(stringResource(R.string.phone_new_key_reason))
+        } else {
+            Line(stringResource(R.string.status_phone_pending, pending.name), title = true)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
             Button(onClick = { onAllow(pending) }) { Text(stringResource(R.string.action_allow)) }
             Button(onClick = { onBlock(pending) }, colors = androidx.wear.compose.material3.ButtonDefaults.outlinedButtonColors()) {
                 Text(stringResource(R.string.action_block))
             }
-        }
-    }
-    val refused = link.refused
-    if (refused != null) {
-        Line(stringResource(R.string.status_phone_refused, refused.name))
-        Button(onClick = { onForget(refused.address) }, modifier = Modifier.padding(top = 4.dp)) {
-            Text(stringResource(R.string.action_forget_phone))
         }
     }
     for (phone in link.trusted) {
