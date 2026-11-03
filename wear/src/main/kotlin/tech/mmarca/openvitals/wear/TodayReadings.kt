@@ -7,9 +7,9 @@ import tech.mmarca.openvitals.wearlink.WearLinkProfile
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol.HeartRateSample
 
 /**
- * Today's values as the tiles show them, from the [MetricStore] the
- * recorders fill and the [PhoneProfile] the phone sends: one place for the
- * rules, kept out of the tile services.
+ * Today's values as the tiles and the watch-face complications show them,
+ * from the [MetricStore] the recorders fill and the [PhoneProfile] the phone
+ * sends: one place for the rules, so a watch face shows what a tile shows.
  * Reads on the caller's thread, which must not be the main one.
  *
  * Steps, distance and active calories are Health Connect's total as the
@@ -82,6 +82,9 @@ internal class TodayReadings(private val context: Context, private val store: Me
     /** The newest heart rate and its age; it can be from before midnight, as long as it is under an hour old. */
     fun heartRateNow(): TileHeartRate =
         TileHeartRate.of(heartRateGranted, store.latest(WearMetrics.HEART_RATE), day.nowMillis)
+
+    /** The newest sample, whenever it was taken; null without the grant or before the first. */
+    fun latestHeartRate(): HeartRateSample? = if (heartRateGranted) store.latest(WearMetrics.HEART_RATE) else null
 
     /** Today's samples, empty without the grant. */
     fun heartRateToday(): List<HeartRateSample> =

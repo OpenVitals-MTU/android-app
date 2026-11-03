@@ -66,6 +66,12 @@
     <string name="tile_amount_kcal">%1$s kcal</string>
     <string name="tile_needs_phone">sync with your phone</string>
     <string name="tile_needs_weight">add your weight on your phone</string>
+    <string name="complication_heart_rate_number_label">Heart rate (number)</string>
+    <string name="complication_distance_number_label">Distance (number)</string>
+    <string name="complication_value_bpm">%1$s bpm</string>
+    <string name="complication_title_steps">steps</string>
+    <string name="complication_title_kcal">kcal</string>
+    <string name="complication_title_floors">floors</string>
     <string name="tile_read_failed">can\'t read the watch\'s data</string>
     <string name="tile_not_granted">allow in the watch app</string>
 </resources>
