@@ -72,6 +72,17 @@ class WearLinkSession internal constructor(
             Reply.Unexpected
         }
 
+    /** Hands the watch the phone's settings; [peer] must announce [WearLinkProtocol.CAP_PROFILE]. */
+    fun pushProfile(profile: WearLinkProfile.Profile): WearLinkOutcome<Unit> =
+        exchange(WearLinkProtocol.Request.Profile(profile), ::acknowledged)
+
+    /** Hands the watch Health Connect's totals for today; [peer] must announce [WearLinkProtocol.CAP_PROFILE]. */
+    fun pushTotals(totals: WearLinkProfile.Totals): WearLinkOutcome<Unit> =
+        exchange(WearLinkProtocol.Request.Totals(totals), ::acknowledged)
+
+    private fun acknowledged(line: String): Reply<Unit> =
+        if (WearLinkProtocol.parseEnd(line) != null) Reply.Done(Unit) else Reply.Unexpected
+
     /** Closes the connection; the watch is waiting for exactly this. */
     fun close() = connection.close()
 

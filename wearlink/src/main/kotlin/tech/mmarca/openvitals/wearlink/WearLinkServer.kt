@@ -169,6 +169,14 @@ class WearLinkServer(
                 }
                 writer.line(WearLinkProtocol.formatEnd(count, false))
             }
+            is WearLinkProtocol.Request.Profile -> {
+                handler.applyProfile(request.profile)
+                writer.line(WearLinkProtocol.formatEnd(0, false))
+            }
+            is WearLinkProtocol.Request.Totals -> {
+                handler.applyTotals(request.totals)
+                writer.line(WearLinkProtocol.formatEnd(0, false))
+            }
         }
     }
 

@@ -102,6 +102,34 @@
                 android:resource="@drawable/tile_preview_steps" />
         </service>
         <service
+            android:name=".DistanceTileService"
+            android:description="@string/tile_distance_description"
+            android:exported="true"
+            android:icon="@drawable/ic_metric_distance"
+            android:label="@string/tile_distance_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview_distance" />
+        </service>
+        <service
+            android:name=".ActiveCaloriesTileService"
+            android:description="@string/tile_active_calories_description"
+            android:exported="true"
+            android:icon="@drawable/ic_metric_active_calories"
+            android:label="@string/tile_active_calories_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview_active_calories" />
+        </service>
+        <service
             android:name=".FloorsTileService"
             android:description="@string/tile_floors_description"
             android:exported="true"

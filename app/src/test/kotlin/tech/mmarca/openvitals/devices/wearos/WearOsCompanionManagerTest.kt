@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.wearlink.WearLinkProfile
 
 private class FakeWearOsNodePort : WearOsNodePort {
     var statusToReturn = WearOsCompanionStatus()
@@ -43,6 +44,13 @@ private class FakeWearOsNodePort : WearOsNodePort {
         readings.forEach { onSample(WearOsHeartRateSample(Instant.EPOCH, it)) }
         return supported
     }
+
+    override suspend fun pushProfile(
+        targetAddress: String?,
+        targetName: String?,
+        profile: WearLinkProfile.Profile?,
+        totals: WearLinkProfile.Totals?,
+    ): Boolean = false
 }
 
 class WearOsCompanionManagerTest {

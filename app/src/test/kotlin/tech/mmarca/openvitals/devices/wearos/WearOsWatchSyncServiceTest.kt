@@ -41,6 +41,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import tech.mmarca.openvitals.wearlink.WearLinkProfile
 
 /**
  * What a Wear OS sync does around the link. The watch is a fake here: the
@@ -114,6 +115,13 @@ class WearOsWatchSyncServiceTest {
             targetAddress: String?,
             targetName: String?,
             onSample: (WearOsHeartRateSample) -> Unit,
+        ): Boolean = false
+
+        override suspend fun pushProfile(
+            targetAddress: String?,
+            targetName: String?,
+            profile: WearLinkProfile.Profile?,
+            totals: WearLinkProfile.Totals?,
         ): Boolean = false
     }
 

@@ -32,6 +32,23 @@ class WearLinkLoopbackTest {
     }
 
     @Test
+    fun `the phone hands the watch its settings and today's totals over one connection`() {
+        val loopback = trusted()
+        val link = loopback.connect()
+        val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
+        val profile = WearLinkProfile.Profile(720, 81_500, WearLinkProfile.Units.METRIC, 8_000, 5_000, 400)
+        val totals = WearLinkProfile.Totals(1_793_660_400_000L, 1_793_700_000_000L, 6_797, 4_890, null)
+
+        assertEquals(WearLinkOutcome.Ok(Unit), session.pushProfile(profile))
+        assertEquals(WearLinkOutcome.Ok(Unit), session.pushTotals(totals))
+        session.close()
+
+        assertEquals(WearLinkServer.Outcome.SERVED, link.serverOutcome())
+        assertEquals(listOf(profile), loopback.handler.profiles)
+        assertEquals(listOf(totals), loopback.handler.totals)
+    }
+
+    @Test
     fun `an unknown phone is pending, allowed, then served`() {
         val loopback = Loopback()
         val first = loopback.connect()

@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.devices.wearos
 
 import java.time.Instant
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import tech.mmarca.openvitals.wearlink.WearLinkProfile
 
 /**
  * What the phone can tell about the OpenVitals Wear OS app on a watch.
@@ -167,5 +168,18 @@ interface WearOsNodePort {
         targetAddress: String?,
         targetName: String?,
         onSample: (WearOsHeartRateSample) -> Unit,
+    ): Boolean
+
+    /**
+     * Hands the watch the phone's settings and Health Connect's totals for
+     * today, for its tiles ([WearOsTileProfilePush]); either may be null, and
+     * the watch keeps its last one. False when no bonded watch matches or the
+     * watch app takes no profile. Any other failure throws [WearOsLinkFailure].
+     */
+    suspend fun pushProfile(
+        targetAddress: String?,
+        targetName: String?,
+        profile: WearLinkProfile.Profile?,
+        totals: WearLinkProfile.Totals?,
     ): Boolean
 }

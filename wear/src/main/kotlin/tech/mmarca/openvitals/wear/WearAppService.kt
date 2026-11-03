@@ -100,6 +100,7 @@ class WearAppService : Service() {
             store = store,
             live = LiveHeartRate(this, isRecording = { recorder.isRunning }),
             localName = ::localName,
+            onPhoneProfile = { MetricTileService.requestUpdates(this) },
         )
         isForeground = startInForeground()
         if (!isForeground) {

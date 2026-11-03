@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
@@ -20,13 +21,16 @@ import javax.inject.Singleton
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.isPermissionFailure
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
@@ -37,7 +41,9 @@ import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.data.repository.RecordWrite
 import tech.mmarca.openvitals.data.repository.insertWithOutcomes
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
+import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.insights.WearSleepEstimator
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
@@ -97,6 +103,8 @@ class WearOsWatchSyncService(
     private val weightKg: suspend () -> Double?,
     private val clock: () -> Instant,
     private val zone: () -> ZoneId,
+    /** What the watch's tiles get from the phone after a sync; null sends nothing. */
+    private val tileProfile: WearOsTileProfilePush? = null,
 ) : DeviceSyncPort {
 
     @Inject
@@ -110,11 +118,29 @@ class WearOsWatchSyncService(
         linkStore: WearOsLinkStore,
         bodyRepository: BodyRepository,
         bodyProfilePreferences: BodyProfilePreferences,
+        preferences: PreferencesRepository,
     ) : this(
         nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect, linkStore,
-        // Strict: the readers turn a failed read into null, which would pass for "no weight".
-        { withStrictHealthConnectReads { bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg } },
+        bodyWeight(bodyRepository, bodyProfilePreferences),
         Instant::now, ZoneId::systemDefault,
+        WearOsTileProfilePush(
+            nodePort = nodePort,
+            settings = {
+                WearOsTileProfilePush.Settings(
+                    strideMeters = preferences.strideLengthMeters,
+                    // The unit the phone shows distances in, its distance override first.
+                    distanceUnits = preferences.unitOverride(UnitQuantity.DISTANCE) ?: preferences.unitSystem,
+                    goalSteps = preferences.dailyGoalFor(MetricDailyGoalKey.STEPS),
+                    goalDistanceMeters = preferences.dailyGoalFor(MetricDailyGoalKey.DISTANCE_METERS),
+                    goalActiveKcal = preferences.dailyGoalFor(MetricDailyGoalKey.ACTIVE_CALORIES_KCAL),
+                )
+            },
+            weightKg = bodyWeight(bodyRepository, bodyProfilePreferences),
+            seesOtherApps = { healthConnect.readsOtherAppsDataNow() },
+            todayTotals = { day -> todayTotals(healthConnect, day) },
+            clock = Instant::now,
+            zone = ZoneId::systemDefault,
+        ),
     )
 
     private val syncMutex = Mutex()
@@ -175,6 +201,12 @@ class WearOsWatchSyncService(
 
         onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.COMPLETE, filesTotal = progress.pages, filesDone = progress.pages))
         bleDeviceRepository.markSynced(device.id, clock())
+        // Once the sync is done and marked: today's totals then hold the watch's own steps. Not cancellable:
+        // the sync has succeeded, and the push is bounded by its own connection timeout.
+        tileProfile?.let { push ->
+            val stepsThrough = cursors.stepsCursor(device.id).takeIf { it != Instant.EPOCH }
+            withContext(NonCancellable) { push.push(device, stepsThrough) }
+        }
         return DeviceSyncResult.Succeeded(
             progress.written, progress.nights, progress.stepMinutes, progress.missingBodyWeight,
             progress.weightReadWithheld, progress.unwritten.toSet(), progress.withheldPermissions.toSet(),
@@ -633,6 +665,38 @@ class WearOsWatchSyncService(
     }
 
     private companion object {
+        /** Body weight for the walking energy: Health Connect's latest, else the profile's. Null when neither has one. */
+        fun bodyWeight(bodyRepository: BodyRepository, bodyProfilePreferences: BodyProfilePreferences): suspend () -> Double? = {
+            // Strict: the readers turn a failed read into null, which would pass for "no weight".
+            withStrictHealthConnectReads { bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg }
+        }
+
+        /**
+         * Health Connect's totals for [day] of the types the phone may read,
+         * strict, so a failed read is not sent as a day without steps. Each
+         * type is asked only with its grant: one aggregate fails whole for a
+         * type it may not read.
+         */
+        suspend fun todayTotals(healthConnect: HealthConnectManager, day: LocalDate): WearOsTileProfilePush.DayTotals? {
+            val granted = healthConnect.grantedPermissions()
+            val steps = STEPS_READ_PERMISSION in granted
+            val distance = DISTANCE_READ_PERMISSION in granted
+            val kcal = ACTIVE_CALORIES_READ_PERMISSION in granted
+            if (!steps && !distance && !kcal) return null
+            val total = withStrictHealthConnectReads {
+                healthConnect.readDailySteps(day, day, includeSteps = steps, includeDistance = distance, includeActiveCalories = kcal)
+            }.firstOrNull() ?: return null
+            return WearOsTileProfilePush.DayTotals(
+                steps = total.steps.takeIf { steps },
+                distanceMeters = total.distanceMeters.takeIf { distance },
+                activeKcal = total.activeCaloriesKcal.takeIf { kcal },
+            )
+        }
+
+        private val STEPS_READ_PERMISSION = HealthPermission.getReadPermission(StepsRecord::class)
+        private val DISTANCE_READ_PERMISSION = HealthPermission.getReadPermission(DistanceRecord::class)
+        private val ACTIVE_CALORIES_READ_PERMISSION = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+
         /** A safety net against a watch that always says "more": two million samples. */
         private const val MAX_PAGES = 1000
 

@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import tech.mmarca.openvitals.wearlink.WalkingEnergy
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol.AscentMinute
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol.HeartRateSample
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol.StepMinute
@@ -138,5 +139,50 @@ class TileDayTest {
         assertEquals(1L, TileDay.wholeDown(0.2 + 0.7 + 0.1))
         assertEquals(2L, TileDay.wholeDown(8.9 / 3.0))
         assertEquals(0L, TileDay.wholeDown(0.0))
+    }
+
+    @Test
+    fun `a step minute walks its steps times the stride, and costs the walking energy for the weight`() {
+        val minute = StepMinute(at("2026-11-03T09:00"), 100)
+
+        assertEquals(listOf(minute.epochMillis to 72.0), TileDay.distanceAmounts(listOf(minute), strideMillimetres = 720))
+        assertEquals(
+            listOf(minute.epochMillis to WalkingEnergy.activeKcalPerMinute(100, 80.0)),
+            TileDay.walkingKcalAmounts(listOf(minute), weightGrams = 80_000),
+        )
+    }
+
+    @Test
+    fun `the phone's total grows with what the watch recorded from the first minute it does not hold`() {
+        val day = day("2026-11-03T16:00")
+        // The phone wrote the watch's minutes through 14:00.
+        val frontier = at("2026-11-03T14:01")
+        val amounts = listOf(
+            // Before and in the sync's minute: already in the phone's total.
+            at("2026-11-03T13:30") to 500.0,
+            at("2026-11-03T14:00") to 40.0,
+            // After it: the watch's own, on top.
+            at("2026-11-03T14:01") to 60.0,
+            at("2026-11-03T15:10") to 1_000.0,
+        )
+
+        assertEquals(9_060.0, day.shownTotal(1_600.0, amounts, phoneTotal = 8_000, phoneFrontierMillis = frontier), 0.0)
+    }
+
+    @Test
+    fun `the watch's own count wins when it is larger, and stands alone without a phone total`() {
+        val day = day("2026-11-03T16:00")
+        val amounts = listOf(at("2026-11-03T15:00") to 100.0)
+
+        assertEquals(12_000.0, day.shownTotal(12_000.0, amounts, phoneTotal = 3_000, phoneFrontierMillis = at("2026-11-03T08:00")), 0.0)
+        assertEquals(1_600.0, day.shownTotal(1_600.0, amounts, phoneTotal = null, phoneFrontierMillis = null), 0.0)
+    }
+
+    @Test
+    fun `when the phone holds none of today's watch minutes, the midnight minute counts on top too`() {
+        val day = day("2026-11-03T16:00")
+        val amounts = listOf(at("2026-11-03T00:00") to 50.0, at("2026-11-03T09:00") to 10.0)
+
+        assertEquals(1_060.0, day.shownTotal(60.0, amounts, phoneTotal = 1_000, phoneFrontierMillis = at("2026-11-03T00:00")), 0.0)
     }
 }

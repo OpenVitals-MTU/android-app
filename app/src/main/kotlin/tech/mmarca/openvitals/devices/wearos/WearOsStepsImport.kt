@@ -9,7 +9,7 @@ import androidx.health.connect.client.units.Energy
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
-import tech.mmarca.openvitals.domain.insights.WalkingEnergy
+import tech.mmarca.openvitals.wearlink.WalkingEnergy
 
 /**
  * Maps the watch's step minutes to Health Connect records, one per minute

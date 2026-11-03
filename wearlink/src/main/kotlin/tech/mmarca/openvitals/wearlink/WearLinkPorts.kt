@@ -63,4 +63,10 @@ interface WearLinkRequestHandler {
      * once when the watch is off the wrist or cannot measure.
      */
     fun liveHeartRate(seconds: Int, emit: (WearLinkProtocol.HeartRateSample) -> Unit): Int
+
+    /** Keeps the phone's settings for the tiles; the newest replaces the last. Only a watch announcing `pf` is sent it. */
+    fun applyProfile(profile: WearLinkProfile.Profile)
+
+    /** Keeps Health Connect's totals for today; the newest replaces the last. Only a watch announcing `pf` is sent them. */
+    fun applyTotals(totals: WearLinkProfile.Totals)
 }

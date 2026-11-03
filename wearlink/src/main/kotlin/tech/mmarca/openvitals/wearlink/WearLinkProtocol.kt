@@ -4,9 +4,11 @@ import java.util.UUID
 
 /**
  * The line protocol between OpenVitals on the phone and the OpenVitals Wear OS
- * app, over one RFCOMM socket per request. Every line is UTF-8, space-separated
- * fields, `\n`-terminated. The phone sends one request line; the watch answers
- * with zero or more data lines and one terminating line, then both sides close.
+ * app, over an RFCOMM socket per exchange. Every line is UTF-8, space-separated
+ * fields, `\n`-terminated. The phone sends a request line; the watch answers
+ * with zero or more data lines and one terminating line. The phone may send
+ * the next request on the same connection (a live heart rate window, the
+ * `PROFILE` and `TOTALS` after a sync), and closes it when done.
  *
  * One source for both apps: `:wearlink` is compiled into `:app` and `:wear`.
  *
@@ -35,6 +37,9 @@ import java.util.UUID
  *   less than the watch's idle timeout), one `HR` line as each reading
  *   arrives, then `END <count> 0`. Only a watch announcing `hl` serves it; a
  *   watch off the wrist answers `END 0 0` at once. Nothing is stored for it.
+ * - `PROFILE ...` and `TOTALS ...` → `END 0 0`. The phone's settings and
+ *   Health Connect's totals for today, for the watch's tiles
+ *   ([WearLinkProfile]). Only a watch announcing `pf` is sent them.
  *
  * Reply lines:
  * - `HR <epochMillis> <bpm>` — one heart rate sample.
@@ -83,6 +88,8 @@ object WearLinkProtocol {
     const val ASCENT_SINCE: String = "AS_SINCE"
     const val ASCENT_MINUTE: String = "AS"
     const val HEART_RATE_LIVE: String = "HR_LIVE"
+    const val PROFILE: String = "PROFILE"
+    const val TOTALS: String = "TOTALS"
     const val END: String = "END"
 
     /** Longer than this a line is a protocol violation; the reader closes rather than buffers. */
@@ -96,6 +103,7 @@ object WearLinkProtocol {
     const val CAP_STEPS: String = "st"
     const val CAP_ASCENT: String = "as"
     const val CAP_LIVE_HEART_RATE: String = "hl"
+    const val CAP_PROFILE: String = "pf"
     const val NO_CAPABILITIES: String = "-"
 
     /** The phone's opening line. */
@@ -140,6 +148,8 @@ object WearLinkProtocol {
         data class StepsSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class AscentSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class LiveHeartRate(val seconds: Int) : Request()
+        data class Profile(val profile: WearLinkProfile.Profile) : Request()
+        data class Totals(val totals: WearLinkProfile.Totals) : Request()
     }
 
     fun formatHello(hello: Hello): String =
@@ -197,6 +207,8 @@ object WearLinkProtocol {
         is Request.StepsSince -> formatStepsRequest(request.sinceEpochMillis, request.limit)
         is Request.AscentSince -> formatAscentRequest(request.sinceEpochMillis, request.limit)
         is Request.LiveHeartRate -> "$HEART_RATE_LIVE ${request.seconds.coerceIn(1, MAX_LIVE_SECONDS)}"
+        is Request.Profile -> WearLinkProfile.formatProfile(request.profile)
+        is Request.Totals -> WearLinkProfile.formatTotals(request.totals)
     }
 
     /** Null unless [line] is a well-formed request. */
@@ -211,6 +223,8 @@ object WearLinkProtocol {
             return Request.AscentSince(since, limit)
         }
         parseLiveRequest(line)?.let { return Request.LiveHeartRate(it) }
+        WearLinkProfile.parseProfile(line)?.let { return Request.Profile(it) }
+        WearLinkProfile.parseTotals(line)?.let { return Request.Totals(it) }
         return null
     }
 

@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.domain.insights
+package tech.mmarca.openvitals.wearlink
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

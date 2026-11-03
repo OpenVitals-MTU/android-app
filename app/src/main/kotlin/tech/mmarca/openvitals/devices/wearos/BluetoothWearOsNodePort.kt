@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.wearlink.WearLinkClient
 import tech.mmarca.openvitals.wearlink.WearLinkConnection
 import tech.mmarca.openvitals.wearlink.WearLinkOutcome
+import tech.mmarca.openvitals.wearlink.WearLinkProfile
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 import tech.mmarca.openvitals.wearlink.WearLinkSession
 
@@ -148,6 +149,22 @@ class BluetoothWearOsNodePort @Inject constructor(
                 )
                 if (count == 0) break
             }
+            true
+        }
+    }
+
+    override suspend fun pushProfile(
+        targetAddress: String?,
+        targetName: String?,
+        profile: WearLinkProfile.Profile?,
+        totals: WearLinkProfile.Totals?,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext false
+        withSession(match, targetAddress, PING_TIMEOUT_MS) { session ->
+            // A watch app from before the tiles would answer the request with an error.
+            if (WearLinkProtocol.CAP_PROFILE !in session.peer.capabilities) return@withSession false
+            profile?.let { unwrap(session.pushProfile(it)) }
+            totals?.let { unwrap(session.pushTotals(it)) }
             true
         }
     }

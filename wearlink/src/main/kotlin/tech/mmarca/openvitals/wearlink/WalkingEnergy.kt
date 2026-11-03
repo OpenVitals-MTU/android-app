@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.domain.insights
+package tech.mmarca.openvitals.wearlink
 
 /**
  * Walking energy per minute from cadence alone. Moore et al. 2021,

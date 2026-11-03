@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import tech.mmarca.openvitals.wearlink.Page
 import tech.mmarca.openvitals.wearlink.WearLinkConnection
+import tech.mmarca.openvitals.wearlink.WearLinkProfile
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 import tech.mmarca.openvitals.wearlink.WearLinkRequestHandler
 import tech.mmarca.openvitals.wearlink.WearLinkServer
@@ -25,9 +26,11 @@ class WearLinkServerHost(
     store: MetricStore,
     live: LiveHeartRate,
     private val localName: () -> String,
+    /** The phone sent its settings or today's totals; the tiles that show them draw again. */
+    onPhoneProfile: () -> Unit = {},
     private val state: WearLinkState = WearLinkState,
 ) {
-    private val server = WearLinkServer(trust, Handler(store, live, localName))
+    private val server = WearLinkServer(trust, Handler(store, live, localName, onPhoneProfile))
 
     @Volatile
     private var serverSocket: BluetoothServerSocket? = null
@@ -110,11 +113,13 @@ class WearLinkServerHost(
         private val store: MetricStore,
         private val live: LiveHeartRate,
         private val localName: () -> String,
+        private val onPhoneProfile: () -> Unit,
     ) : WearLinkRequestHandler {
         override fun localName(): String = localName.invoke()
 
         override fun capabilities(): Set<String> = WearMetrics.ALL.mapTo(LinkedHashSet()) { it.key }.apply {
             if (live.hasSensor) add(WearLinkProtocol.CAP_LIVE_HEART_RATE)
+            add(WearLinkProtocol.CAP_PROFILE)
         }
 
         override fun heartRateSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.HeartRateSample> =
@@ -131,6 +136,21 @@ class WearLinkServerHost(
 
         override fun liveHeartRate(seconds: Int, emit: (WearLinkProtocol.HeartRateSample) -> Unit): Int =
             live.window(seconds, emit)
+
+        override fun applyProfile(profile: WearLinkProfile.Profile) {
+            PhoneProfile.save(store, profile)
+            redraw()
+        }
+
+        override fun applyTotals(totals: WearLinkProfile.Totals) {
+            PhoneProfile.save(store, totals)
+            redraw()
+        }
+
+        /** Best effort: a failed redraw request must not turn the phone's `END` into an error. */
+        private fun redraw() {
+            runCatching(onPhoneProfile).onFailure { Log.w(TAG, "Tiles not asked to redraw", it) }
+        }
 
         private fun <T> page(metric: WearMetric<T>, sinceEpochMillis: Long, limit: Int): Page<T> {
             // One more than asked tells whether the limit cut the reply.

@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.wear
 
 import android.content.ComponentName
+import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.graphics.BitmapFactory
 import android.util.Log
@@ -53,8 +54,8 @@ abstract class MetricTileService : TileService() {
     /** The tile's title, also its title when the store cannot be read. */
     internal abstract val titleRes: Int
 
-    /** Today's tile from [store], read on the IO dispatcher. */
-    internal abstract fun read(day: TileDay, chart: TileChart, store: MetricStore): MetricTile
+    /** Today's tile, read on the IO dispatcher. */
+    internal abstract fun read(today: TodayReadings, chart: TileChart): MetricTile
 
     override fun onTileRequest(requestParams: TileRequest): ListenableFuture<Tile> =
         SuspendToFutureAdapter.launchFuture(scope.coroutineContext) {
@@ -92,6 +93,10 @@ abstract class MetricTileService : TileService() {
 
     internal fun formatCount(count: Long): String = NumberFormat.getIntegerInstance().format(count)
 
+    /** [value] as a share of [goal], in whole percent, with the goal as [goalText]: "68% of 8,000". */
+    internal fun goalProgress(value: Double, goal: Double, goalText: String): String =
+        getString(R.string.tile_goal_progress, (value / goal * PERCENT).toInt(), goalText)
+
     /** A tile without a value: a dash, [reason] as the caption, no curve. */
     internal fun unavailable(reason: String): MetricTile {
         val title = getString(titleRes)
@@ -110,7 +115,7 @@ abstract class MetricTileService : TileService() {
         )
         val store = MetricStore(this)
         return try {
-            read(TileDay.of(System.currentTimeMillis(), ZoneId.systemDefault()), chart, store)
+            read(TodayReadings(this, store, TileDay.of(System.currentTimeMillis(), ZoneId.systemDefault())), chart)
         } catch (e: SQLiteException) {
             Log.e(TAG, "Metric store unreadable", e)
             unavailable(getString(R.string.tile_read_failed))
@@ -197,10 +202,27 @@ abstract class MetricTileService : TileService() {
     }
 
     internal companion object {
+        /**
+         * Asks Wear OS to draw the tiles that show what the phone sends
+         * ([PhoneProfile]) again: the recorders' rows reach the tiles on
+         * their own schedule, the phone's only when it syncs.
+         */
+        fun requestUpdates(context: Context) {
+            val updater = getUpdater(context)
+            for (tile in PHONE_PROFILE_TILES) updater.requestUpdate(tile)
+        }
+
+        private val PHONE_PROFILE_TILES = listOf(
+            StepsTileService::class.java,
+            DistanceTileService::class.java,
+            ActiveCaloriesTileService::class.java,
+        )
+
         /** The one image a metric tile has. */
         const val CHART_RESOURCE_ID = "chart"
 
         private const val TAG = "MetricTileService"
+        private const val PERCENT = 100
         private const val NO_CHART_VERSION = "none"
         private const val CACHE_DIR = "tile-charts"
         private const val PNG_SUFFIX = ".png"

@@ -74,6 +74,15 @@ class MetricStore(context: Context, name: String? = DB_NAME) : SQLiteOpenHelper(
         }
     }
 
+    /** Sets the state [key] to [value] on its own, for state that comes with no rows. */
+    fun putState(key: String, value: String) {
+        val row = ContentValues(2).apply {
+            put(COL_KEY, key)
+            put(COL_VALUE, value)
+        }
+        writableDatabase.insertWithOnConflict(STATE_TABLE, null, row, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
     /** The state stored under [key], or null when there is none. */
     fun state(key: String): String? =
         readableDatabase.query(STATE_TABLE, arrayOf(COL_VALUE), "$COL_KEY = ?", arrayOf(key), null, null, null)
