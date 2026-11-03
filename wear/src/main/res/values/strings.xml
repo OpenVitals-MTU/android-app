@@ -30,4 +30,24 @@
     <string name="action_open_bluetooth">Bluetooth settings</string>
     <string name="link_requests_channel_name">Phone requests</string>
     <string name="status_ppg_logging">Raw PPG log on · long press to stop</string>
+    <string name="tile_heart_rate_label">Heart rate</string>
+    <string name="tile_heart_rate_description">Your latest heart rate and its curve today, as the watch app recorded them</string>
+    <string name="tile_heart_rate_caption_now">bpm · just now</string>
+    <plurals name="tile_heart_rate_caption_minutes">
+        <item quantity="one">bpm · %1$d min ago</item>
+        <item quantity="other">bpm · %1$d min ago</item>
+    </plurals>
+    <string name="tile_heart_rate_range">%1$d–%2$d bpm today</string>
+    <string name="tile_heart_rate_none">no recent reading</string>
+    <string name="tile_steps_label">Steps</string>
+    <string name="tile_steps_description">Your steps since midnight and when you took them</string>
+    <string name="tile_steps_caption">steps on this watch</string>
+    <string name="tile_steps_no_sensor">no step counter</string>
+    <string name="tile_floors_label">Floors</string>
+    <string name="tile_floors_description">The floors you climbed since midnight and when you climbed them</string>
+    <string name="tile_floors_caption">floors today</string>
+    <string name="tile_floors_climbed">%1$s m climbed</string>
+    <string name="tile_floors_no_sensor">no barometer</string>
+    <string name="tile_read_failed">can\'t read the watch\'s data</string>
+    <string name="tile_not_granted">allow in the watch app</string>
 </resources>

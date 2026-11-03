@@ -18,4 +18,25 @@ object AscentCredit {
     /** The metres of [climbedMetres] that [steps] (this minute and the one before) carry. */
     fun creditedMetres(climbedMetres: Double, steps: Int): Double =
         minOf(climbedMetres, steps * METRES_PER_FLOOR / MIN_STEPS_PER_FLOOR).coerceAtLeast(0.0)
+
+    /**
+     * Per minute start (epoch milliseconds), the metres of that minute's climb
+     * that count: [creditedMetres] of the minute's climb and the steps of that
+     * minute and the one before. A minute listed twice keeps its larger climb
+     * and its larger step count. Minutes that credit nothing are left out.
+     * The phone writes these as floors and elevation; the watch's floors tile
+     * shows them, so both count alike.
+     */
+    fun creditedPerMinute(climbedMetres: List<Pair<Long, Double>>, steps: List<Pair<Long, Int>>): List<Pair<Long, Double>> {
+        val stepsAt = HashMap<Long, Int>()
+        for ((start, count) in steps) stepsAt.merge(start, count, ::maxOf)
+        return climbedMetres.groupBy { it.first }.mapNotNull { (start, same) ->
+            val climbed = same.maxOf { it.second }
+            val walked = (stepsAt[start - MINUTE_MILLIS] ?: 0) + (stepsAt[start] ?: 0)
+            val credited = creditedMetres(climbed, walked)
+            if (credited > 0.0) start to credited else null
+        }
+    }
+
+    private const val MINUTE_MILLIS: Long = 60_000L
 }

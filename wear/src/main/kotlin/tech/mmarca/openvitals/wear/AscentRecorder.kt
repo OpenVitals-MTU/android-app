@@ -83,13 +83,17 @@ class AscentRecorder(
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
-    private companion object {
-        const val TAG = "AscentRecorder"
-        const val SAMPLING_PERIOD_MICROS = 1_000_000
+    companion object {
+        private const val TAG = "AscentRecorder"
+        private const val SAMPLING_PERIOD_MICROS = 1_000_000
 
         /** The heart rate's latency, so both batches arrive in one wake-up; see `HeartRateRecorder`. */
-        const val MAX_REPORT_LATENCY_MICROS = 40 * 1_000_000
+        private const val MAX_REPORT_LATENCY_MICROS = 40 * 1_000_000
 
-        const val PRUNE_EVERY_MILLIS = 6L * 60 * 60 * 1000
+        private const val PRUNE_EVERY_MILLIS = 6L * 60 * 60 * 1000
+
+        /** Whether the watch has a barometer at all; without one there is no ascent to record. */
+        fun hasBarometer(context: Context): Boolean =
+            (context.getSystemService(Context.SENSOR_SERVICE) as SensorManager).getDefaultSensor(Sensor.TYPE_PRESSURE) != null
     }
 }
