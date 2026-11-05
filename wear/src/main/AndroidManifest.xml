@@ -77,7 +77,7 @@
             android:name=".HeartRateTileService"
             android:description="@string/tile_heart_rate_description"
             android:exported="true"
-            android:icon="@drawable/ic_launcher_monochrome"
+            android:icon="@drawable/ic_metric_heart_rate"
             android:label="@string/tile_heart_rate_label"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter>
@@ -91,7 +91,7 @@
             android:name=".StepsTileService"
             android:description="@string/tile_steps_description"
             android:exported="true"
-            android:icon="@drawable/ic_launcher_monochrome"
+            android:icon="@drawable/ic_metric_steps"
             android:label="@string/tile_steps_label"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter>
@@ -105,7 +105,7 @@
             android:name=".FloorsTileService"
             android:description="@string/tile_floors_description"
             android:exported="true"
-            android:icon="@drawable/ic_launcher_monochrome"
+            android:icon="@drawable/ic_metric_floors"
             android:label="@string/tile_floors_label"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter>

@@ -37,6 +37,11 @@
         <item quantity="one">bpm · %1$d min ago</item>
         <item quantity="other">bpm · %1$d min ago</item>
     </plurals>
+    <string name="tile_heart_rate_spoken_now">%1$d bpm, just now</string>
+    <plurals name="tile_heart_rate_spoken_minutes">
+        <item quantity="one">%1$d bpm, %2$d minute ago</item>
+        <item quantity="other">%1$d bpm, %2$d minutes ago</item>
+    </plurals>
     <string name="tile_heart_rate_range">%1$d–%2$d bpm today</string>
     <string name="tile_heart_rate_none">no recent reading</string>
     <string name="tile_steps_label">Steps</string>

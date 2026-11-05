@@ -41,6 +41,17 @@ class HeartRateTileService : MetricTileService() {
                 )
             }
         }
+        // Said as a sentence: the caption's unit belongs with the number, and its dot is not read out well.
+        val spoken = when {
+            now !is TileHeartRate.Recent -> caption
+            now.minutesAgo == 0L -> getString(R.string.tile_heart_rate_spoken_now, now.bpm)
+            else -> resources.getQuantityString(
+                R.plurals.tile_heart_rate_spoken_minutes,
+                now.minutesAgo.toInt(),
+                now.bpm,
+                now.minutesAgo.toInt(),
+            )
+        }
         val title = getString(titleRes)
         val detail = day.range(samples)?.let { getString(R.string.tile_heart_rate_range, it.first, it.last) }
         return MetricTile(
@@ -48,7 +59,7 @@ class HeartRateTileService : MetricTileService() {
             value = value,
             caption = caption,
             accent = accent,
-            description = listOfNotNull("$title: $value, $caption", detail).joinToString(", "),
+            description = listOfNotNull("$title: $spoken", detail).joinToString(", "),
             chart = chart.heartRate(day.meanPerBucket(samples), day),
             detail = detail,
         )

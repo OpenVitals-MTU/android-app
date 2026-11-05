@@ -60,7 +60,8 @@ abstract class MetricTileService : TileService() {
         SuspendToFutureAdapter.launchFuture(scope.coroutineContext) {
             val device = requestParams.deviceConfiguration
             val tile = withContext(Dispatchers.IO) {
-                readToday(device).also { tile -> tile.chart?.let(::keep) }
+                val today = readToday(device)
+                if (today.chart == null || keep(today.chart)) today else today.withoutChart()
             }
             val version = tile.chart?.let(::versionOf) ?: NO_CHART_VERSION
             val open = clickable(launchAction(ComponentName(this@MetricTileService, MainActivity::class.java)))
@@ -133,17 +134,22 @@ abstract class MetricTileService : TileService() {
      * Keeps [chart] under its version for the resources request, written whole
      * before it gets its name, and drops all but this tile's [KEPT_VERSIONS]
      * newest, and temporary files a crash left behind. A failure only costs
-     * the chart: the resources request then asks for the tile again.
+     * the chart: false, and the tile goes without its curve, since a tile
+     * naming a version with no file would only be asked for again.
      */
-    private fun keep(chart: TileChart.Png) {
+    private fun keep(chart: TileChart.Png): Boolean =
         try {
             val dir = File(cacheDir, CACHE_DIR).apply { mkdirs() }
             val file = File(dir, fileName(versionOf(chart)))
             if (!file.isFile) {
                 // A temporary file of its own, so two requests drawing the same version never share one.
                 val partial = File.createTempFile(file.name, PART_SUFFIX, dir)
-                partial.writeBytes(chart.bytes)
-                if (!partial.renameTo(file)) partial.delete()
+                try {
+                    partial.writeBytes(chart.bytes)
+                    partial.renameTo(file)
+                } finally {
+                    partial.delete()
+                }
             }
             file.setLastModified(System.currentTimeMillis())
             dir.listFiles { kept -> kept.name.startsWith(filePrefix) && kept.name.endsWith(PNG_SUFFIX) }
@@ -153,10 +159,11 @@ abstract class MetricTileService : TileService() {
             val abandoned = System.currentTimeMillis() - ABANDONED_PART_MILLIS
             dir.listFiles { part -> part.name.startsWith(filePrefix) && part.name.endsWith(PART_SUFFIX) && part.lastModified() < abandoned }
                 ?.forEach(File::delete)
+            file.isFile
         } catch (e: IOException) {
             Log.w(TAG, "Chart not kept", e)
+            false
         }
-    }
 
     /** The PNG kept under [version], or null when it is gone or cannot be read. */
     private fun kept(version: String): ByteArray? =

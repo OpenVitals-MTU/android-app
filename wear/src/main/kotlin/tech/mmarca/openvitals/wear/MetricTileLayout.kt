@@ -35,7 +35,10 @@ internal class MetricTile(
     val chart: TileChart.Png?,
     /** A line under the curve with one more fact about the day, such as its range. */
     val detail: String? = null,
-)
+) {
+    /** The same tile without its curve, for when the curve cannot be served. */
+    fun withoutChart(): MetricTile = MetricTile(title, value, caption, accent, description, chart = null, detail)
+}
 
 /**
  * The layout every metric tile shares: the title, the value in the metric's
