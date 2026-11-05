@@ -3729,10 +3729,11 @@
     <string name="cycle_thermal_skin_unavailable">Skin temperature is not readable here: no watch or ring may have written it, or OpenVitals may not be allowed to read it. See the Health Connect permissions in Settings.</string>
     <string name="cycle_thermal_bbt_unavailable">Basal temperature is not available: no morning reading in this cycle.</string>
     <string name="cycle_thermal_none_selected">Select Morning (BBT) or Night (skin) to see the chart.</string>
-    <string name="cycle_skin_result_confirmed">Found afterwards: from %1$s on, three nights in a row were each at least 0.2 °C above at least five of the six nights before (rise about %2$s). This is a rise in your skin temperature, not a statement about when you can become pregnant.</string>
-    <string name="cycle_skin_result_none">No shift detected in the night skin temperature of this cycle so far. Three nights in a row at least 0.2 °C above the six before were not found. That does not show whether ovulation happened.</string>
-    <string name="cycle_skin_result_weak">Signal too weak to judge: the nights of this cycle differ by at most %1$s, under the 0.2 °C needed. This happens when a watch or ring smooths the data it passes on, which hides small rises. OpenVitals does not guess.</string>
+    <string name="cycle_skin_result_confirmed">Found afterwards: from %1$s on, three nights in a row were each at least %3$s above at least five of the six nights before (rise about %2$s). This is a rise in your skin temperature, not a statement about when you can become pregnant.</string>
+    <string name="cycle_skin_result_none">No shift detected in the night skin temperature of this cycle so far. Three nights in a row at least %1$s above the six before were not found. That does not show whether ovulation happened.</string>
+    <string name="cycle_skin_result_weak">Signal too weak to judge: the nights of this cycle differ by at most %1$s, under the %2$s needed. This happens when a watch or ring smooths the data it passes on, which hides small rises. OpenVitals does not guess.</string>
     <string name="cycle_skin_result_insufficient">Too few nights of skin temperature in this cycle yet: at least 15 are needed before the cycle is read.</string>
+    <string name="cycle_skin_result_sparse" formatted="false">The nights of skin temperature in this cycle are too gappy to read: at least 70% of the days need a night, and no gap may be longer than three nights.</string>
     <string name="cycle_skin_result_not_plausible">A rise around %1$s was found, but it would leave the first part of the cycle outside 10 to 90 days or, in a finished cycle, the second part outside 7 to 17 days. It is not counted as a shift.</string>
     <string name="cycle_skin_result_source">Data source: %1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>

@@ -3719,10 +3719,11 @@
     <string name="cycle_thermal_skin_unavailable">Temperatury skóry nie można tu odczytać: być może żaden zegarek ani pierścień jej nie zapisał albo OpenVitals nie ma zgody na jej odczyt. Sprawdź uprawnienia Health Connect w Ustawieniach.</string>
     <string name="cycle_thermal_bbt_unavailable">Temperatura podstawowa jest niedostępna: w tym cyklu nie ma pomiaru porannego.</string>
     <string name="cycle_thermal_none_selected">Wybierz Rano (BBT) lub Noc (skóra), aby zobaczyć wykres.</string>
-    <string name="cycle_skin_result_confirmed">Wykryto z perspektywy czasu: od %1$s trzy noce z rzędu były każda o co najmniej 0,2 °C wyższe niż co najmniej pięć z sześciu poprzednich nocy (wzrost o około %2$s). To wzrost temperatury twojej skóry, a nie informacja o tym, kiedy możesz zajść w ciążę.</string>
-    <string name="cycle_skin_result_none">W nocnej temperaturze skóry z tego cyklu nie wykryto na razie żadnego przesunięcia. Nie znaleziono trzech nocy z rzędu o co najmniej 0,2 °C wyższych niż sześć poprzednich. To nie mówi, czy doszło do owulacji.</string>
-    <string name="cycle_skin_result_weak">Sygnał zbyt słaby, by go ocenić: noce tego cyklu różnią się co najwyżej o %1$s, czyli mniej niż potrzebne 0,2 °C. Tak bywa, gdy zegarek lub pierścień wygładza przekazywane dane i małe wzrosty znikają. OpenVitals nie zgaduje.</string>
+    <string name="cycle_skin_result_confirmed">Wykryto z perspektywy czasu: od %1$s trzy noce z rzędu były każda o co najmniej %3$s wyższe niż co najmniej pięć z sześciu poprzednich nocy (wzrost o około %2$s). To wzrost temperatury twojej skóry, a nie informacja o tym, kiedy możesz zajść w ciążę.</string>
+    <string name="cycle_skin_result_none">W nocnej temperaturze skóry z tego cyklu nie wykryto na razie żadnego przesunięcia. Nie znaleziono trzech nocy z rzędu o co najmniej %1$s wyższych niż sześć poprzednich. To nie mówi, czy doszło do owulacji.</string>
+    <string name="cycle_skin_result_weak">Sygnał zbyt słaby, by go ocenić: noce tego cyklu różnią się co najwyżej o %1$s, czyli mniej niż potrzebne %2$s. Tak bywa, gdy zegarek lub pierścień wygładza przekazywane dane i małe wzrosty znikają. OpenVitals nie zgaduje.</string>
     <string name="cycle_skin_result_insufficient">W tym cyklu jest jeszcze zbyt mało nocy z temperaturą skóry: do odczytania cyklu potrzeba ich co najmniej 15.</string>
+    <string name="cycle_skin_result_sparse" formatted="false">Noce z temperaturą skóry w tym cyklu mają zbyt wiele luk, by je odczytać: co najmniej 70 % dni musi mieć noc, a żadna luka nie może być dłuższa niż trzy noce.</string>
     <string name="cycle_skin_result_not_plausible">Około %1$s znaleziono wzrost, ale wtedy pierwsza część cyklu wypadłaby poza 10 do 90 dni lub, w zakończonym cyklu, druga część poza 7 do 17 dni. Nie liczy się jako przesunięcie.</string>
     <string name="cycle_skin_result_source">Źródło danych: %1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>

@@ -3661,10 +3661,11 @@
     <string name="cycle_thermal_skin_unavailable">Nahatemperatuuri ei saa siin lugeda: võib-olla pole ükski kell ega sõrmus seda kirjutanud või OpenVitalsil pole luba seda lugeda. Vaata Health Connecti õigusi Seadetes.</string>
     <string name="cycle_thermal_bbt_unavailable">Basaaltemperatuur pole saadaval: selles tsüklis pole hommikust mõõtmist.</string>
     <string name="cycle_thermal_none_selected">Diagrammi nägemiseks vali Hommik (BBT) või Öö (nahk).</string>
-    <string name="cycle_skin_result_confirmed">Tuvastatud tagantjärele: alates %1$s oli kolm ööd järjest igaüks vähemalt 0,2 °C kõrgem vähemalt viiest eelnevast kuuest ööst (tõus umbes %2$s). See on sinu nahatemperatuuri tõus, mitte väide selle kohta, millal sa võid rasestuda.</string>
-    <string name="cycle_skin_result_none">Selle tsükli öises nahatemperatuuris ei ole seni nihet tuvastatud. Kolme järjestikust ööd, mis oleksid vähemalt 0,2 °C kõrgemad eelnevast kuuest, ei leitud. See ei näita, kas ovulatsioon toimus.</string>
-    <string name="cycle_skin_result_weak">Signaal on hindamiseks liiga nõrk: selle tsükli ööd erinevad kuni %1$s, see on vähem kui vajalik 0,2 °C. Nii juhtub, kui kell või sõrmus silub edastatavaid andmeid ja väikesed tõusud kaovad. OpenVitals ei oska arvata.</string>
+    <string name="cycle_skin_result_confirmed">Tuvastatud tagantjärele: alates %1$s oli kolm ööd järjest igaüks vähemalt %3$s kõrgem vähemalt viiest eelnevast kuuest ööst (tõus umbes %2$s). See on sinu nahatemperatuuri tõus, mitte väide selle kohta, millal sa võid rasestuda.</string>
+    <string name="cycle_skin_result_none">Selle tsükli öises nahatemperatuuris ei ole seni nihet tuvastatud. Kolme järjestikust ööd, mis oleksid vähemalt %1$s kõrgemad eelnevast kuuest, ei leitud. See ei näita, kas ovulatsioon toimus.</string>
+    <string name="cycle_skin_result_weak">Signaal on hindamiseks liiga nõrk: selle tsükli ööd erinevad kuni %1$s, see on vähem kui vajalik %2$s. Nii juhtub, kui kell või sõrmus silub edastatavaid andmeid ja väikesed tõusud kaovad. OpenVitals ei oska arvata.</string>
     <string name="cycle_skin_result_insufficient">Selles tsüklis on nahatemperatuuriga öid veel liiga vähe: tsükli lugemiseks on vaja vähemalt 15.</string>
+    <string name="cycle_skin_result_sparse" formatted="false">Selle tsükli naha temperatuuri ööd on liiga hõredad, et neid lugeda: vähemalt 70 % päevadest vajab ööd ja ükski vahe ei tohi olla pikem kui kolm ööd.</string>
     <string name="cycle_skin_result_not_plausible">Umbes %1$s leiti tõus, kuid siis jääks tsükli esimene osa väljapoole 10 kuni 90 päeva või lõppenud tsüklis teine osa väljapoole 7 kuni 17 päeva. Seda ei loeta nihkeks.</string>
     <string name="cycle_skin_result_source">Andmeallikas: %1$s</string>
     <string name="cycle_thermal_day_label">P%1$d</string>

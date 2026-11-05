@@ -305,8 +305,8 @@ private fun CycleThermalChart(
             }
             if (skinPoints.isNotEmpty()) {
                 val text = unitFormatter.temperatureDelta(skinAxis.valueAt(fraction)).value
-                val measured = textMeasurer.measure(text, style = style.text.copy(color = style.skin))
-                drawText(textMeasurer, text, Offset(size.width - right + LabelGap.toPx(), y - measured.size.height / 2f), style.text.copy(color = style.skin))
+                val measured = textMeasurer.measure(text, style = style.text)
+                drawText(textMeasurer, text, Offset(size.width - right + LabelGap.toPx(), y - measured.size.height / 2f), style.text)
             }
         }
         if (points.isNotEmpty()) drawAxisTitle(textMeasurer, bbtTitle, style.text.copy(color = style.bbt), Offset(left, 0f), alignEnd = false)

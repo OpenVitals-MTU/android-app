@@ -3667,10 +3667,11 @@
     <string name="cycle_thermal_skin_unavailable">这里无法读取皮肤温度：可能没有手表或戒指写入过，也可能OpenVitals没有读取权限。请查看设置中的Health Connect权限。</string>
     <string name="cycle_thermal_bbt_unavailable">基础体温不可用：这个周期没有晨起测量。</string>
     <string name="cycle_thermal_none_selected">选择“早晨（BBT）”或“夜间（皮肤）”以查看图表。</string>
-    <string name="cycle_skin_result_confirmed">事后检测到：从%1$s起，连续三个夜晚各自比前六个夜晚中至少五个高出至少0.2 °C（升高约%2$s）。这是皮肤温度的升高，并不说明你何时可能怀孕。</string>
-    <string name="cycle_skin_result_none">这个周期的夜间皮肤温度目前未检测到变化。没有找到连续三个夜晚都比前六个夜晚高出至少0.2 °C的情况。这并不说明是否发生了排卵。</string>
-    <string name="cycle_skin_result_weak">信号太弱，无法判断：这个周期各夜之间最多相差%1$s，低于所需的0.2 °C。当手表或戒指对传出的数据做平滑处理时就会这样，小幅升高会被掩盖。OpenVitals不会猜测。</string>
+    <string name="cycle_skin_result_confirmed">事后检测到：从%1$s起，连续三个夜晚各自比前六个夜晚中至少五个高出至少%3$s（升高约%2$s）。这是皮肤温度的升高，并不说明你何时可能怀孕。</string>
+    <string name="cycle_skin_result_none">这个周期的夜间皮肤温度目前未检测到变化。没有找到连续三个夜晚都比前六个夜晚高出至少%1$s的情况。这并不说明是否发生了排卵。</string>
+    <string name="cycle_skin_result_weak">信号太弱，无法判断：这个周期各夜之间最多相差%1$s，低于所需的%2$s。当手表或戒指对传出的数据做平滑处理时就会这样，小幅升高会被掩盖。OpenVitals不会猜测。</string>
     <string name="cycle_skin_result_insufficient">这个周期里有皮肤温度的夜晚还太少：至少需要15个夜晚才能解读该周期。</string>
+    <string name="cycle_skin_result_sparse" formatted="false">本周期的夜间皮肤温度缺口太多，无法判读：至少 70 % 的日子需要有夜间数据，且缺口不能超过三个夜晚。</string>
     <string name="cycle_skin_result_not_plausible">在%1$s前后发现了升高，但这样周期的前半段会超出10到90天的范围，或者在已结束的周期中后半段会超出7到17天的范围。因此不算作变化。</string>
     <string name="cycle_skin_result_source">数据来源：%1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>

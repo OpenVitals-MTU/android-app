@@ -171,17 +171,17 @@ class SkinTemperatureShiftCalculatorTest {
     }
 
     @Test
-    fun `fifteen nights spread over sixty days are insufficient`() {
+    fun `fifteen nights spread over sixty days are too sparse`() {
         val start = LocalDate.of(2026, 3, 1)
         val nights = (0 until 15).map { SkinTemperatureNight(start.plusDays(it * 4L), "device.a", if (it > 8) 0.3 else 0.0) }
         val result = SkinTemperatureShiftCalculator.evaluateSource(start, null, "device.a", nights)
-        assertEquals(SkinTemperatureShiftResult.InsufficientData(15), result)
+        assertEquals(SkinTemperatureShiftResult.SparseData(15), result)
     }
 
     @Test
     fun `a gap longer than three days is not filled`() {
         val cycle = SyntheticCycle(length = 30, gaps = setOf(10, 11, 12, 13))
-        assertTrue(evaluate(cycle, nextPeriod = false).result is SkinTemperatureShiftResult.InsufficientData)
+        assertTrue(evaluate(cycle, nextPeriod = false).result is SkinTemperatureShiftResult.SparseData)
     }
 
     @Test

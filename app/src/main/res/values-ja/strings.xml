@@ -3733,10 +3733,11 @@
     <string name="cycle_thermal_skin_unavailable">ここでは皮膚温を読み取れません。時計やリングが書き込んでいないか、OpenVitalsに読み取りが許可されていない可能性があります。設定のHealth Connectの権限を確認してください。</string>
     <string name="cycle_thermal_bbt_unavailable">基礎体温は利用できません。この周期には朝の測定がありません。</string>
     <string name="cycle_thermal_none_selected">グラフを表示するには、朝（BBT）または夜（皮膚）を選んでください。</string>
-    <string name="cycle_skin_result_confirmed">後から検出: %1$s以降、3夜連続で、それぞれ直前6夜のうち少なくとも5夜より0.2 °C以上高くなりました（上昇は約%2$s）。これは皮膚温の上昇であり、いつ妊娠しうるかを示すものではありません。</string>
-    <string name="cycle_skin_result_none">この周期の夜間の皮膚温では、これまでのところ変化は検出されていません。直前6夜より0.2 °C以上高い夜が3夜連続する箇所は見つかりませんでした。排卵があったかどうかは、これでは分かりません。</string>
-    <string name="cycle_skin_result_weak">信号が弱すぎて判断できません。この周期の夜の差は最大でも%1$sで、必要な0.2 °Cに届きません。時計やリングが受け渡すデータを平滑化していると、小さな上昇が隠れることがあります。OpenVitalsは推測しません。</string>
+    <string name="cycle_skin_result_confirmed">後から検出: %1$s以降、3夜連続で、それぞれ直前6夜のうち少なくとも5夜より%3$s以上高くなりました（上昇は約%2$s）。これは皮膚温の上昇であり、いつ妊娠しうるかを示すものではありません。</string>
+    <string name="cycle_skin_result_none">この周期の夜間の皮膚温では、これまでのところ変化は検出されていません。直前6夜より%1$s以上高い夜が3夜連続する箇所は見つかりませんでした。排卵があったかどうかは、これでは分かりません。</string>
+    <string name="cycle_skin_result_weak">信号が弱すぎて判断できません。この周期の夜の差は最大でも%1$sで、必要な%2$sに届きません。時計やリングが受け渡すデータを平滑化していると、小さな上昇が隠れることがあります。OpenVitalsは推測しません。</string>
     <string name="cycle_skin_result_insufficient">この周期では、皮膚温のある夜がまだ少なすぎます。周期を読み取るには、少なくとも15夜が必要です。</string>
+    <string name="cycle_skin_result_sparse" formatted="false">この周期の皮膚温の夜は欠けが多すぎて読み取れません。日数の70 %以上に夜のデータが必要で、欠けは3夜を超えてはいけません。</string>
     <string name="cycle_skin_result_not_plausible">%1$s頃に上昇が見つかりましたが、その場合、周期の前半が10〜90日の範囲外、または完了した周期では後半が7〜17日の範囲外になります。変化としては数えません。</string>
     <string name="cycle_skin_result_source">データ元: %1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>

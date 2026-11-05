@@ -3719,10 +3719,11 @@
     <string name="cycle_thermal_skin_unavailable">Teplotu kůže tu nelze číst: žádné hodinky ani prsten ji nemusely zapsat, nebo ji OpenVitals nemusí smět číst. Podívej se na oprávnění Health Connect v Nastavení.</string>
     <string name="cycle_thermal_bbt_unavailable">Bazální teplota není k dispozici: v tomto cyklu není žádné ranní měření.</string>
     <string name="cycle_thermal_none_selected">Vyber Ráno (BBT) nebo Noc (kůže), aby se zobrazil graf.</string>
-    <string name="cycle_skin_result_confirmed">Zjištěno zpětně: od %1$s byly tři noci po sobě každá nejméně o 0,2 °C nad nejméně pěti z šesti předchozích nocí (vzestup asi %2$s). Jde o vzestup teploty tvé kůže, ne o tvrzení, kdy můžeš otěhotnět.</string>
-    <string name="cycle_skin_result_none">V nočních teplotách kůže tohoto cyklu zatím nebyl zjištěn žádný posun. Nenašly se tři noci po sobě nejméně o 0,2 °C nad předchozími šesti. To neříká, zda k ovulaci došlo.</string>
-    <string name="cycle_skin_result_weak">Signál je příliš slabý na posouzení: noci tohoto cyklu se liší nejvýše o %1$s, tedy méně než potřebných 0,2 °C. To se stává, když hodinky nebo prsten data, která předávají, vyhlazují, a malé vzestupy tak zmizí. OpenVitals nehádá.</string>
+    <string name="cycle_skin_result_confirmed">Zjištěno zpětně: od %1$s byly tři noci po sobě každá nejméně o %3$s nad nejméně pěti z šesti předchozích nocí (vzestup asi %2$s). Jde o vzestup teploty tvé kůže, ne o tvrzení, kdy můžeš otěhotnět.</string>
+    <string name="cycle_skin_result_none">V nočních teplotách kůže tohoto cyklu zatím nebyl zjištěn žádný posun. Nenašly se tři noci po sobě nejméně o %1$s nad předchozími šesti. To neříká, zda k ovulaci došlo.</string>
+    <string name="cycle_skin_result_weak">Signál je příliš slabý na posouzení: noci tohoto cyklu se liší nejvýše o %1$s, tedy méně než potřebných %2$s. To se stává, když hodinky nebo prsten data, která předávají, vyhlazují, a malé vzestupy tak zmizí. OpenVitals nehádá.</string>
     <string name="cycle_skin_result_insufficient">V tomto cyklu je zatím příliš málo nocí s teplotou kůže: před vyhodnocením cyklu je jich potřeba alespoň 15.</string>
+    <string name="cycle_skin_result_sparse" formatted="false">Noci s teplotou kůže v tomto cyklu mají příliš mnoho mezer na vyhodnocení: alespoň 70 % dnů potřebuje noční měření a žádná mezera nesmí být delší než tři noci.</string>
     <string name="cycle_skin_result_not_plausible">Kolem %1$s byl nalezen vzestup, ale první část cyklu by pak ležela mimo 10 až 90 dní, nebo ve skončeném cyklu druhá část mimo 7 až 17 dní. Nepočítá se jako posun.</string>
     <string name="cycle_skin_result_source">Zdroj dat: %1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>

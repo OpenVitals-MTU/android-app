@@ -61,6 +61,9 @@ sealed interface SkinTemperatureShiftResult {
     /** Fewer than [SkinTemperatureShiftCalculator.MIN_NIGHTS] nights of any one source. */
     data class InsufficientData(val nights: Int) : SkinTemperatureShiftResult
 
+    /** Enough nights, but too thin or gapped to read: under 70% of the days are real nights, or a gap is longer than three nights. */
+    data class SparseData(val nights: Int) : SkinTemperatureShiftResult
+
     /** A rise was found, but it leaves the follicular or luteal phase outside its plausible range. */
     data class NotPlausible(
         val firstHighDay: LocalDate,
@@ -166,10 +169,10 @@ object SkinTemperatureShiftCalculator {
             .sortedBy { it.first }
         if (inCycle.size < MIN_NIGHTS) return SkinTemperatureShiftResult.InsufficientData(inCycle.size)
         val span = ChronoUnit.DAYS.between(inCycle.first().first, inCycle.last().first) + 1
-        if (inCycle.size < MIN_REAL_SHARE * span) return SkinTemperatureShiftResult.InsufficientData(inCycle.size)
+        if (inCycle.size < MIN_REAL_SHARE * span) return SkinTemperatureShiftResult.SparseData(inCycle.size)
 
-        val series = cleaned(inCycle) ?: return SkinTemperatureShiftResult.InsufficientData(inCycle.size)
-        if (series.size < LOW_NIGHTS + HIGH_NIGHTS) return SkinTemperatureShiftResult.InsufficientData(inCycle.size)
+        val series = cleaned(inCycle) ?: return SkinTemperatureShiftResult.SparseData(inCycle.size)
+        if (series.size < LOW_NIGHTS + HIGH_NIGHTS) return SkinTemperatureShiftResult.SparseData(inCycle.size)
         val values = series.map { it.value }
 
         val amplitude = strongestAmplitude(values)
@@ -270,12 +273,14 @@ object SkinTemperatureShiftCalculator {
         SkinTemperatureShiftResult.None -> 1
         is SkinTemperatureShiftResult.SignalTooWeak -> 2
         is SkinTemperatureShiftResult.NotPlausible -> 3
-        is SkinTemperatureShiftResult.InsufficientData -> 4
+        is SkinTemperatureShiftResult.SparseData -> 4
+        is SkinTemperatureShiftResult.InsufficientData -> 5
     }
 
     private fun strength(result: SkinTemperatureShiftResult): Double = when (result) {
         is SkinTemperatureShiftResult.Confirmed -> result.amplitudeCelsius
         is SkinTemperatureShiftResult.SignalTooWeak -> result.amplitudeCelsius
+        is SkinTemperatureShiftResult.SparseData -> result.nights.toDouble()
         is SkinTemperatureShiftResult.InsufficientData -> result.nights.toDouble()
         else -> 0.0
     }

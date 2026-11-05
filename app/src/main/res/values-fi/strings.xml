@@ -3661,10 +3661,11 @@
     <string name="cycle_thermal_skin_unavailable">Ihon lämpötilaa ei voi lukea tässä: mikään kello tai sormus ei ehkä ole kirjoittanut sitä, tai OpenVitalsilla ei ehkä ole lupaa lukea sitä. Katso Health Connectin käyttöoikeudet Asetuksista.</string>
     <string name="cycle_thermal_bbt_unavailable">Peruslämpötila ei ole saatavilla: tässä kierrossa ei ole aamumittausta.</string>
     <string name="cycle_thermal_none_selected">Valitse Aamu (BBT) tai Yö (iho), niin kaavio näkyy.</string>
-    <string name="cycle_skin_result_confirmed">Havaittu jälkikäteen: %1$s alkaen kolme yötä peräkkäin oli kukin vähintään 0,2 °C korkeammalla kuin vähintään viisi edeltävistä kuudesta yöstä (nousu noin %2$s). Tämä on ihosi lämpötilan nousu, ei väite siitä, milloin voit tulla raskaaksi.</string>
-    <string name="cycle_skin_result_none">Tämän kierron yölliseen ihon lämpötilaan ei ole toistaiseksi havaittu siirtymää. Kolmea peräkkäistä yötä, jotka olisivat vähintään 0,2 °C edeltävää kuutta korkeammalla, ei löytynyt. Se ei kerro, tapahtuiko ovulaatio.</string>
-    <string name="cycle_skin_result_weak">Signaali on liian heikko arvioitavaksi: tämän kierron yöt eroavat enintään %1$s, vähemmän kuin tarvittava 0,2 °C. Näin käy, kun kello tai sormus tasoittaa välittämiään tietoja ja pienet nousut katoavat. OpenVitals ei arvaa.</string>
+    <string name="cycle_skin_result_confirmed">Havaittu jälkikäteen: %1$s alkaen kolme yötä peräkkäin oli kukin vähintään %3$s korkeammalla kuin vähintään viisi edeltävistä kuudesta yöstä (nousu noin %2$s). Tämä on ihosi lämpötilan nousu, ei väite siitä, milloin voit tulla raskaaksi.</string>
+    <string name="cycle_skin_result_none">Tämän kierron yölliseen ihon lämpötilaan ei ole toistaiseksi havaittu siirtymää. Kolmea peräkkäistä yötä, jotka olisivat vähintään %1$s edeltävää kuutta korkeammalla, ei löytynyt. Se ei kerro, tapahtuiko ovulaatio.</string>
+    <string name="cycle_skin_result_weak">Signaali on liian heikko arvioitavaksi: tämän kierron yöt eroavat enintään %1$s, vähemmän kuin tarvittava %2$s. Näin käy, kun kello tai sormus tasoittaa välittämiään tietoja ja pienet nousut katoavat. OpenVitals ei arvaa.</string>
     <string name="cycle_skin_result_insufficient">Tässä kierrossa on vielä liian vähän öitä, joilta on ihon lämpötila: kierron lukemiseen tarvitaan vähintään 15.</string>
+    <string name="cycle_skin_result_sparse" formatted="false">Tämän jakson ihon lämpötilan yöt ovat liian aukkoisia luettaviksi: vähintään 70 %:lle päivistä tarvitaan yö, eikä yksikään aukko saa olla kolmea yötä pidempi.</string>
     <string name="cycle_skin_result_not_plausible">Noin %1$s löytyi nousu, mutta silloin kierron ensimmäinen osa jäisi 10–90 päivän ulkopuolelle tai päättyneessä kierrossa toinen osa 7–17 päivän ulkopuolelle. Sitä ei lasketa siirtymäksi.</string>
     <string name="cycle_skin_result_source">Tietolähde: %1$s</string>
     <string name="cycle_thermal_day_label">P%1$d</string>

@@ -24,17 +24,22 @@ internal fun skinResultText(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ): String {
     val date = dateTimeFormatterProvider.mediumDate()
+    // The 0.2 °C the rule needs, in the reader's unit.
+    val threshold = unitFormatter.temperatureDelta(0.2, signed = false).text
     return when (val result = skin.result) {
         is SkinTemperatureShiftResult.Confirmed -> stringResource(
             R.string.cycle_skin_result_confirmed,
             date.format(result.firstHighDay),
             unitFormatter.temperatureDelta(result.amplitudeCelsius).let { "${it.value} ${it.unit}" },
+            threshold,
         )
-        SkinTemperatureShiftResult.None -> stringResource(R.string.cycle_skin_result_none)
+        SkinTemperatureShiftResult.None -> stringResource(R.string.cycle_skin_result_none, threshold)
         is SkinTemperatureShiftResult.SignalTooWeak -> stringResource(
             R.string.cycle_skin_result_weak,
             unitFormatter.temperatureDelta(result.amplitudeCelsius).let { "${it.value} ${it.unit}" },
+            threshold,
         )
+        is SkinTemperatureShiftResult.SparseData -> stringResource(R.string.cycle_skin_result_sparse)
         is SkinTemperatureShiftResult.InsufficientData -> stringResource(R.string.cycle_skin_result_insufficient)
         is SkinTemperatureShiftResult.NotPlausible -> stringResource(
             R.string.cycle_skin_result_not_plausible,
