@@ -30,6 +30,13 @@ data class CycleObservations(
     val bbtReadings: List<BbtReading> = emptyList(),
     val mucusDays: Map<LocalDate, Boolean> = emptyMap(),
 ) {
+    /** These observations and [other], read from different date ranges. */
+    operator fun plus(other: CycleObservations) = CycleObservations(
+        lhPositiveDays = lhPositiveDays + other.lhPositiveDays,
+        bbtReadings = (bbtReadings + other.bbtReadings).sortedBy { it.date },
+        mucusDays = mucusDays + other.mucusDays,
+    )
+
     companion object {
         /**
          * The latest temperature of a day counts; a journal disturbance flags it.

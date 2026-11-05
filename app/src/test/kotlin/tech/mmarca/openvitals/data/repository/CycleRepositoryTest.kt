@@ -23,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
@@ -169,6 +170,35 @@ class CycleRepositoryTest {
         assertEquals(listOf(ovulation), data.ovulationTests)
         assertEquals(listOf(mucus), data.cervicalMucus)
         assertEquals(listOf(bbt), data.basalBodyTemperature)
+    }
+
+    @Test fun `loadCycleStatistics reads the earlier cycles only when the current cycle holds a marker`() = runTest {
+        val today = LocalDate.of(2026, 3, 20)
+        val currentStart = LocalDate.of(2026, 2, 26)
+        fun at(date: LocalDate) = date.atStartOfDay(zone).toInstant()
+        val hc = hc(grantedPermissions = allCyclePermissions)
+        val periods = listOf(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 29), currentStart).map {
+            MenstruationPeriodEntry(startTime = at(it), endTime = at(it.plusDays(5)), source = "test")
+        }
+        coEvery { hc.readMenstruationFlowEntries(any(), any()) } returns emptyList()
+        coEvery { hc.readMenstruationPeriods(any(), any()) } returns periods
+        coEvery { hc.readCervicalMucusEntries(any(), any()) } returns emptyList()
+        coEvery { hc.readBasalBodyTemperatureEntries(any(), any()) } returns emptyList()
+        coEvery { hc.readOvulationTests(any(), any()) } returns emptyList()
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
+
+        repository.loadCycleStatistics(today)
+
+        // No marker yet: only the current cycle is read.
+        coVerify(exactly = 1) { hc.readOvulationTests(any(), any()) }
+        coVerify(exactly = 1) { hc.readOvulationTests(at(currentStart), any()) }
+
+        coEvery { hc.readOvulationTests(at(currentStart), any()) } returns
+            listOf(OvulationTestEntry(time = at(currentStart.plusDays(12)), result = CycleRecordValues.OVULATION_POSITIVE, source = "test"))
+        repository.loadCycleStatistics(today)
+
+        // A marker: the earlier cycles are read too, from the first of them.
+        coVerify(exactly = 1) { hc.readOvulationTests(at(LocalDate.of(2026, 1, 1)), at(currentStart)) }
     }
 
     private fun hc(
