@@ -76,7 +76,7 @@ Once the current cycle holds a recorded sign that ovulation has passed, the esti
 
 Each marker has its own interval to the next start, learned from the user's earlier cycles that hold the same marker (the last six, 7 to 20 days) and shrunk toward a published prior with weight 2: LH 13.8 ± 1.86 days, temperature 11.0 ± 2.07, mucus 13.0 ± 2.5. The window is 1.96 standard deviations, at least 2 and at most 22 days, and never starts inside recorded flow. A declared timing context floors the variance at the prior.
 
-When an LH test or a mucus peak falls zero to three days before the first high day, the shift is confirmed and the card says another sign agrees. The LH test anchors when there is one, the temperature otherwise. When a shift and another marker are recorded and none agrees, the estimate keeps the calendar and the card says the signs disagree. An excluded current cycle always keeps the calendar.
+When an LH test falls up to five days, or a mucus peak up to three days, before the first high day, the shift is confirmed and the card says another sign agrees. The LH test anchors when there is one, the temperature otherwise. When a shift and another marker are recorded and none agrees, the estimate keeps the calendar and the card says the signs disagree. A marker on the first six days of the cycle is taken for a stray entry and ignored. An excluded current cycle always keeps the calendar.
 
 The card names what the range counts from. A marker estimate is still an estimate of the next period: it never marks fertile or infertile days.
 

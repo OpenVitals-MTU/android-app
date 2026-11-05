@@ -21,8 +21,23 @@ internal object MarkerEstimate {
     /** A temperature shift and another marker were recorded, and they do not agree. */
     data object Disagreement : Result
 
-    /** A marker within this many days before the first high day agrees with it. */
-    private const val AGREEMENT_DAYS = 3
+    /**
+     * A marker within this many days before the first high day agrees with it. The mucus
+     * bound is the mucus peak's 1 to 3 days before the rise. The LH bound is wider: the
+     * rise follows the LH peak by 2.4 ± 1.5 days (Henry et al. 2024), so 5 covers the
+     * spread. Not sourced beyond that; the LH bound is a reading of the same figure.
+     */
+    private val agreementDays = mapOf(
+        OvulationMarker.LH_TEST to 5,
+        OvulationMarker.MUCUS to 3,
+    )
+
+    /**
+     * A marker on an earlier day of the cycle is a stray entry, not ovulation, and is
+     * ignored: a positive test on day 3 would otherwise centre the estimate on day 17.
+     * Day 1 is the first day of bleeding. Not sourced.
+     */
+    private const val MINIMUM_MARKER_CYCLE_DAY = 7
 
     /** Marker-to-start intervals outside this range are not modelled. */
     private val plausibleIntervalDays = 7..20
@@ -58,7 +73,9 @@ internal object MarkerEstimate {
         hasTimingContext: Boolean,
     ): Result? {
         val current = sorted.lastOrNull()?.takeIf { it.isCurrent && !it.isExcludedFromEstimates } ?: return null
-        val recorded = markers[current.startDate].orEmpty()
+        val recorded = markers[current.startDate].orEmpty().filterValues {
+            ChronoUnit.DAYS.between(current.startDate, it) + 1 >= MINIMUM_MARKER_CYCLE_DAY
+        }
         if (recorded.isEmpty()) return null
 
         val temperature = recorded[OvulationMarker.TEMPERATURE]
@@ -66,8 +83,8 @@ internal object MarkerEstimate {
             emptySet()
         } else {
             recorded.filter { (marker, date) ->
-                marker != OvulationMarker.TEMPERATURE &&
-                    ChronoUnit.DAYS.between(date, temperature) in 0..AGREEMENT_DAYS
+                val bound = agreementDays[marker] ?: return@filter false
+                ChronoUnit.DAYS.between(date, temperature) in 0..bound
             }.keys
         }
         val anchor = when {

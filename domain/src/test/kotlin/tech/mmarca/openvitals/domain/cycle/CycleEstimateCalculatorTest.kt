@@ -295,6 +295,56 @@ class CycleEstimateCalculatorTest {
     }
 
     @Test
+    fun `an LH test up to five days before the temperature shift confirms it`() {
+        val cycles = closedCycles("2025-01-01", 28, 28)
+        val shift = LocalDate.parse("2025-03-15")
+
+        val basis = markerBasis(cycles, OvulationMarker.TEMPERATURE to shift, OvulationMarker.LH_TEST to shift.minusDays(5))
+
+        assertEquals(OvulationMarker.LH_TEST, basis.anchor)
+        assertEquals(setOf(OvulationMarker.LH_TEST, OvulationMarker.TEMPERATURE), basis.confirmedBy)
+    }
+
+    @Test
+    fun `an LH test six days before the temperature shift disagrees`() {
+        val cycles = closedCycles("2025-01-01", 28, 28)
+        val shift = LocalDate.parse("2025-03-15")
+
+        val estimate = requireNotNull(
+            CycleEstimateCalculator.evaluate(
+                cycles,
+                markers = currentMarkers(cycles, OvulationMarker.TEMPERATURE to shift, OvulationMarker.LH_TEST to shift.minusDays(6)),
+            ).estimateOrNull,
+        )
+
+        assertEquals(CycleEstimateBasis.Calendar(markersDisagree = true), estimate.basis)
+    }
+
+    @Test
+    fun `a marker on an early cycle day is ignored and the calendar estimate stays`() {
+        val cycles = closedCycles("2025-01-01", 28, 28)
+        val stray = cycles.last().startDate.plusDays(2)
+
+        val estimate = requireNotNull(
+            CycleEstimateCalculator.evaluate(cycles, markers = currentMarkers(cycles, OvulationMarker.LH_TEST to stray)).estimateOrNull,
+        )
+
+        assertEquals(CycleEstimateBasis.Calendar(), estimate.basis)
+    }
+
+    @Test
+    fun `an early stray marker does not make a valid temperature shift disagree`() {
+        val cycles = closedCycles("2025-01-01", 28, 28)
+        val shift = LocalDate.parse("2025-03-15")
+        val stray = cycles.last().startDate.plusDays(2)
+
+        val basis = markerBasis(cycles, OvulationMarker.TEMPERATURE to shift, OvulationMarker.LH_TEST to stray)
+
+        assertEquals(OvulationMarker.TEMPERATURE, basis.anchor)
+        assertEquals(emptySet<OvulationMarker>(), basis.confirmedBy)
+    }
+
+    @Test
     fun `an excluded current cycle keeps the calendar estimate`() {
         val cycles = closedCycles("2025-01-01", 28, 28).let { it.dropLast(1) + it.last().copy(isExcludedFromEstimates = true) }
 
@@ -326,6 +376,10 @@ class CycleEstimateCalculatorTest {
 
     private fun currentMarkers(cycles: List<RecordedCycle>, vararg markers: Pair<OvulationMarker, LocalDate>) =
         mapOf(cycles.last().startDate to markers.toMap())
+
+    private fun markerBasis(cycles: List<RecordedCycle>, vararg markers: Pair<OvulationMarker, LocalDate>) =
+        requireNotNull(CycleEstimateCalculator.evaluate(cycles, markers = currentMarkers(cycles, *markers)).estimateOrNull).basis
+            as CycleEstimateBasis.Marker
 
     private fun radiusOf(estimate: CycleEstimate): Int =
         ChronoUnit.DAYS.between(estimate.centralDate, estimate.latestDate).toInt()
