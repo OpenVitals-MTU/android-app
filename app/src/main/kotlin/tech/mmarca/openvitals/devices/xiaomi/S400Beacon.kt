@@ -60,6 +60,10 @@ object S400Beacon {
 
     private const val OBJECT_WEIGH_IN = 0x6E16
     private const val OBJECT_WEIGH_IN_SIZE = 9
+    private const val WEIGHT_MASK = 0x7FFL
+
+    /** All weight bits set: the S400 Pro's "no weight" in its 250 kHz frame. */
+    private const val WEIGHT_ABSENT = 0x7FF
 
     private val AssociatedData = byteArrayOf(0x11)
 
@@ -144,11 +148,13 @@ object S400Beacon {
      * `profile (1), packed (4), timestamp (4)`. The packed word holds the
      * weight in its low 11 bits (0.1 kg), the heart rate in the next 7 (less
      * 50) and the impedance in the top 14 (0.1 ohm). The frame with a weight
-     * carries the 50 kHz impedance, the one without the 250 kHz.
+     * carries the 50 kHz impedance, the one without the 250 kHz. The S400
+     * leaves the weight bits clear in that second frame; the S400 Pro
+     * (MJTZC03YM) sets them all, which read literally is 204.7 kg.
      */
     private fun weighIn(objects: ByteArray, at: Int): S400Frame {
         val packed = objects.u32(at + 1)
-        val weight = (packed and 0x7FF).toInt()
+        val weight = (packed and WEIGHT_MASK).toInt().takeIf { it != WEIGHT_ABSENT } ?: 0
         val heartRate = ((packed ushr 11) and 0x7F).toInt()
         val impedance = (packed ushr 18).toInt().takeIf { it != 0 }?.let { it / 10.0 }
         val reading = if (weight != 0) {
