@@ -87,6 +87,23 @@ class CyclePreferencesRepositoryTest {
     }
 
     @Test
+    fun `saving the derived profile while the pill scheme is on keeps the stored method`() {
+        val prefs = FakeSharedPreferences()
+        val repository = repository(prefs)
+        val implant = HormonalContraception(HormonalContraceptionKind.IMPLANT, LocalDate.of(2026, 8, 1))
+        repository.setCycleTrackingProfile(CycleTrackingProfile(hormonalContraception = implant))
+        repository.setPillPlan(PillPlan(enabled = true, packStart = LocalDate.of(2026, 9, 1), updatedAt = Instant.parse("2026-09-01T08:00:00Z")))
+
+        // What a caller does after a context edit: hand back the profile it read, pill included.
+        repository.setCycleTrackingProfile(repository.cycleTrackingProfile().copy(ageBand = AgeBand.entries.first()))
+        assertEquals(HormonalContraceptionKind.PILL, repository.cycleTrackingProfile().hormonalContraception.kind)
+
+        repository.setPillPlan(PillPlan(enabled = false, packStart = LocalDate.of(2026, 9, 1), updatedAt = Instant.parse("2026-09-02T08:00:00Z")))
+        assertEquals(implant, repository.cycleTrackingProfile().hormonalContraception)
+        assertEquals(AgeBand.entries.first(), repository.cycleTrackingProfile().ageBand)
+    }
+
+    @Test
     fun `a pill scheme stored by an older build reads as the pill`() {
         val prefs = FakeSharedPreferences()
         prefs.edit().putBoolean("pill_enabled", true).commit()

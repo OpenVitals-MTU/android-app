@@ -41,13 +41,17 @@ class CyclePreferencesRepository @Inject constructor(
             putString(KEY_CONTEXTS, profile.contexts.map { it.id }.sorted().joinToString(SEPARATOR))
             val ageBand = profile.ageBand
             if (ageBand == null) remove(KEY_AGE_BAND) else putString(KEY_AGE_BAND, ageBand.id)
-            val hormonal = profile.hormonalContraception
-            if (hormonal.isDeclared) putString(KEY_HORMONAL_KIND, hormonal.kind.id) else remove(KEY_HORMONAL_KIND)
-            val stopped = hormonal.stoppedOn
-            if (hormonal.isDeclared && stopped != null) {
-                putString(KEY_HORMONAL_STOPPED, stopped.toString())
-            } else {
-                remove(KEY_HORMONAL_STOPPED)
+            // While the pill scheme is on, it owns the method. Callers hand back the derived profile,
+            // so writing it would replace the stored method with "pill" for good.
+            if (!prefs.getBoolean(KEY_PILL_ENABLED, false)) {
+                val hormonal = profile.hormonalContraception
+                if (hormonal.isDeclared) putString(KEY_HORMONAL_KIND, hormonal.kind.id) else remove(KEY_HORMONAL_KIND)
+                val stopped = hormonal.stoppedOn
+                if (hormonal.isDeclared && stopped != null) {
+                    putString(KEY_HORMONAL_STOPPED, stopped.toString())
+                } else {
+                    remove(KEY_HORMONAL_STOPPED)
+                }
             }
         }
         this.profile.value = readProfile()
