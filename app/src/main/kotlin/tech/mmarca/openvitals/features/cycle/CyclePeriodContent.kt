@@ -161,6 +161,12 @@ internal fun LazyListScope.cyclePeriodContent(
         section(MetricDetailSectionId.CYCLE_THERMAL, today.hasCycleHistory) {
             SectionHeader(stringResource(R.string.section_cycle_thermal))
             CycleThermalCard(thermal = display.thermal, unitFormatter = unitFormatter, modifier = sectionModifier)
+            CycleSkinTemperatureInfoCard(
+                unitFormatter = unitFormatter,
+                pillTracked = today.pill != null,
+                pcosDeclared = today.pcosDeclared,
+                modifier = sectionModifier,
+            )
         }
         section(MetricDetailSectionId.CYCLE_PATTERNS, today.hasCycleHistory) {
             SectionHeader(stringResource(R.string.section_cycle_patterns))

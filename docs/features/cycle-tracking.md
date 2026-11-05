@@ -88,6 +88,12 @@ Bleeding days are menstrual. Days 2 to 7 without a bleeding entry are indetermin
 
 Over the current cycle's basal temperatures: six lows followed by three highs, the third at least 0.2 °C above the highest low, no gap over three days, at most a two-day transition. Disturbed readings are shown but skipped. A confirmed shift is retrospective information, never a prediction.
 
+### Skin temperature information card
+
+Under the thermal chart, a card explains what night-time skin temperature from a watch or ring can and cannot say. The estimates and the thermal shift do not use it: the card is background information. It says the rise after ovulation is read afterwards from the whole cycle, never in advance, and says the app makes no fertility, contraception or medical claim.
+
+A toggle shows the numbers and the papers (Wang 2025, Thigpen 2025, Maijala 2019, Shilaih 2018, Zhu 2021, each with its DOI link). Two notes are always visible when they apply: a tracked contraceptive pill (the large wrist-temperature study excluded hormonal contraception and the two months after) and a declared PCOS context (no study of temperature-based ovulation detection in PCOS was found). Every number on the card was read in the paper's abstract or full text; see the design document, *Skin temperature sources*.
+
 ## Cycle management
 
 - **Add past period**: writes a light-flow record at noon on a chosen day up to 92 days back, so the estimator has history sooner.
