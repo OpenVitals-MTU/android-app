@@ -1,10 +1,12 @@
 package tech.mmarca.openvitals.devices.xiaomi
 
+import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.ScaleReading
+import tech.mmarca.openvitals.domain.model.ScaleWeighIn
 
 /**
  * Frames captured from real scales, with the keys their owners published:
@@ -25,6 +27,13 @@ class S400BeaconTest {
     private val synthetic = Scale("02:00:00:00:00:01", "00112233445566778899aabbccddeeff")
     private val highImpedanceFrame = "4859d53b072ee59431ca8a3a99837c0e64000000e045abeb"
     private val weightFrame = "4859d53b0abc078ff2348c844138e930220000009e538599"
+
+    /**
+     * An S400 Pro (MJTZC03YM) built by xiaomi-ble's test suite: profile 1,
+     * all weight bits set, 498.0 ohm at 250 kHz, sealed for [pro].
+     */
+    private val pro = Scale("D0:7B:6F:F6:BE:EF", "5b3c8a1e9d2f47c6b0a4e8d1c7f29a63")
+    private val proHighImpedanceFrame = "4859054b12a3bc6db82994e10dd162d0340000005e55f7e5"
 
     private fun decode(scale: Scale, frame: String, address: String = scale.address, key: ByteArray = scale.key) =
         S400Beacon.decode(frame.hexToByteArray(), address, key)
@@ -86,6 +95,28 @@ class S400BeaconTest {
             S400BeaconResult.Frame(S400Frame(3, 1767225600, ScaleReading(80.0, 70, impedanceLowOhm = 900.0))),
             decode(synthetic, highImpedanceFrame),
         )
+    }
+
+    @Test
+    fun `the S400 Pro's second frame is an impedance, not a weight of 204 kg`() {
+        assertEquals(
+            S400BeaconResult.Frame(S400Frame(1, 1760000000, ScaleReading(impedanceHighOhm = 498.0))),
+            decode(pro, proHighImpedanceFrame),
+        )
+    }
+
+    @Test
+    fun `the S400 Pro's second frame adds to the weight frame and never replaces it`() {
+        val second = (decode(pro, proHighImpedanceFrame) as S400BeaconResult.Frame).frame
+        val first = ScaleReading(72.4, 68, impedanceLowOhm = 410.0)
+        val weighIn = ScaleWeighIn(second.scaleTimestamp, second.profile, Instant.EPOCH, first, updatedMillis = 1)
+
+        assertEquals(
+            ScaleReading(72.4, 68, impedanceLowOhm = 410.0, impedanceHighOhm = 498.0),
+            weighIn.mergedWith(second.reading, 2).reading,
+        )
+        // Heard first, it waits for the weight like the S400's own second frame.
+        assertFalse(weighIn.copy(reading = second.reading).isWritable)
     }
 
     @Test
