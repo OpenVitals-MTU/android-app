@@ -73,8 +73,11 @@ class UnitFormatter(
         return DisplayValue(decimal(TemperatureUnits.fromCelsius(celsius, system), decimals), TemperatureUnits.label(system))
     }
 
-    /** A signed difference: no freezing-point offset, and a value that rounds to zero is "0.0", unsigned. */
-    fun temperatureDelta(celsius: Double): DisplayValue {
+    /**
+     * A difference: no freezing-point offset, and a value that rounds to zero is "0.0", unsigned.
+     * [signed] false drops the "+" for running text ("about 0.3 deg C").
+     */
+    fun temperatureDelta(celsius: Double, signed: Boolean = true): DisplayValue {
         val system = unitSystem(UnitQuantity.TEMPERATURE)
         val converted = when (system) {
             UnitSystem.METRIC -> celsius
@@ -83,7 +86,7 @@ class UnitFormatter(
         // Sign and digits must agree after rounding: -0.04 is "0.0", not "-0.0". The
         // added zero turns IEEE negative zero into positive zero.
         val value = (converted * 10.0).roundToLong() / 10.0 + 0.0
-        val prefix = if (value > 0.0) "+" else ""
+        val prefix = if (signed && value > 0.0) "+" else ""
         return DisplayValue("$prefix${decimal(value, 1)}", TemperatureUnits.label(system))
     }
 

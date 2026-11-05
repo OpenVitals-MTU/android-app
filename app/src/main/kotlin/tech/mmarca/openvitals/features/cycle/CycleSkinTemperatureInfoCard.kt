@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.cycle.CycleSource
 import tech.mmarca.openvitals.domain.cycle.CycleSources
 import tech.mmarca.openvitals.ui.components.AccentIconChip
@@ -27,6 +28,12 @@ import tech.mmarca.openvitals.ui.components.ReferenceLinkButton
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 import tech.mmarca.openvitals.ui.theme.Spacing
+
+// The two figures the studies report, in Celsius; the card shows them in the user's unit.
+private const val RingRiseCelsius = 0.3
+private const val AppleWatchThresholdCelsius = 0.2
+
+private fun UnitFormatter.studyDelta(celsius: Double): String = temperatureDelta(celsius, signed = false).text
 
 private val SkinTemperatureSources: List<CycleSource> = listOf(
     CycleSources.WANG_WRIST,
@@ -44,6 +51,7 @@ private val SkinTemperatureSources: List<CycleSource> = listOf(
  */
 @Composable
 internal fun CycleSkinTemperatureInfoCard(
+    unitFormatter: UnitFormatter,
     pillTracked: Boolean,
     pcosDeclared: Boolean,
     modifier: Modifier = Modifier,
@@ -59,7 +67,10 @@ internal fun CycleSkinTemperatureInfoCard(
                     modifier = Modifier.padding(start = Spacing.md),
                 )
             }
-            Text(text = stringResource(R.string.cycle_skin_intro), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = stringResource(R.string.cycle_skin_intro, unitFormatter.studyDelta(RingRiseCelsius)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
             if (pillTracked) {
                 SkinNote(R.string.cycle_skin_note_pill)
             }
@@ -67,7 +78,7 @@ internal fun CycleSkinTemperatureInfoCard(
                 SkinNote(R.string.cycle_skin_note_pcos)
             }
             if (expanded) {
-                SkinDetails()
+                SkinDetails(unitFormatter)
             }
             Text(
                 text = stringResource(R.string.cycle_skin_not_a_method),
@@ -87,9 +98,12 @@ private fun SkinNote(textRes: Int) {
 }
 
 @Composable
-private fun SkinDetails() {
+private fun SkinDetails(unitFormatter: UnitFormatter) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Text(text = stringResource(R.string.cycle_skin_accuracy), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = stringResource(R.string.cycle_skin_accuracy, unitFormatter.studyDelta(AppleWatchThresholdCelsius)),
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Text(text = stringResource(R.string.cycle_skin_limits), style = MaterialTheme.typography.bodyMedium)
         SkinTemperatureSources.forEach { source ->
             ReferenceLinkButton(title = source.label, url = source.url)
