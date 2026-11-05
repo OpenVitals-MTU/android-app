@@ -81,6 +81,17 @@ class CycleViewModelNightlyTest {
         assertEquals(setOf("sleep", "hrv"), vm.nightlyPermissions)
     }
 
+    @Test fun `a failed nightly read is kept as an error, not as an empty card`() = runTest {
+        val useCase = mockk<LoadCycleNightlyVitalsUseCase>()
+        coEvery { useCase(any(), any(), any()) } throws IllegalStateException("Health Connect access is paused")
+
+        val vm = viewModel(useCase)
+
+        assertNull(vm.uiState.value.nightly)
+        assertNotNull(vm.uiState.value.nightlyError)
+        assertNull(vm.uiState.value.error)
+    }
+
     @Test fun `month navigation does not read the nights again, a refresh does`() = runTest {
         val useCase = mockk<LoadCycleNightlyVitalsUseCase>()
         coEvery { useCase(any(), any(), any()) } returns nightly(start)

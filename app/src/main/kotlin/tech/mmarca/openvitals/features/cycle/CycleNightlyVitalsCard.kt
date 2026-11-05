@@ -82,11 +82,14 @@ private fun evidenceRes(id: String): Int = when (id) {
 internal fun CycleNightlyVitalsCard(
     nightly: NightlyVitals?,
     modifier: Modifier = Modifier,
+    /** Why the nights could not be read; shown in place of the loading line. */
+    error: String? = null,
     /** The optional overnight reads not granted yet. While not empty the card offers a button. */
     missingPermissions: Set<String> = emptySet(),
     onAllowReading: () -> Unit = {},
 ) {
     var showDetails by rememberSaveable { mutableStateOf(false) }
+    val deniedInBody = nightly != null && nightly.nightCount > 0 && nightly.series.any { it.isMissing && it.permissionDenied }
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(LayoutMetrics.cardPadding),
@@ -98,12 +101,13 @@ internal fun CycleNightlyVitalsCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             when {
-                nightly == null -> Muted(stringResource(R.string.cycle_nightly_loading))
+                nightly == null -> Muted(error ?: stringResource(R.string.cycle_nightly_loading))
                 nightly.nightCount == 0 -> Muted(stringResource(R.string.cycle_nightly_no_sleep))
                 else -> CycleNightlyBody(nightly)
             }
             if (missingPermissions.isNotEmpty()) {
-                Muted(stringResource(R.string.cycle_nightly_permission_needed))
+                // The body already says it for a signal that was denied.
+                if (!deniedInBody) Muted(stringResource(R.string.cycle_nightly_permission_needed))
                 OpenVitalsOutlinedButton(onClick = onAllowReading, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.cycle_nightly_allow_reading))
                 }
@@ -165,13 +169,10 @@ private fun CycleNightlyBody(nightly: NightlyVitals) {
         }
     }
     // The gaps are named, never filled.
-    nightly.series.filter { it.isMissing }.forEach { series ->
-        Muted(
-            stringResource(
-                if (series.permissionDenied) R.string.cycle_nightly_permission_needed else signalMissingRes(series.signal),
-            ),
-        )
-    }
+    val missing = nightly.series.filter { it.isMissing }
+    missing.filterNot { it.permissionDenied }.forEach { series -> Muted(stringResource(signalMissingRes(series.signal))) }
+    // One sentence for all denied signals.
+    if (missing.any { it.permissionDenied }) Muted(stringResource(R.string.cycle_nightly_permission_needed))
 }
 
 @Composable

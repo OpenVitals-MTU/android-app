@@ -58,6 +58,8 @@ data class CycleUiState(
     val nightly: NightlyVitals? = null,
     /** The optional overnight reads not granted yet; the card offers a button while this is not empty. */
     val missingNightlyPermissions: Set<String> = emptySet(),
+    /** Why the nightly signals could not be read (a refusal, paused access), so the card does not say "no data". */
+    val nightlyError: ScreenError? = null,
     val error: ScreenError? = null,
 )
 
@@ -220,17 +222,31 @@ class CycleViewModel @Inject constructor(
             // No current cycle: whatever was reading is for a cycle that is gone.
             nightlyCoordinator.cancel()
             nightlyLoadedFor = null
-            _uiState.value = _uiState.value.copy(nightly = null, missingNightlyPermissions = emptySet())
+            _uiState.value = _uiState.value.copy(nightly = null, missingNightlyPermissions = emptySet(), nightlyError = null)
             return
         }
         val key = cycleStart to LocalDate.now()
         if (!force && nightlyLoadedFor == key && _uiState.value.nightly != null) return
         nightlyCoordinator.launch(viewModelScope) load@{
             val missing = runCatching { repository.missingNightlyPermissions() }.getOrDefault(emptySet())
-            val vitals = withContext(dispatchers.default) { useCase(cycleStart) }
-            if (!isCurrent) return@load
-            nightlyLoadedFor = key
-            _uiState.value = _uiState.value.copy(nightly = vitals, missingNightlyPermissions = missing)
+            runCatching { withContext(dispatchers.default) { useCase(cycleStart) } }
+                .onSuccess { vitals ->
+                    if (!isCurrent) return@load
+                    nightlyLoadedFor = key
+                    _uiState.value = _uiState.value.copy(
+                        nightly = vitals,
+                        missingNightlyPermissions = missing,
+                        nightlyError = null,
+                    )
+                }
+                .onFailure { error ->
+                    if (!isCurrent) return@load
+                    _uiState.value = _uiState.value.copy(
+                        nightly = null,
+                        missingNightlyPermissions = missing,
+                        nightlyError = error.toScreenError(),
+                    )
+                }
         }
     }
 

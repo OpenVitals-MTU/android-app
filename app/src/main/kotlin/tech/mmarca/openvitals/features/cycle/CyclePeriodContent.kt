@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -179,6 +180,7 @@ internal fun LazyListScope.cyclePeriodContent(
             SectionHeader(stringResource(R.string.section_cycle_nightly))
             CycleNightlyVitalsCard(
                 nightly = state.nightly,
+                error = state.nightlyError.resolve(),
                 modifier = sectionModifier,
                 missingPermissions = state.missingNightlyPermissions,
                 onAllowReading = actions.onAllowNightlyReading,

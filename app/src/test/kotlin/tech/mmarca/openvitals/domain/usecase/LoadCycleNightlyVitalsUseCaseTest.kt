@@ -60,9 +60,9 @@ class LoadCycleNightlyVitalsUseCaseTest {
     }
 
     @Test
-    fun `a failing read costs that signal and not the card`() = runTest {
+    fun `a missing permission costs that signal and not the card`() = runTest {
         val heart = mockk<HeartRepository>()
-        coEvery { heart.loadRestingHeartRateSamples(any(), any()) } throws IllegalStateException("boom")
+        coEvery { heart.loadRestingHeartRateSamples(any(), any()) } returns emptyList()
         coEvery { heart.loadHrvSamples(any(), any()) } returns listOf(HrvSample(at("2026-03-02", 3), 48.0, "watch"))
         val vitals = mockk<VitalsRepository>()
         coEvery { vitals.loadRespiratoryRate(any(), any()) } throws SecurityException("no permission")
@@ -77,10 +77,23 @@ class LoadCycleNightlyVitalsUseCaseTest {
     }
 
     @Test
+    fun `a refusal or paused access is not turned into no data`() = runTest {
+        val heart = mockk<HeartRepository>()
+        coEvery { heart.loadRestingHeartRateSamples(any(), any()) } throws IllegalStateException("Health Connect access is paused")
+        coEvery { heart.loadHrvSamples(any(), any()) } returns emptyList()
+        val vitals = mockk<VitalsRepository>()
+        coEvery { vitals.loadRespiratoryRate(any(), any()) } returns emptyList()
+
+        val failure = runCatching { LoadCycleNightlyVitalsUseCase(sleep, heart, vitals)(start, today, zone) }.exceptionOrNull()
+
+        assertTrue(failure is IllegalStateException)
+    }
+
+    @Test
     fun `a missing permission is told apart from no data`() = runTest {
         val heart = mockk<HeartRepository>()
         coEvery { heart.loadRestingHeartRateSamples(any(), any()) } throws SecurityException("no permission")
-        coEvery { heart.loadHrvSamples(any(), any()) } throws IllegalStateException("boom")
+        coEvery { heart.loadHrvSamples(any(), any()) } returns emptyList()
         val vitals = mockk<VitalsRepository>()
         coEvery { vitals.loadRespiratoryRate(any(), any()) } returns emptyList()
 

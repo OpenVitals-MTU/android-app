@@ -19,9 +19,10 @@ import tech.mmarca.openvitals.domain.cycle.NightlyVitalsCalculator
 /**
  * The current cycle's nightly resting pulse, HRV and breathing rate, cut by the sleep
  * sessions. It reuses the repositories the heart, sleep and vitals screens read through.
- * One failing read costs that signal, not the card: a permission failure marks the signal
- * as not allowed (so the card can say "permission" instead of "no data"), any other failure
- * leaves it empty. Cancellation is never swallowed.
+ * A permission failure marks that signal as not allowed (so the card can say "permission"
+ * instead of "no data"). Any other failure, such as a rate-limit refusal or paused access,
+ * propagates to the caller, which shows it like the main load does: it is not "no data".
+ * Cancellation is never swallowed.
  */
 class LoadCycleNightlyVitalsUseCase @Inject constructor(
     private val sleep: SleepRepository,
@@ -77,13 +78,14 @@ class LoadCycleNightlyVitalsUseCase @Inject constructor(
         return Read(samples, denied)
     }
 
-    /** The result, or an empty list and whether the failure was a missing permission. */
+    /** The result, or an empty list marked denied when the failure was a missing permission; other failures propagate. */
     private suspend fun <T> guarded(block: suspend () -> List<T>): Pair<List<T>, Boolean> =
         try {
             block() to false
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
-            emptyList<T>() to failure.isPermissionFailure()
+            if (!failure.isPermissionFailure()) throw failure
+            emptyList<T>() to true
         }
 }
