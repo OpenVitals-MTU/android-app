@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
+import androidx.health.connect.client.records.OvulationTestRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -20,11 +21,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.domain.cycle.CycleEstimateBasis
+import tech.mmarca.openvitals.domain.cycle.OvulationMarker
 import tech.mmarca.openvitals.domain.model.CycleEntry
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.OvulationTestEntry
 import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -210,4 +214,31 @@ class CycleRepositoryWriteTest {
         val repository = CycleRepositoryImpl(hc(granted = emptySet()), FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
         assertEquals(null, repository.loadCycleStatistics(LocalDate.of(2026, 8, 5)))
     }
+
+    @Test
+    fun `a positive LH test read with its permission sharpens the estimate`() = runTest {
+        val today = LocalDate.of(2026, 8, 12)
+        val lhDay = LocalDate.of(2026, 8, 11)
+        val readMenstruation = HealthPermission.getReadPermission(MenstruationFlowRecord::class)
+        val readOvulation = HealthPermission.getReadPermission(OvulationTestRecord::class)
+        val hc = hc(granted = setOf(readMenstruation, readOvulation))
+        coEvery { hc.readMenstruationFlowEntries(any(), any()) } returns emptyList()
+        coEvery { hc.readMenstruationPeriods(any(), any()) } returns listOf(period(LocalDate.of(2026, 7, 1)), period(LocalDate.of(2026, 7, 29)))
+        coEvery { hc.readOvulationTests(any(), any()) } returns listOf(
+            OvulationTestEntry(lhDay.atTime(8, 0).atZone(zone).toInstant(), CycleRecordValues.OVULATION_POSITIVE, "other.app"),
+        )
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
+
+        val basis = repository.loadCycleStatistics(today)?.estimate?.estimateOrNull?.basis
+
+        assertEquals(CycleEstimateBasis.Marker(OvulationMarker.LH_TEST, lhDay, emptySet(), 0), basis)
+        coVerify(exactly = 0) { hc.readBasalBodyTemperatureEntries(any(), any()) }
+        coVerify(exactly = 0) { hc.readCervicalMucusEntries(any(), any()) }
+    }
+
+    private fun period(start: LocalDate) = tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry(
+        startTime = start.atStartOfDay(zone).toInstant(),
+        endTime = start.plusDays(4).atStartOfDay(zone).toInstant(),
+        source = "other.app",
+    )
 }

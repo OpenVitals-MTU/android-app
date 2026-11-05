@@ -38,8 +38,10 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.domain.cycle.CurrentCyclePhase
 import tech.mmarca.openvitals.domain.cycle.CycleEstimate
+import tech.mmarca.openvitals.domain.cycle.CycleEstimateBasis
 import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
 import tech.mmarca.openvitals.domain.cycle.CyclePhase
+import tech.mmarca.openvitals.domain.cycle.OvulationMarker
 import tech.mmarca.openvitals.domain.cycle.PhaseCertainty
 import tech.mmarca.openvitals.domain.model.DayBleedingChoice
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -313,16 +315,37 @@ private fun EstimateBody(estimate: CycleEstimate, today: CycleTodayDisplay, form
     if (daysUntilEarliest > 0) {
         EstimateWindowTrack(leadDays = daysUntilEarliest, windowDays = windowDays, latestLabel = formatter.format(estimate.latestDate))
     }
-    Text(
-        text = pluralStringResource(R.plurals.cycle_estimate_basis, estimate.cycleCount, estimate.cycleCount),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    EstimateBasisText(estimate, formatter)
     Text(
         text = stringResource(R.string.cycle_estimate_disclaimer),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+/** What the range counts from: the recorded cycles, or a marker recorded in this cycle. */
+@Composable
+private fun EstimateBasisText(estimate: CycleEstimate, formatter: DateTimeFormatter) {
+    val lines = when (val basis = estimate.basis) {
+        is CycleEstimateBasis.Calendar -> listOfNotNull(
+            pluralStringResource(R.plurals.cycle_estimate_basis, estimate.cycleCount, estimate.cycleCount),
+            if (basis.markersDisagree) stringResource(R.string.cycle_estimate_basis_markers_disagree) else null,
+        )
+        is CycleEstimateBasis.Marker -> listOfNotNull(
+            stringResource(
+                when (basis.anchor) {
+                    OvulationMarker.LH_TEST -> R.string.cycle_estimate_basis_lh
+                    OvulationMarker.TEMPERATURE -> R.string.cycle_estimate_basis_temperature
+                    OvulationMarker.MUCUS -> R.string.cycle_estimate_basis_mucus
+                },
+                formatter.format(basis.anchorDate),
+            ),
+            if (basis.confirmedBy.isNotEmpty()) stringResource(R.string.cycle_estimate_basis_confirmed) else null,
+        )
+    }
+    lines.forEach { line ->
+        Text(text = line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 /** The wait ahead, to scale, with the window as a band. Its width is the uncertainty. */
