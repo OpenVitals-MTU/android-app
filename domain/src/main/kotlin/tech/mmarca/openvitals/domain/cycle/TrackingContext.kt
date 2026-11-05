@@ -35,11 +35,27 @@ enum class TrackingContext(val id: String, val group: ContextGroup) {
     }
 }
 
-/** The user's declared contexts and age band. Both are optional. */
+/** The user's declared contexts, age band and hormonal method. All are optional. */
 data class CycleTrackingProfile(
     val contexts: Set<TrackingContext> = emptySet(),
     val ageBand: AgeBand? = null,
+    val hormonalContraception: HormonalContraception = HormonalContraception(),
 ) {
+    /** Nothing declared: a phone in this state accepts a profile from another. */
+    val isEmpty: Boolean
+        get() = contexts.isEmpty() && ageBand == null && !hormonalContraception.isDeclared
+
+    /** Each part this profile has not declared is taken from [other]; a declared part is never overwritten. */
+    fun filledFrom(other: CycleTrackingProfile): CycleTrackingProfile = copy(
+        contexts = contexts.ifEmpty { other.contexts },
+        ageBand = ageBand ?: other.ageBand,
+        hormonalContraception = if (hormonalContraception.isDeclared) hormonalContraception else other.hormonalContraception,
+    )
+
+    /** An active pill scheme means the pill; a stop date no longer applies. */
+    fun withPillScheme(): CycleTrackingProfile =
+        copy(hormonalContraception = HormonalContraception(HormonalContraceptionKind.PILL))
+
     val hasTimingContext: Boolean
         get() = contexts.any { it.group == ContextGroup.TIMING }
 

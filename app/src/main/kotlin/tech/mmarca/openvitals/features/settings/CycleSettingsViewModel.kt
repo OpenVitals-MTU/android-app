@@ -20,6 +20,8 @@ import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
 import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
 import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.model.CycleReminderVisibility
@@ -91,6 +93,19 @@ class CycleSettingsViewModel @Inject constructor(
 
     fun setAgeBand(band: AgeBand?) = saveProfile(_uiState.value.profile.copy(ageBand = band))
 
+    /** Picking none clears the stop date too. An active pill scheme owns the kind, so the picker is hidden then. */
+    fun setHormonalKind(kind: HormonalContraceptionKind) {
+        val current = _uiState.value.profile.hormonalContraception
+        val next = if (kind == HormonalContraceptionKind.NONE) HormonalContraception() else current.copy(kind = kind)
+        saveProfile(_uiState.value.profile.copy(hormonalContraception = next))
+    }
+
+    fun setHormonalStoppedOn(date: LocalDate?) {
+        val current = _uiState.value.profile.hormonalContraception
+        if (!current.isDeclared) return
+        saveProfile(_uiState.value.profile.copy(hormonalContraception = current.copy(stoppedOn = date)))
+    }
+
     fun setRemindersEnabled(enabled: Boolean) = updateReminders { copy(enabled = enabled) }
 
     fun setDailyCheckIn(enabled: Boolean) = updateReminders { copy(dailyCheckInEnabled = enabled) }
@@ -158,12 +173,8 @@ class CycleSettingsViewModel @Inject constructor(
             }
             import.exclusions.forEach { (start, reason) -> journal.exclude(start, start, reason) }
             val current = preferences.cycleTrackingProfile()
-            val incoming = import.profile
-            if (incoming != null && current.contexts.isEmpty() && current.ageBand == null &&
-                (incoming.contexts.isNotEmpty() || incoming.ageBand != null)
-            ) {
-                preferences.setCycleTrackingProfile(incoming)
-            }
+            val merged = import.profile?.let(current::filledFrom)
+            if (merged != null && merged != current) preferences.setCycleTrackingProfile(merged)
             reminders.applyStoredConfig()
             homeWidgetRefreshScheduler?.refreshNow()
             _uiState.value = snapshot().copy(backupMessage = CycleBackupMessage.IMPORTED, importedDays = imported)
@@ -206,7 +217,8 @@ class CycleSettingsViewModel @Inject constructor(
         val plan = _uiState.value.pill.transform().copy(updatedAt = Instant.now()).normalized()
         preferences.setPillPlan(plan)
         reminders.applyStoredConfig()
-        _uiState.value = _uiState.value.copy(pill = plan)
+        // An enabled scheme means the pill; the repository derives it, so the card only re-reads.
+        _uiState.value = _uiState.value.copy(pill = plan, profile = preferences.cycleTrackingProfile())
     }
 
     private fun snapshot() = CycleSettingsUiState(

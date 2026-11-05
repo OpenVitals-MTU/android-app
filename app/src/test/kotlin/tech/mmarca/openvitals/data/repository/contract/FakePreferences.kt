@@ -232,7 +232,9 @@ class FakePreferences(
     private val cycleProfile = MutableStateFlow(CycleTrackingProfile())
     private var cycleReminders = CycleReminderConfig()
 
-    override fun cycleTrackingProfile(): CycleTrackingProfile = cycleProfile.value
+    /** Like the real repository: an enabled pill scheme means the pill. */
+    override fun cycleTrackingProfile(): CycleTrackingProfile =
+        cycleProfile.value.let { if (pill.enabled) it.withPillScheme() else it }
 
     override val cycleTrackingProfileFlow: Flow<CycleTrackingProfile> = cycleProfile
 

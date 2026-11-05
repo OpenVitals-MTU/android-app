@@ -17,6 +17,8 @@ import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
@@ -85,12 +87,23 @@ object CycleJournalJson {
     fun profile(profile: CycleTrackingProfile): JsonObject = buildJsonObject {
         put("contexts", buildJsonArray { profile.contexts.map { it.id }.sorted().forEach { add(it) } })
         profile.ageBand?.let { put("ageBand", it.id) }
+        val hormonal = profile.hormonalContraception
+        if (hormonal.isDeclared) {
+            put("hormonalContraception", hormonal.kind.id)
+            hormonal.stoppedOn?.let { put("hormonalContraceptionStoppedOn", it.toString()) }
+        }
     }
 
     fun profileOrNull(json: JsonObject): CycleTrackingProfile? = runCatching {
         CycleTrackingProfile(
             contexts = json.names("contexts").mapNotNullTo(mutableSetOf()) { TrackingContext.fromId(it) },
             ageBand = AgeBand.fromId(json.nameOrNull("ageBand")),
+            hormonalContraception = HormonalContraception(
+                kind = HormonalContraceptionKind.fromId(json.nameOrNull("hormonalContraception"))
+                    ?: HormonalContraceptionKind.NONE,
+                stoppedOn = json.nameOrNull("hormonalContraceptionStoppedOn")
+                    ?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+            ),
         )
     }.getOrNull()
 
