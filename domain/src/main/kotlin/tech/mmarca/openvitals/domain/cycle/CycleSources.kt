@@ -66,6 +66,34 @@ object CycleSources {
     val SALKELD_OC_TEMPERATURE = CycleSource("Salkeld et al., Neuroimmunomodulation, 2001", "https://doi.org/10.1159/000059389")
     val CHARKOUDIAN_THERMOREGULATION = CycleSource("Charkoudian & Stachenfeld, Comprehensive Physiology, 2014", "https://doi.org/10.1002/cphy.c130029")
     val RIVERA_HORMONAL_MECHANISM = CycleSource("Rivera et al., Am J Obstet Gynecol, 1999", "https://doi.org/10.1016/s0002-9378(99)70120-1")
+    val GOODALE_2019 = CycleSource(
+        "Goodale et al., J Med Internet Res, 2019",
+        "https://doi.org/10.2196/13404",
+    )
+    val JASINSKI_2024 = CycleSource(
+        "Jasinski et al., npj Digital Medicine, 2024",
+        "https://doi.org/10.1038/s41746-024-01394-0",
+    )
+    val GONZALEZ_2026 = CycleSource(
+        "Gonzalez et al., npj Digital Medicine, 2026",
+        "https://doi.org/10.1038/s41746-026-02799-9",
+    )
+    val LIN_MCPHASES_2026 = CycleSource(
+        "Lin et al., Scientific Data, 2026",
+        "https://doi.org/10.1038/s41597-026-06805-3",
+    )
+    val DE_JAGER_2026 = CycleSource(
+        "de Jager et al., Sports Medicine, 2026",
+        "https://doi.org/10.1007/s40279-025-02388-y",
+    )
+    val PIETILA_2018 = CycleSource(
+        "Pietila et al., JMIR Mental Health, 2018",
+        "https://doi.org/10.2196/mental.9519",
+    )
+    val SHI_2026 = CycleSource(
+        "Shi et al., npj Digital Medicine, 2026",
+        "https://doi.org/10.1038/s41746-025-02320-8",
+    )
 }
 
 /** Scatters consecutive days across a list so the pick is stable per day but does not walk in order. */

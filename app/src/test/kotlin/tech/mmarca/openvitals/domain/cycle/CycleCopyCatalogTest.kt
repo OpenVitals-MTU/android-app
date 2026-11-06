@@ -23,6 +23,11 @@ class CycleCopyCatalogTest {
     }
 
     @Test
+    fun `every nightly vitals evidence has a string`() {
+        assertMissing("nightly evidence", NightlyVitalsEvidence.ALL.map { "cycle_nightly_evidence_${it.id}" })
+    }
+
+    @Test
     fun `every symptom has a string`() {
         assertMissing("symptoms", CycleSymptom.entries.map { "cycle_symptom_${it.id}" })
     }

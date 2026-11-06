@@ -21,6 +21,13 @@ class LoadCoordinator {
         }
     }
 
+    /** Cancels the load in flight, if any, and makes any answer still on its way stale. */
+    fun cancel() {
+        activeRequestId++
+        activeJob?.cancel()
+        activeJob = null
+    }
+
     private fun isCurrent(requestId: Long): Boolean =
         requestId == activeRequestId
 
