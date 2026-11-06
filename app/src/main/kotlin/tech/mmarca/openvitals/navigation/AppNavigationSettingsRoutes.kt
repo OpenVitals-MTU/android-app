@@ -10,8 +10,6 @@ import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.devicesync.DeviceSyncScreen
 import tech.mmarca.openvitals.features.imports.csv.CsvImportScreen
 import tech.mmarca.openvitals.features.reports.ReportBuilderScreen
-import tech.mmarca.openvitals.features.scales.ScaleDeviceScreen
-import tech.mmarca.openvitals.features.scales.ScalesSettingsScreen
 import tech.mmarca.openvitals.features.settings.ActivitiesSettingsScreen
 import tech.mmarca.openvitals.features.settings.BodyProfileSettingsScreen
 import tech.mmarca.openvitals.features.settings.DataImportScreen
@@ -22,7 +20,6 @@ import tech.mmarca.openvitals.features.settings.RecoverySettingsScreen
 import tech.mmarca.openvitals.features.settings.SensorsSettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
-import tech.mmarca.openvitals.features.watches.WatchesSettingsScreen
 
 /**
  * Each section builds only its own ViewModel. The root, Health Connect, Vitals and
@@ -55,33 +52,6 @@ internal fun NavGraphBuilder.settingsRoutes(
 
     composable(Screen.SettingsSensors.route) {
         SensorsSettingsScreen()
-    }
-
-    // A bespoke screen: paired-watch rows plus the add flow.
-    composable(Screen.SettingsWatches.route) {
-        WatchesSettingsScreen(
-            viewModel = hiltViewModel(),
-            onOpenWatch = { deviceId ->
-                navController.navigate(Screen.WatchDevice.createRoute(deviceId)) {
-                    launchSingleTop = true
-                }
-            },
-        )
-    }
-
-    // A bespoke screen: the scale's card plus the add flow, like the watches, and its device view.
-    composable(Screen.SettingsScales.route) {
-        ScalesSettingsScreen(
-            viewModel = hiltViewModel(),
-            onOpenScale = { navController.navigate(Screen.ScaleDevice.route) { launchSingleTop = true } },
-        )
-    }
-    composable(Screen.ScaleDevice.route) {
-        ScaleDeviceScreen(
-            viewModel = hiltViewModel(),
-            onOpenBodyProfile = { navController.navigate(Screen.SettingsBodyProfile.route) { launchSingleTop = true } },
-            onRemoved = { navController.popBackStack() },
-        )
     }
 
     // Three routes, one screen: the metric screens link to the section by what they show.
@@ -176,8 +146,6 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.DISPLAY -> Screen.SettingsDisplay.route
         SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
         SettingsSection.SENSORS -> Screen.SettingsSensors.route
-        SettingsSection.WATCHES -> Screen.SettingsWatches.route
-        SettingsSection.SCALES -> Screen.SettingsScales.route
         SettingsSection.NUTRITION -> Screen.SettingsNutrition.route
         SettingsSection.BODY_PROFILE -> Screen.SettingsBodyProfile.route
         SettingsSection.VITALS -> Screen.SettingsVitals.route

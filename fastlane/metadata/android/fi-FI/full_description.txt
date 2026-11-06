@@ -13,7 +13,6 @@ Mitä voit tehdä
 * Tuo Apple Health -vientejä sekä GPX-, KML-, KMZ-, TCX-, FIT- ja CSV-tiedostoja
 * Koosta PDF-terveysraportti ja jaa se lääkärillesi
 * Seuraa kiertoasi: kuukautiset, oireet, peruslämpö, arvio seuraavista kuukautisista ja pillerimuistutukset
-* Synkronoi tuetut Garmin-kellot suoraan Bluetoothilla
 * Kopioi tietoja kahden puhelimen välillä Bluetoothilla ilman tiliä ja verkkoa
 * Ansaitse merkkejä askelista, matkasta, kerroksista, treeneistä, nesteytyksestä, unesta ja mindfulnessista
 * Ota käyttöön muistutukset juomisesta, mindfulnessista ja kierrostasi

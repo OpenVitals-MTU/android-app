@@ -2,7 +2,6 @@ package tech.mmarca.openvitals.sensors.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -12,17 +11,12 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Build
 import android.os.ParcelUuid
-import android.os.Parcelable
 import android.util.Log
-import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -36,13 +30,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
-import tech.mmarca.openvitals.devices.core.DeviceClassification
-import tech.mmarca.openvitals.devices.core.DeviceClassifier
-import tech.mmarca.openvitals.devices.core.DeviceScanClassifier
-import tech.mmarca.openvitals.devices.core.classifyDevice
-import tech.mmarca.openvitals.devices.garmin.GarminDeviceClassifier
-import tech.mmarca.openvitals.devices.garmin.GarminScanClassifier
-import tech.mmarca.openvitals.devices.wearos.WearOsDeviceClassifier
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
@@ -91,15 +78,8 @@ class BleSensorCoordinator @Inject constructor(
     val discoveredDevices: StateFlow<List<BleDiscoveredDevice>> = _discoveredDevices.asStateFlow()
 
     private var scanCallback: ScanCallback? = null
-    private var sdpReceiver: BroadcastReceiver? = null
     private val scanResults = ConcurrentHashMap<String, BleDiscoveredDevice>()
 
-    /** Per-integration classifiers: scan-time evidence, and the `(integration, kind)` verdict. */
-    private val scanClassifiers: List<DeviceScanClassifier> = listOf(GarminScanClassifier())
-    private val deviceClassifiers: List<DeviceClassifier> = listOf(
-        GarminDeviceClassifier(),
-        WearOsDeviceClassifier(),
-    )
     private var metricsTimeoutTickerScheduled = false
     private val metricsTimeoutTicker = object : Runnable {
         override fun run() = synchronized(stateLock) {
@@ -314,61 +294,10 @@ class BleSensorCoordinator @Inject constructor(
                     name = device.name,
                     rssi = null,
                     suggestedCapabilities = emptySet(),
-                    classicServiceUuids = device.uuids.toUuidStrings(),
                 ),
             )
         }
         publishScanResults()
-        refreshBondedServices(bonded)
-    }
-
-    /**
-     * The bond's service list is cached from pairing, before any app on the
-     * device listened. A fresh SDP query lets a classifier see the services
-     * running now. Only unclaimed dual-mode bonds are paged: one a classifier
-     * already claims (a Garmin, a known smartwatch name) gains nothing, and
-     * audio/video, peripheral and imaging bonds never run the app.
-     */
-    @SuppressLint("MissingPermission")
-    private fun refreshBondedServices(bonded: List<BluetoothDevice>) {
-        val candidates = bonded.filter {
-            it.type == BluetoothDevice.DEVICE_TYPE_DUAL &&
-                it.bluetoothClass?.majorDeviceClass !in NeverRunsTheApp &&
-                scanResults[it.address.uppercase()]
-                    ?.let(::classifyDiscoveredDevice) == DeviceClassification.SENSOR
-        }
-        if (candidates.isEmpty()) return
-        // A restarted scan registers afresh; the old receiver must not leak.
-        sdpReceiver?.let { old -> runCatching { context.unregisterReceiver(old) } }
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val device = intent.parcelable<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
-                val uuids = intent.parcelableArray(BluetoothDevice.EXTRA_UUID)
-                    ?.filterIsInstance<ParcelUuid>()
-                    ?.toTypedArray()
-                    .toUuidStrings()
-                if (uuids.isEmpty()) return
-                // Atomic per key: an advertisement for the same device lands on the scan thread.
-                scanResults.computeIfPresent(device.address.uppercase()) { _, existing ->
-                    existing.copy(classicServiceUuids = existing.classicServiceUuids + uuids)
-                } ?: return
-                publishScanResults()
-            }
-        }
-        sdpReceiver = receiver
-        ContextCompat.registerReceiver(
-            context,
-            receiver,
-            IntentFilter(BluetoothDevice.ACTION_UUID),
-            ContextCompat.RECEIVER_EXPORTED,
-        )
-        candidates.forEach { device ->
-            try {
-                device.fetchUuidsWithSdp()
-            } catch (error: SecurityException) {
-                Log.w(TAG, "SDP refresh refused: ${error.message}")
-            }
-        }
     }
 
     @SuppressLint("MissingPermission")
@@ -377,8 +306,6 @@ class BleSensorCoordinator @Inject constructor(
             bluetoothAdapter?.bluetoothLeScanner?.stopScan(callback)
         }
         scanCallback = null
-        sdpReceiver?.let { receiver -> runCatching { context.unregisterReceiver(receiver) } }
-        sdpReceiver = null
     }
 
     @SuppressLint("MissingPermission")
@@ -473,31 +400,14 @@ class BleSensorCoordinator @Inject constructor(
         val serviceCapabilities = advertisedUuids
             .flatMap { BleUuids.capabilitiesForService(it) }
             .toSet()
-        // Which integration claims this advertisement as a sync watch. The
-        // scanner carries no protocol knowledge of its own.
-        val advertisedUuidStrings = advertisedUuids.map { it.toString() }
-        val advertisesSync =
-            scanClassifiers.any { it.advertisesSyncService(advertisedUuidStrings) }
-        // Atomic per key: the SDP receiver updates the same entry on the main thread.
         scanResults.compute(address) { _, existing -> BleDiscoveredDevice(
             address = address,
             name = device.name ?: existing?.name,
             rssi = result.rssi,
             suggestedCapabilities = (existing?.suggestedCapabilities.orEmpty() + serviceCapabilities).toSet(),
-            // Sticky across advertisements: one sighting of the member service settles it.
-            advertisesSyncService = advertisesSync || (existing?.advertisesSyncService ?: false),
-            // Bond evidence comes from the bonded list and SDP, never an advertisement.
-            classicServiceUuids = existing?.classicServiceUuids.orEmpty(),
         ) }
         publishScanResults()
     }
-
-    /**
-     * Maps a discovered device to how it registers: Garmin watch, Edge,
-     * WearOS watch, or a plain sensor. Garmin's verdict beats the name match.
-     */
-    fun classifyDiscoveredDevice(device: BleDiscoveredDevice): DeviceClassification =
-        classifyDevice(device, deviceClassifiers)
 
     private fun publishScanResults() {
         _discoveredDevices.value = scanResults.values.sortedWith(
@@ -618,29 +528,3 @@ class BleSensorCoordinator @Inject constructor(
         private const val CONNECT_SCAN_RETRY_MS = 30_000L
     }
 }
-
-/** Major classes that never run the OpenVitals Wear OS app. */
-private val NeverRunsTheApp = setOf(
-    BluetoothClass.Device.Major.AUDIO_VIDEO,
-    BluetoothClass.Device.Major.PERIPHERAL,
-    BluetoothClass.Device.Major.IMAGING,
-)
-
-private fun Array<ParcelUuid>?.toUuidStrings(): Set<String> =
-    this?.map { it.uuid.toString().lowercase() }?.toSet().orEmpty()
-
-@Suppress("DEPRECATION")
-private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        getParcelableExtra(key, T::class.java)
-    } else {
-        getParcelableExtra(key)
-    }
-
-@Suppress("DEPRECATION")
-private fun Intent.parcelableArray(key: String): Array<out Parcelable>? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        getParcelableArrayExtra(key, ParcelUuid::class.java)
-    } else {
-        getParcelableArrayExtra(key)
-    }

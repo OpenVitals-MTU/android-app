@@ -42,21 +42,12 @@ internal object BleUuids {
         measurementUuid = UUID.fromString("00002a53-0000-1000-8000-00805f9b34fb"),
     )
 
-    /**
-     * Garmin's member service (`0xFE1F`), the only Garmin UUID a watch
-     * advertises and so the only one a scan filter can match. Confirmed on a
-     * vívoactive 5. Marks a watch to onboard, never a source of capabilities.
-     */
-    val GARMIN_MEMBER_SERVICE: UUID =
-        UUID.fromString("0000fe1f-0000-1000-8000-00805f9b34fb")
-
     val SCAN_SERVICE_UUIDS = listOf(
         HEART_RATE.serviceUuid,
         HEART_RATE_MIBAND.serviceUuid,
         CYCLING_SPEED_CADENCE.serviceUuid,
         CYCLING_POWER.serviceUuid,
         RUNNING_SPEED_CADENCE.serviceUuid,
-        GARMIN_MEMBER_SERVICE,
     )
 
     fun capabilitiesForService(serviceUuid: UUID): Set<tech.mmarca.openvitals.domain.model.BleSensorCapability> =

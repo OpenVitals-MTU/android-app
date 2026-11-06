@@ -20,15 +20,6 @@ enum class SettingsSection(
         summaryRes = R.string.settings_sensors_group_body,
     ),
 
-    // Its own section: sensors and watches shared a screen only because they share a radio.
-    WATCHES(
-        titleRes = R.string.settings_watches_group_title,
-        summaryRes = R.string.settings_watches_group_body,
-    ),
-    SCALES(
-        titleRes = R.string.settings_scales_group_title,
-        summaryRes = R.string.settings_scales_group_body,
-    ),
     NUTRITION(
         titleRes = R.string.settings_nutrition_group_title,
         summaryRes = R.string.settings_nutrition_group_body,

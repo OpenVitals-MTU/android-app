@@ -4,7 +4,7 @@
 > **Audience:** Users and contributors.
 > **Implementation:** `features/manualentry/activity/routeimport`.
 > **Navigation:** `Screen.SettingsDataImport`, then `Screen.ActivityEntry` for review.
-> **Related:** [Feature map](feature-map.md), [GPX/KML/KMZ/TCX route import](route-file-import.md), [Recording of activity](activity-recording.md), [Watches](watches.md), [Elevation correction](elevation-correction.md), [Apple Health import](apple-health-import.md).
+> **Related:** [Feature map](feature-map.md), [GPX/KML/KMZ/TCX route import](route-file-import.md), [Recording of activity](activity-recording.md), [Elevation correction](elevation-correction.md), [Apple Health import](apple-health-import.md).
 
 FIT import lives in Settings, Data Importers. It lets users bring supported activity, course, and workout files into OpenVitals for review before saving to Health Connect.
 
@@ -40,7 +40,7 @@ Progress, imported and failed counts, and any warning show on the FIT card for a
 
 FIT uses the same activity review screen as route import after the file is selected from Settings. Like TCX, FIT files do not need GPS route points; OpenVitals imports supported activity, course, or workout details and attaches a route only when usable route samples are present.
 
-Files a paired Garmin watch hands over go through this same importer. See [Watches](watches.md).
+Syncing a watch over Bluetooth is not part of OpenVitals: the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app does that and writes to Health Connect. This importer reads FIT files you already have, such as those copied from a watch's storage or exported by its vendor's service.
 
 ## Limits
 

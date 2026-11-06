@@ -672,8 +672,8 @@ internal fun DashboardData.toSnapshot(
                 snapshot(displayValue)
             }
         }
-        // Device state and the medical records entry, not a day's reading.
-        DashboardWidgetId.WATCH, DashboardWidgetId.MEDICAL_RECORDS -> snapshot(null)
+        // The medical records entry, not a day's reading.
+        DashboardWidgetId.MEDICAL_RECORDS -> snapshot(null)
     }
 }
 
@@ -717,7 +717,6 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.CARDIO_LOAD -> R.string.metric_weekly_cardio_load
     DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
     DashboardWidgetId.CYCLE -> R.string.metric_cycle
-    DashboardWidgetId.WATCH -> R.string.metric_watch
     DashboardWidgetId.MEDICAL_RECORDS -> R.string.medical_records_title
 }
 

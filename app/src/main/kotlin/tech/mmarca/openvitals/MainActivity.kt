@@ -22,9 +22,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
-import tech.mmarca.openvitals.core.geo.GeoUri
-import tech.mmarca.openvitals.core.geo.SharedGeoPoint
-import tech.mmarca.openvitals.core.geo.SharedLocationText
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -38,7 +35,6 @@ import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.ExternalRouteImportRequest
 import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
 import java.time.LocalDate
-import tech.mmarca.openvitals.devices.core.pairing.CompanionDevicePairing
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.util.Locale
@@ -52,7 +48,6 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var healthRepository: HealthRepository
     @Inject lateinit var unitFormatter: UnitFormatter
     @Inject lateinit var dateTimeFormatterProvider: DateTimeFormatterProvider
-    @Inject lateinit var companionDevicePairing: CompanionDevicePairing
 
     private var nextRouteImportRequestId = 0L
     private var routeImportRequest by mutableStateOf<ExternalRouteImportRequest?>(null)
@@ -65,9 +60,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
         enableEdgeToEdge()
-        // The companion association dialog needs an Activity launcher. Nothing attached one
-        // after the native rewrite, so no new watch was ever associated.
-        companionDevicePairing.attachToActivity(this)
         // A recreated Activity (rotation, language change, process restore) still holds the
         // launch intent, and its back stack comes back on its own. Applying the intent again
         // pushed a second copy of a widget's screen, and re-ran a file import over the user's
@@ -159,11 +151,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        companionDevicePairing.detachFromActivity(this)
-        super.onDestroy()
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -196,7 +183,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateExternalNavigationRoute(intent: Intent?) {
-        externalNavigationRoute = intent?.openVitalsRoute() ?: intent?.sendPointRoute()
+        externalNavigationRoute = intent?.openVitalsRoute()
     }
 }
 
@@ -210,39 +197,6 @@ internal fun Intent.openVitalsRoute(): String? =
     getStringExtra(EXTRA_OPENVITALS_ROUTE)
         ?.let(::migratedOpenVitalsRoute)
         ?.takeIf(::isSupportedOpenVitalsRoute)
-
-/**
- * The send-a-point route for a place another app shared: a `geo:` link, or
- * text holding one, a maps URL or bare coordinates. Built here from parsed
- * numbers, so nothing from the intent reaches the navigator as a route.
- */
-internal fun Intent.sendPointRoute(): String? = when (action) {
-    Intent.ACTION_VIEW -> sharedPlaceRoute(geoLink = dataString, text = null)
-    Intent.ACTION_SEND -> sharedPlaceRoute(
-        geoLink = null,
-        text = getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
-            .takeIf { type?.startsWith("text/") == true },
-    )
-    else -> null
-}
-
-/** Null when there is nothing place-like at all. A share with no position still opens the form, which says so. */
-internal fun sharedPlaceRoute(geoLink: String?, text: String?): String? {
-    val point = when {
-        geoLink != null -> GeoUri.parse(geoLink) ?: return null
-        text != null -> SharedLocationText.parse(text) ?: SharedGeoPoint()
-        else -> return null
-    }
-    return Screen.WatchSendPoint.createRoute(
-        latitude = point.latitude,
-        longitude = point.longitude,
-        name = point.name?.take(SharedPlaceNameLimit),
-        unreadable = !point.hasPosition,
-    )
-}
-
-/** The watch keeps 31 bytes. This only stops a whole shared page becoming a route. */
-private const val SharedPlaceNameLimit = 64
 
 /**
  * The route a stored intent should open. A widget placed before the

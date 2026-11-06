@@ -25,5 +25,3 @@ dependencyResolutionManagement {
 rootProject.name = "OpenVitals"
 include(":app")
 include(":domain")
-include(":wear")
-include(":wearlink")

@@ -13,7 +13,6 @@ Qué puedes hacer
 * Importa exportaciones de Apple Health y archivos GPX, KML, KMZ, TCX, FIT y CSV
 * Crea un informe de salud en PDF para compartirlo con tu médico
 * Sigue tu ciclo: periodos, síntomas, temperatura corporal basal, estimación del próximo periodo y recordatorios de la píldora
-* Sincroniza relojes Garmin compatibles directamente por Bluetooth
 * Copia datos entre dos teléfonos por Bluetooth, sin cuenta y sin red
 * Gana insignias por pasos, distancia, pisos, entrenamientos, hidratación, sueño y mindfulness
 * Activa recordatorios de hidratación, de mindfulness y del ciclo

@@ -17,17 +17,11 @@ import tech.mmarca.openvitals.data.local.cycle.PillIntakeEntity
 import tech.mmarca.openvitals.data.local.food.FoodDao
 import tech.mmarca.openvitals.data.local.food.FoodEntity
 import tech.mmarca.openvitals.data.local.food.FoodNutrientEntity
-import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
-import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteEntity
-import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
-import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayCacheDao
 import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayEntity
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentDao
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentEntity
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentRecordEntity
-import tech.mmarca.openvitals.data.local.scale.ScaleWeighInDao
-import tech.mmarca.openvitals.data.local.scale.ScaleWeighInEntity
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
@@ -41,9 +35,7 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         VitalsSyncCursorEntity::class,
         BodyEnergyDayEntity::class,
         BodyEnergyBucketEntity::class,
-        GarminWellnessSampleEntity::class,
         SyncedRecordOriginEntity::class,
-        GarminSleepMinuteEntity::class,
         HeartRateDayEntity::class,
         FoodEntity::class,
         FoodNutrientEntity::class,
@@ -52,7 +44,6 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         PillIntakeEntity::class,
         MedicalDocumentEntity::class,
         MedicalDocumentRecordEntity::class,
-        ScaleWeighInEntity::class,
     ],
     version = OpenVitalsDatabase.VERSION,
     exportSchema = true,
@@ -64,9 +55,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun bodyEnergyTimelineDao(): BodyEnergyTimelineDao
 
-    abstract fun garminWellnessDao(): GarminWellnessDao
 
-    abstract fun garminSleepMinuteDao(): GarminSleepMinuteDao
 
     abstract fun syncedRecordOriginDao(): SyncedRecordOriginDao
 
@@ -80,11 +69,10 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun medicalDocumentDao(): MedicalDocumentDao
 
-    abstract fun scaleWeighInDao(): ScaleWeighInDao
 
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 17
+        const val VERSION = 18
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -192,6 +180,19 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
         }
 
         /**
+         * The device layer moved to OpenWatch, which keeps its own store. The watch-only
+         * samples, the Garmin sleep minutes and the scale's pending weigh-ins have no reader
+         * left here; Health Connect holds everything the devices wrote.
+         */
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `garmin_wellness_samples`")
+                db.execSQL("DROP TABLE IF EXISTS `garmin_sleep_minutes`")
+                db.execSQL("DROP TABLE IF EXISTS `scale_weigh_ins`")
+            }
+        }
+
+        /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
          */
@@ -213,6 +214,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_14_15,
                 MIGRATION_15_16,
                 MIGRATION_16_17,
+                MIGRATION_17_18,
             )
 
         /** `ALTER TABLE ADD COLUMN`, skipped when an earlier creation already carries the column. */

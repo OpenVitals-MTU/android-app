@@ -84,7 +84,7 @@ is where an earlier hand-tally drifted). One row is an exception: the
 | [Apple Health import](apple-health-import.md) | 97 | 70 | 4 | 0 | 0 | 23 | 0 | 0 |
 | [Body / cycle / recovery](body-cycle-recovery.md) | 48 | 44 | 2 | 0 | 0 | 2 | 0 | 0 |
 | [Domain / data / core](domain-data-core.md) | 1,055 | 729 | 85 | 9 | 5 | 222 | 5 | 0 |
-| [Devices (GFDI, notifications, sync) / UI / goldens](devices-ui.md) | 744 | 646 | 65 | 9 | 6 | 10 | 0 | 8 |
+| [UI / goldens / integration (the device rows left with the device layer)](devices-ui.md) | 744 | 646 | 65 | 9 | 6 | 10 | 0 | 8 |
 | **Total** | **3,441** | **2,631** | **277** | **44** | **57** | **395** | **29** | **8** |
 
 Of the 2,952 portable cases (PORTED + DIVERGED + MISSING), **2,631 are ported
@@ -172,16 +172,10 @@ Fixed during the parity work rather than deferred:
   until a later tick happened to succeed. A read that did not happen now leaves
   the last good snapshot alone. Timeouts had been falling out of the loaders as
   the same null an empty day produces, which is why the two were drawn the same.
-- Watch syncs, phone-to-phone syncs and finished Apple Health imports tell every
+- Phone-to-phone syncs and finished Apple Health imports tell every
   placed widget to redraw. `updatePeriodMillis` is honoured at the system's
   convenience and not at all in Doze, so a sync at 08:05 left the morning's
   tiles on their pre-sync numbers while the user watched it succeed.
-- A Garmin sync invalidates and rebuilds the Body Energy chain from the earliest
-  day it back-filled. Body Energy chains across midnight, so a week of recovered
-  sleep invalidated every day after it too — and days past the 7-day settling
-  window are never revisited, so they stayed frozen at their pre-sync scores
-  permanently. `syncAll(force = true)` existed for exactly this caller and had
-  none; `invalidateForward` was reachable only from the repository's own ripple.
 - Both reminder schedules are re-planned whenever the app comes to the
   foreground. A reminder that fires without `POST_NOTIFICATIONS` cancels its own
   alarm and returns before rescheduling, and that permission is auto-revoked for
@@ -251,15 +245,3 @@ defects in the ~200 lines of Kotlin around it, which no parity row tracked:
   screen. It now delegates to `LatLongUtils.zoomForBounds` and clamps to the
   zoom range the packs actually carry, rather than a fixed 7..16 that stopped a
   city extract reaching the detail it was imported for.
-
-### A missing feature, not a missing test
-
-`FitBodyEnergyFromWatchUseCase` had no Kotlin counterpart. Both halves of it
-were already ported — `BodyEnergyCalibrationFit` computes the gain update and
-`BodyEnergyWatchObservations` pairs watch samples against a timeline — but
-nothing joined them and nothing called them, so a Garmin watch's Body Battery
-was only ever drawn on the watch-data screen. The gains stayed at their defaults
-however much watch data accumulated. The use case now runs after a sync, once
-the Body Energy chain has been rebuilt: Flutter fits *before* the rebuild, and
-ordering it after avoids teaching the model from a prediction that had not yet
-seen the sync's own data.

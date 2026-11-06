@@ -5,8 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
-import tech.mmarca.openvitals.devices.garmin.wellness.FitW
-import tech.mmarca.openvitals.devices.garmin.wellness.fitWrap
 
 /** `byte` fields reach the caller whole; the numeric maps stay as they were. */
 class FitDecoderByteFieldTest {

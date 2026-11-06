@@ -13,7 +13,6 @@ Co můžete dělat
 * Importujte exporty Apple Health a soubory GPX, KML, KMZ, TCX, FIT a CSV
 * Vytvořte zdravotní zprávu v PDF a sdílejte ji se svým lékařem
 * Sledujte svůj cyklus: menstruaci, příznaky, bazální teplotu, odhad příští menstruace a připomínky pilulky
-* Synchronizujte podporované hodinky Garmin přímo přes Bluetooth
 * Kopírujte data mezi dvěma telefony přes Bluetooth, bez účtu a bez sítě
 * Získávejte odznaky za kroky, vzdálenost, patra, tréninky, hydrataci, spánek a všímavost
 * Zapněte si připomenutí nápojů, všímavosti a cyklu

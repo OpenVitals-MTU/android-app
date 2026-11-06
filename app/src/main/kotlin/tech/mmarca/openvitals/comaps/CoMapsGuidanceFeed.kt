@@ -33,9 +33,6 @@ class CoMapsGuidanceFeed @Inject constructor(
     enum class Reason {
         /** A GPS recording is running (or being armed) with the integration on. */
         ACTIVITY_RECORDING,
-
-        /** A paired watch is showing guidance on the wrist. */
-        WATCH,
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

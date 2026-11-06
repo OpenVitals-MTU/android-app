@@ -64,8 +64,6 @@ internal fun LazyListScope.settingsScreenContent(
         SettingsSection.DISPLAY,
         SettingsSection.ACTIVITIES,
         SettingsSection.SENSORS,
-        SettingsSection.WATCHES,
-        SettingsSection.SCALES,
         SettingsSection.NUTRITION,
         SettingsSection.BODY_PROFILE,
         SettingsSection.RECOVERY,

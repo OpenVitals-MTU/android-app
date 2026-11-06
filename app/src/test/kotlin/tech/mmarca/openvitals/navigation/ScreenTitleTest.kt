@@ -57,6 +57,6 @@ class ScreenTitleTest {
     private companion object {
         /** Onboarding shows no app bar. The others are titled by the thing they show: a metric, a device. */
         val ScreensWithoutFixedTitle: Set<Screen> =
-            setOf(Screen.Onboarding, Screen.Metric, Screen.WatchDevice, Screen.ScaleDevice)
+            setOf(Screen.Onboarding, Screen.Metric)
     }
 }

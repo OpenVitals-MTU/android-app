@@ -216,4 +216,19 @@ class OpenVitalsDatabaseMigrationTest {
             )
         }
     }
+
+    @Test
+    fun `version seventeen drops the device tables that moved to OpenWatch`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_17_18.migrate(db)
+
+        assertEquals(17, OpenVitalsDatabase.MIGRATION_17_18.startVersion)
+        assertEquals(18, OpenVitalsDatabase.MIGRATION_17_18.endVersion)
+        verify { db.execSQL("DROP TABLE IF EXISTS `garmin_wellness_samples`") }
+        verify { db.execSQL("DROP TABLE IF EXISTS `garmin_sleep_minutes`") }
+        verify { db.execSQL("DROP TABLE IF EXISTS `scale_weigh_ins`") }
+        // Nothing else: Health Connect holds what the devices wrote, and the dashboard tables stay.
+        verify(exactly = 3) { db.execSQL(any()) }
+    }
 }

@@ -13,7 +13,6 @@ Mida saad teha
 * Impordi Apple Healthi eksporte ning GPX-, KML-, KMZ-, TCX-, FIT- ja CSV-faile
 * Koosta PDF-tervisearuanne, mida saad arstiga jagada
 * Jälgi oma tsüklit: menstruatsioonid, sümptomid, basaaltemperatuur, järgmise menstruatsiooni hinnang ja tableti meeldetuletused
-* Sünkrooni toetatud Garmini kellad otse Bluetoothi kaudu
 * Kopeeri andmeid kahe telefoni vahel Bluetoothi kaudu, ilma konto ja võrguta
 * Teeni märke sammude, vahemaa, korruste, treeningute, vedelikutarbimise, une ja teadveloleku eest
 * Lülita sisse meeldetuletused jookide, teadveloleku ja tsükli jaoks

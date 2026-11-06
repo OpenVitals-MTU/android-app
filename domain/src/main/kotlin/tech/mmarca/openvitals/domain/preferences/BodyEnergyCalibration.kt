@@ -44,13 +44,11 @@ data class BodyEnergyCalibration(
     val manualZoneThresholdsBpm: HeartZoneThresholds? = null,
     val useManualZones: Boolean = false,
     val setupCompleted: Boolean = false,
-    // Personal gains, one per component. 1.0 is neutral; the watch fit nudges within bounds.
+    // Personal gains, one per component. 1.0 is neutral; a fit nudges within bounds.
     val sleepChargeGain: Double = 1.0,
     val activityDrainGain: Double = 1.0,
     val basalDrainGain: Double = 1.0,
     val stressDrainGain: Double = 1.0,
-    // How many watch readings have informed the gains, for display.
-    val watchObservationCount: Int = 0,
 ) {
     private val clampedSleepChargeGain: Double get() = sleepChargeGain.coerceIn(MinGain, MaxGain)
     private val clampedActivityDrainGain: Double get() = activityDrainGain.coerceIn(MinGain, MaxGain)
@@ -67,12 +65,8 @@ data class BodyEnergyCalibration(
             activityDrainGain = clampedActivityDrainGain,
             basalDrainGain = clampedBasalDrainGain,
             stressDrainGain = clampedStressDrainGain,
-            watchObservationCount = watchObservationCount.coerceAtLeast(0),
         )
     }
-
-    /** Whether a watch has contributed to the gains, for the calibration copy. */
-    val hasWatchObservations: Boolean get() = watchObservationCount > 0
 
     /** Whether the gains differ from the neutral defaults. */
     val hasPersonalGains: Boolean
@@ -93,7 +87,7 @@ data class BodyEnergyCalibration(
         ).joinToString("|")
     }
 
-    /** The half the watch fit moves, in steps far smaller than three decimals. */
+    /** The half a fit moves, in steps far smaller than three decimals. */
     fun gainSignature(): String {
         val normalized = normalized()
         return listOf(
