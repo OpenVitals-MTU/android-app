@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenVitals</string>
+    <string name="cd_back">Πίσω</string>
+    <string name="cd_settings">Ρυθμίσεις</string>
+    <string name="cd_achievements">Επιτεύγματα</string>
+    <string name="cd_sensor_battery_status">Κατάσταση αισθητήρα μπαταρίας</string>
+    <string name="cd_edit_dashboard">Σύνοψη επεξεργασίας</string>
+    <string name="cd_finish_dashboard_editing">Ολοκλήρωση επεξεργασίας σύνοψης</string>
+    <string name="cd_edit_saved_drinks">Επεξεργασία αποθηκευμένων ποτών</string>
+    <string name="cd_done_editing_saved_drinks">Τέλος επεξεργασίας αποθηκευμένων ποτών</string>
+    <string name="cd_edit_drink">Επεξεργασία ποτών</string>
+    <string name="cd_delete_drink">Διαγραφή ποτού</string>
+    <string name="cd_move_drink_category">Μετακίνηση κατηγορίας ποτού</string>
+    <string name="cd_expand_drink_category">Επέκταση %1$s</string>
+    <string name="cd_collapse_drink_category">Σύμπτυξη %1$s</string>
+    <string name="cd_edit_manual_entry_widgets">Επεξεργασία γραφικών στοιχείων &amp; προσθήκη καταχώρισης</string>
+</resources>
