@@ -90,6 +90,7 @@ class OnboardingViewModelTest {
         every { prefs.healthConnectMindfulnessEnabled } answers { integrationEnabled }
         every { prefs.healthConnectMindfulnessEnabled = any() } answers { integrationEnabled = firstArg() }
         every { prefs.onboardingDone = any() } just Runs
+        every { prefs.openWatchMoveNoticeSeen = any() } just Runs
         every { prefs.acceptCurrentPrivacyPolicy() } just Runs
     }
 
@@ -498,6 +499,7 @@ class OnboardingViewModelTest {
 
         verify { prefs.acceptCurrentPrivacyPolicy() }
         verify { prefs.onboardingDone = true }
+        verify { prefs.openWatchMoveNoticeSeen = true }
     }
 
     // The mindfulness opt-in deadlock.

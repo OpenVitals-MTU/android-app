@@ -1,6 +1,6 @@
 # Features
 
-This document is a functional inventory of the OpenVitals Android app. It is organized by what the user can view, what the user can insert/update/delete, and which settings are available. Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) is the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, which writes what those devices record to Health Connect.
+This document is a functional inventory of the OpenVitals Android app. It is organized by what the user can view, what the user can insert/update/delete, and which settings are available. Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) is the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, which writes what those devices record to Health Connect. An install updated from a version that still had them sees a one-time notice saying so, with a link to OpenWatch.
 
 For the route, widget, package, and documentation mapping, see [`docs/features/feature-map.md`](docs/features/feature-map.md).
 

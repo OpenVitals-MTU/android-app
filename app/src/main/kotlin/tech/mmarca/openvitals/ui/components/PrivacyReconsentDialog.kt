@@ -47,8 +47,9 @@ fun PrivacyReconsentDialog(
     )
 }
 
+/** [blocked] holds the dialog back while another root prompt is on screen, so two never stack. */
 @Composable
-fun PrivacyReconsentPrompt() {
+fun PrivacyReconsentPrompt(blocked: Boolean = false) {
     val context = LocalContext.current
     val prefs = remember {
         EntryPointAccessors.fromApplication(
@@ -65,9 +66,9 @@ fun PrivacyReconsentPrompt() {
         resumeTick++
     }
 
-    LaunchedEffect(resumeTick) {
+    LaunchedEffect(resumeTick, blocked) {
         val accepted = prefs.acceptedPrivacyPolicyVersion
-        showDialog = prefs.onboardingDone &&
+        showDialog = !blocked && prefs.onboardingDone &&
             accepted != PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
     }
 

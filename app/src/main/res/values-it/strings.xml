@@ -3189,6 +3189,10 @@
     <string name="food_invalid_amount">Questa porzione è troppo grande per essere salvata. Inserisci una quantità minore.</string>
     <string name="food_write_failed">Impossibile salvare la voce di cibo: %1$s</string>
     <string name="privacy_reconsent_no_browser">Nessuna app su questo telefono può aprire il link. L\'informativa è disponibile su %1$s</string>
+    <string name="openwatch_move_title">Orologi e bilance sono passati a OpenWatch</string>
+    <string name="openwatch_move_body">Gli orologi Garmin e Wear OS e la bilancia Xiaomi ora si sincronizzano tramite OpenWatch, un\'app separata dello stesso progetto. OpenVitals mantiene la dashboard e legge tutto ciò che OpenWatch scrive in Health Connect, così l\'app è più leggera e si apre più in fretta.\n\nPer continuare a sincronizzare un orologio o una bilancia, installa OpenWatch e associa lì il dispositivo. Nulla di ciò che hai registrato va perso: resta in Health Connect.</string>
+    <string name="openwatch_move_action_get">Scarica OpenWatch</string>
+    <string name="openwatch_move_no_browser">Nessuna app su questo telefono può aprire il link. OpenWatch è su %1$s</string>
     <string name="app_lock_locked_title">OpenVitals è bloccata</string>
     <string name="app_lock_unlock_action">Sblocca</string>
     <string name="device_sync_host_option_body_compare">Lascia che l\'altro telefono trovi questo.</string>

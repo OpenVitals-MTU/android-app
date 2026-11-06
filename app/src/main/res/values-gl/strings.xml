@@ -3243,6 +3243,10 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="food_invalid_amount">Esa porción é demasiado grande para gardala. Introduce unha cantidade menor.</string>
     <string name="food_write_failed">Non se puido gardar a entrada de comida: %1$s</string>
     <string name="privacy_reconsent_no_browser">Ningunha app deste teléfono pode abrir a ligazón. A política está en %1$s</string>
+    <string name="openwatch_move_title">Os reloxos e as básculas pasaron a OpenWatch</string>
+    <string name="openwatch_move_body">Os reloxos Garmin e Wear OS e a báscula Xiaomi agora sincronízanse a través de OpenWatch, unha aplicación aparte do mesmo proxecto. OpenVitals conserva o panel e le todo o que OpenWatch escribe en Health Connect, así que a aplicación é máis lixeira e ábrese máis rápido.\n\nPara seguir sincronizando un reloxo ou unha báscula, instala OpenWatch e emparella o dispositivo alí. Non se perde nada do que rexistraches: segue en Health Connect.</string>
+    <string name="openwatch_move_action_get">Obter OpenWatch</string>
+    <string name="openwatch_move_no_browser">Ningunha aplicación deste teléfono pode abrir a ligazón. OpenWatch está en %1$s</string>
     <string name="app_lock_locked_title">OpenVitals está bloqueado</string>
     <string name="app_lock_unlock_action">Desbloquear</string>
     <string name="device_sync_host_option_body_compare">Deixa que o outro teléfono atope este.</string>
