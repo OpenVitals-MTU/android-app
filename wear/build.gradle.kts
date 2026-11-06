@@ -90,6 +90,12 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.wear.compose.material3)
+    // The metric tiles: Material 3 tile layouts, no Play Services.
+    implementation(libs.androidx.wear.tiles)
+    implementation(libs.androidx.wear.protolayout)
+    implementation(libs.androidx.wear.protolayout.material3)
+    // A suspend function as the ListenableFuture a TileService returns.
+    implementation(libs.androidx.concurrent.futures.ktx)
     testImplementation(libs.junit4)
     // Real org.json for local tests (the android.jar copy is a throwing stub): the feature vector is JSON.
     testImplementation(libs.org.json)

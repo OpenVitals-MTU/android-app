@@ -72,6 +72,50 @@
             android:name=".WearPhoneConfirmReceiver"
             android:exported="false" />
 
+        <!-- The metric tiles: each reads what the recorders stored and starts no sensor. -->
+        <service
+            android:name=".HeartRateTileService"
+            android:description="@string/tile_heart_rate_description"
+            android:exported="true"
+            android:icon="@drawable/ic_metric_heart_rate"
+            android:label="@string/tile_heart_rate_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview_heart_rate" />
+        </service>
+        <service
+            android:name=".StepsTileService"
+            android:description="@string/tile_steps_description"
+            android:exported="true"
+            android:icon="@drawable/ic_metric_steps"
+            android:label="@string/tile_steps_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview_steps" />
+        </service>
+        <service
+            android:name=".FloorsTileService"
+            android:description="@string/tile_floors_description"
+            android:exported="true"
+            android:icon="@drawable/ic_metric_floors"
+            android:label="@string/tile_floors_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview_floors" />
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -134,7 +134,10 @@ class HeartRateRecorder(
          */
         const val MAX_REPORT_LATENCY_MICROS = 40 * 1_000_000
 
-        /** Stored sample spacing. Enough for resting and daily curves; a tenth of the bytes. */
+        /**
+         * Stored sample spacing. Enough for resting and daily curves; a tenth of the bytes.
+         * [TileDay.MAX_HEART_RATE_SAMPLES_PER_DAY] counts on it: a closer spacing needs a higher limit there.
+         */
         const val MIN_SAMPLE_GAP_MILLIS = 10_000L
 
         const val PRUNE_EVERY_MILLIS = 6L * 60 * 60 * 1000
