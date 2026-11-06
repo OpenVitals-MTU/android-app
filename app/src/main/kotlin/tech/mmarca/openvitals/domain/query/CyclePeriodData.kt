@@ -4,6 +4,7 @@ import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 
 data class CyclePeriodData(
     val data: CycleData,
@@ -15,4 +16,6 @@ data class CyclePeriodData(
     val allJournalEntries: List<CycleJournalEntry> = emptyList(),
     /** Morning temperatures since the current cycle started, for the thermal chart. */
     val currentCycleTemperatures: List<BasalBodyTemperatureEntry> = emptyList(),
+    /** Night skin temperature since the current cycle started. It feeds the retrospective shift line only, never an estimate. */
+    val currentCycleSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
 )

@@ -186,6 +186,7 @@ class CycleViewModel @Inject constructor(
                         journalEntries = result.journalEntries,
                         allJournalEntries = result.allJournalEntries,
                         currentCycleTemperatures = result.currentCycleTemperatures,
+                        currentCycleSkinTemperature = result.currentCycleSkinTemperature,
                         profile = profile,
                         pill = pill,
                     )
