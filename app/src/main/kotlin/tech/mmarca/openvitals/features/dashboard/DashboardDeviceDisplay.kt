@@ -2,35 +2,10 @@ package tech.mmarca.openvitals.features.dashboard
 
 import java.time.Instant
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.devices.garmin.GarminRealtimeState
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
-
-/** The watch tile: the most recently synced watch, others behind a count. Bike computers excluded. */
-internal fun List<BleSensorDevice>.toWatchWidgetDisplay(
-    syncingDeviceId: String? = null,
-    live: GarminRealtimeState = GarminRealtimeState(),
-    now: Instant = Instant.now(),
-): WatchWidgetDisplay? {
-    val watches = filter { it.isWatch }
-    // The watch being synced owns the tile; failing that, the most recently synced.
-    val primary = watches.firstOrNull { it.id == syncingDeviceId }
-        ?: watches.maxByOrNull { it.lastSyncedAt?.toEpochMilli() ?: Long.MIN_VALUE }
-        ?: return null
-    return WatchWidgetDisplay(
-        deviceId = primary.id,
-        name = primary.displayName,
-        batteryPercent = primary.batteryPercent,
-        lastSyncedAt = primary.lastSyncedAt,
-        additionalCount = watches.size - 1,
-        isSyncing = primary.id == syncingDeviceId,
-        // Only one watch can hold a link, so the live values belong to it or nothing.
-        liveHeartRateBpm = live.freshHeartRate(now),
-        liveSteps = live.freshSteps(now),
-    )
-}
 
 /**
  * The paired BLE devices the Sensors & devices screen lists. Watches are

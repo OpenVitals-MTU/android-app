@@ -38,10 +38,9 @@ OpenVitals needs precise location to record route-backed activities. Without it,
 
 ## Why Does OpenVitals Need Bluetooth Permission?
 
-Bluetooth is used for three separate things, all of them local:
+Bluetooth is used for two separate things, both of them local:
 
 - Connecting to Bluetooth LE sensors during activity recording.
-- Pairing with and syncing a Garmin watch.
 - Copying Health Connect records to another nearby phone.
 
 Nearby-device Bluetooth permissions do not add internet access.
@@ -61,19 +60,9 @@ Notification permission is used for:
 
 Reminders are local and optional.
 
-## Why Does OpenVitals Ask For Notification Access?
+## Can OpenVitals Sync My Watch Or Scale?
 
-Notification access is a different, optional permission from notification permission, and it is used for one thing only: showing your phone's notifications on a paired watch.
-
-OpenVitals reads the notification, sends it to the watch over Bluetooth, and keeps it in memory only. Nothing is written to a file, a database, or Health Connect, and the app has no internet permission, so there is nowhere else for it to go. Android grants this from its own settings screen; OpenVitals shows a disclosure first, and the feature does nothing until access is granted. Individual apps can be silenced, the feature can be turned off, and access can be revoked at any time.
-
-## Why Does Android Ask To Let OpenVitals Access My Watch?
-
-That is Android's companion device dialog. Allowing it lets Android keep OpenVitals running while the watch is nearby, so a sync that takes several minutes is not killed halfway through. Declining is fine: the watch is still paired and still syncs, just without the background priority.
-
-## Where Does Watch Data Go?
-
-Data from a synced watch is written to Health Connect wherever a matching record type exists. Watch-only series such as stress, Body Battery, and watch sleep scores have no Health Connect type, so OpenVitals keeps those in its own local database on the device.
+Not by itself. Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) is the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app. It writes what those devices record to Health Connect, and OpenVitals reads it from there like any other source. A watch that broadcasts its heart rate over Bluetooth LE can still be used as a sensor while recording an activity.
 
 ## Is OpenVitals A Medical App?
 

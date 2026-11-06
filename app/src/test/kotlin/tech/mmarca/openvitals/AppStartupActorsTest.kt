@@ -9,45 +9,25 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.core.performance.ReminderRestoreBootstrap
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
-import tech.mmarca.openvitals.devices.garmin.GarminLocalData
-import tech.mmarca.openvitals.devices.garmin.GarminMusicRelay
-import tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
-import tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
-import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleListener
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
-import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
 
 class AppStartupActorsTest {
 
     private val reminders = mockk<ReminderRestoreBootstrap>(relaxed = true)
     private val origins = mockk<SyncedRecordOriginRepository>(relaxed = true)
-    private val bridge = mockk<GarminNotificationBridge>(relaxed = true)
-    private val navigation = mockk<GarminNavigationRelay>(relaxed = true)
-    private val music = mockk<GarminMusicRelay>(relaxed = true)
-    private val autoSync = mockk<WatchAutoSyncScheduler>(relaxed = true)
     private val widgets = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
     private val appleHealth = mockk<AppleHealthImportWorkController>(relaxed = true)
-    private val garminData = mockk<GarminLocalData>(relaxed = true)
-    private val scale = mockk<XiaomiScaleListener>(relaxed = true)
 
-    private fun subject() = AppStartupActors(
-        reminders, origins, bridge, navigation, music, autoSync, widgets, appleHealth, garminData, scale,
-    )
+    private fun subject() = AppStartupActors(reminders, origins, widgets, appleHealth)
 
     @Test
     fun `every actor is started once`() {
         subject().start {}
 
         verify(exactly = 1) { origins.warmOverlay() }
-        verify(exactly = 1) { bridge.onAppStart() }
-        verify(exactly = 1) { navigation.start() }
-        verify(exactly = 1) { music.start() }
-        verify(exactly = 1) { autoSync.restoreAll() }
         verify(exactly = 1) { widgets.reconcile() }
         verify(exactly = 1) { appleHealth.clearAbandonedStagedExport() }
-        verify(exactly = 1) { garminData.pruneOnAppStart() }
-        verify(exactly = 1) { scale.onAppStart() }
     }
 
     @Test

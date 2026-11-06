@@ -64,17 +64,14 @@ class BodyEnergyCalibrationTest {
 
         assertEquals(1.0, automatic.sleepChargeGain, 0.0)
         assertFalse(automatic.hasPersonalGains)
-        assertFalse(automatic.hasWatchObservations)
 
         val normalized = BodyEnergyCalibration(
             sleepChargeGain = 9.0,
             activityDrainGain = 0.0,
-            watchObservationCount = -4,
         ).normalized()
 
         assertEquals(BodyEnergyCalibration.MaxGain, normalized.sleepChargeGain, 0.0)
         assertEquals(BodyEnergyCalibration.MinGain, normalized.activityDrainGain, 0.0)
-        assertEquals(0, normalized.watchObservationCount)
     }
 
     @Test

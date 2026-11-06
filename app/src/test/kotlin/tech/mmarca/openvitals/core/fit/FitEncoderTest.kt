@@ -8,7 +8,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.devices.garmin.GarminCrc
 
 /** Whatever the encoder frames, [FitDecoder] decodes back, field for field. */
 class FitEncoderTest {
@@ -169,18 +168,6 @@ class FitEncoderTest {
         assertEquals(time, fitInstant(fitTimestamp(time)))
         // Pre-FIT-epoch clamps rather than going negative.
         assertEquals(0L, fitTimestamp(Instant.parse("1980-01-01T00:00:00Z")))
-    }
-
-    @Test fun `GarminCrc still computes the same checksum after the move`() {
-        // GFDI packet framing delegates to FitCrc; a drift here would corrupt every packet sent to a watch.
-        val data = ByteArray(64) { (it * 37 + 11).toByte() }
-
-        assertEquals(FitCrc.compute(data), GarminCrc.compute(data))
-        assertEquals(
-            FitCrc.compute(data, offset = 3, length = 40, initialCrc = 77),
-            GarminCrc.compute(data, offset = 3, length = 40, initialCrc = 77),
-        )
-        assertFalse(FitCrc.compute(data) == 0)
     }
 
     private fun ByteArray.uint16At(offset: Int): Int =

@@ -55,36 +55,7 @@ For the detailed feature inventory, see the [feature guide](https://docs.openvit
 
 ## Devices and integrations
 
-### Garmin watches
-
-[Garmin support](https://docs.openvitals.health/features/smartwatches) is experimental. A paired watch talks to OpenVitals over Bluetooth, with no Garmin account required. OpenVitals itself has no `INTERNET` permission.
-
-Supported synced data is written to Health Connect where OpenVitals has a matching mapping and Health Connect has a suitable record type. Garmin-only measurements such as Body Battery and watch stress stay in OpenVitals on the phone.
-
-<details>
-<summary>Current Garmin support</summary>
-
-- Sync recorded activity, sleep and wellness files over Bluetooth, manually or with optional periodic sync.
-- Both Garmin transport paths are supported, including older watches such as the Instinct 2X.
-- A dashboard watch tile shows the paired watch and provides sync controls.
-- Activities are written to Health Connect with routes and recorded series where available.
-- Sleep, heart rate, resting heart rate, HRV, Pulse Ox, respiratory rate, VO2 max, BMR, steps, distance, active calories and supported weight data are written to Health Connect where supported.
-- Body weight from a paired Garmin scale can be relayed through the watch integration.
-- Watch-only data includes stress, Body Battery, intensity minutes, sleep score, sleep need and restless moments, recovery time, Garmin training readiness, acute/chronic training load, functional threshold power, lactate threshold, and hill and endurance scores.
-- For watches that provide sleep but no stages, OpenVitals can estimate the stages on the phone.
-- An optional stay-connected mode keeps the Bluetooth link open and shows live heart rate and steps.
-- Forward phone notifications and ringing calls to the watch, with per-app blocking and supported notification actions.
-- Weather can come from a weather app on the phone; calendar and media controls are optional.
-- Find the watch from the phone, or ring the phone from the watch.
-- Read and change the watch's settings tree and alarms where supported. Older watches without a settings tree can use alarms kept on the phone and sent to the watch.
-- Send an imported GPS ephemeris file to the watch.
-- Send named coordinates to the watch's saved locations.
-
-</details>
-
-### Bathroom scale
-
-Experimental [support for the Xiaomi Body Composition Scale S400 and S400 Pro](https://docs.openvitals.health/features/scales). Every weigh-in is saved to Health Connect as it happens, with the app open or closed, decoded from the scale's own Bluetooth broadcast with the key from your Xiaomi account. Weight and heart rate are saved as measured; body fat, lean mass and body water are estimated on the phone. OpenVitals never connects to the scale and never contacts Xiaomi.
+Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) lives in the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, which writes what those devices record to Health Connect for OpenVitals to read.
 
 ### Bluetooth sensors
 
@@ -95,12 +66,6 @@ A connected heart-rate sensor can also be used during strength training and for 
 ### CoMaps
 
 While [CoMaps](https://docs.openvitals.health/features/comaps-navigation-context) is navigating, OpenVitals can show its turn guidance on the offline activity map during a recording, and optionally save the guidance with the activity on-device.
-
-Guidance can also be sent to a paired Garmin watch on its own switch, independently of activity recording.
-
-### Wear OS watches
-
-A [Wear OS watch](https://docs.openvitals.health/features/smartwatches) running the OpenVitals Wear OS app records heart rate, steps and the height climbed minute by minute, and what a sleep estimate needs; off the wrist it rests the heart rate sensor. A sync from the phone, on a tap or on a schedule, copies the heart rate, the steps and the floors into Health Connect, with each minute's cadence and, once your weight is known, an estimate of the calories walking cost, and writes one estimated sleep session per night with the night's resting heart rate. A status card shows whether the watch is paired and the watch app answers, and the heart rate live while the screen is open. On the watch, three tiles show today's heart rate, steps and floors with the day's curve. No vendor app is needed on the phone once the watch is paired. The watch app is still in development, for testers: it is not on any store yet and is [installed over adb](https://docs.openvitals.health/how-to/wear-os-sideload).
 
 ### Sync with another phone
 
@@ -126,7 +91,6 @@ OpenVitals currently has screens or data handling for:
 - Goals
 - Achievements
 - Medical records
-- Garmin-only wellness data
 
 <details>
 <summary>What is covered in each area</summary>
@@ -141,7 +105,6 @@ OpenVitals currently has screens or data handling for:
 - **Goals:** configurable daily goals for supported activity metrics, workout minutes, hydration, sleep, nutrition and mindfulness.
 - **Achievements:** badges and progress for daily steps, lifetime distance, floors and other supported achievement categories.
 - **Medical records (beta):** the Health Connect medical-record categories available on Android 14 and newer with a recent Health Connect module. Records can be imported, typed in by hand and exported. They are shown as stored; OpenVitals does not interpret their clinical meaning. The area is still in development, so review what you import.
-- **Garmin-only data:** stress, Body Battery, intensity minutes, watch sleep metrics, recovery time, Garmin training readiness and acute/chronic training load when the paired watch supplies them.
 
 </details>
 
@@ -156,7 +119,7 @@ A fuller breakdown of what can be viewed, entered, edited, imported or exported 
 - OpenVitals opts out of Android cloud backup.
 - Health Connect remains the source of truth wherever it has a record type.
 - The dashboard is read-only by default; writes happen only through actions you explicitly start or enable.
-- Bluetooth is used for sensors, paired watches, the scale and phone-to-phone sync. Data sent over Bluetooth goes only to devices or phones you pair or use with those features.
+- Bluetooth is used for sensors and phone-to-phone sync. Data sent over Bluetooth goes only to devices or phones you pair or use with those features.
 - Files are exported or shared only when you choose to do so.
 
 Health Connect access is split into categories rather than requested as one block:
@@ -178,11 +141,9 @@ This includes things such as:
 
 - derived summary caches and Body Energy history;
 - food and drink catalogues;
-- Garmin-only wellness data and temporary per-minute watch data used for sleep processing;
-- the readings of each bathroom scale weigh-in;
 - the parts of the cycle journal that Health Connect cannot store, along with cycle exclusions and pill intakes;
 - metadata used by device sync;
-- downloaded watch files, recordings not yet saved, staged Apple Health imports, imported offline maps and elevation tiles;
+- recordings not yet saved, staged Apple Health imports, imported offline maps and elevation tiles;
 - medical documents you explicitly choose to keep;
 - the last phone-to-phone sync report, the last Apple Health import report and the last crash report, each holding counts, types and reasons rather than your values.
 
@@ -290,7 +251,7 @@ After launching the app:
 
 ## Architecture at a glance
 
-The repository has two Gradle modules. `:app` is the phone app; `:wear` is the Wear OS companion app, still in development, with its own CI gate.
+The repository has two Gradle modules: `:app` is the phone app and `:domain` holds its pure Kotlin models and calculations.
 
 The phone app uses:
 
@@ -299,9 +260,9 @@ The phone app uses:
 - Hilt for dependency injection;
 - the AndroidX Health Connect client behind `HealthConnectManager` and feature-specific repositories;
 - Room for derived caches and data Health Connect cannot represent. Health Connect remains the source of truth for record types it supports;
-- WorkManager for Apple Health imports, offline-map imports and the opt-in periodic Garmin watch-sync job.
+- WorkManager for Apple Health imports and offline-map imports.
 
-Watch and scale integration lives under `devices/`, including the Garmin protocol stack, shared Bluetooth radio handling, companion-device pairing, notification forwarding and the scale listener.
+Watch and scale support is not in this repository: it lives in [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch), a separate app that writes to Health Connect.
 
 Live Bluetooth LE sensor streaming during activity recording is separate under `sensors/ble/`.
 
@@ -312,11 +273,10 @@ See the [architecture documentation](docs/engineering/architecture.md) for the c
 ## Project layout
 
 - [`app/`](app): Android phone app module
-- [`wear/`](wear): Wear OS companion app module
+- [`domain/`](domain): pure Kotlin module with the app-local models, period math and insight calculations
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
 - [`app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/`](app/src/main/kotlin/tech/mmarca/openvitals/healthconnect): Health Connect readers, writers and the permission shell
-- [`app/src/main/kotlin/tech/mmarca/openvitals/devices/`](app/src/main/kotlin/tech/mmarca/openvitals/devices): Garmin, Wear OS and scale device layer
 - [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components

@@ -14,8 +14,6 @@ import tech.mmarca.openvitals.data.repository.CycleJournalRepositoryImpl
 import tech.mmarca.openvitals.data.repository.PillIntakeRepositoryImpl
 import tech.mmarca.openvitals.data.repository.CycleRepositoryImpl
 import tech.mmarca.openvitals.data.repository.FoodRepositoryImpl
-import tech.mmarca.openvitals.data.repository.GarminSleepMinuteRepositoryImpl
-import tech.mmarca.openvitals.data.repository.GarminWellnessRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HealthRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HeartRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HydrationRepositoryImpl
@@ -23,7 +21,6 @@ import tech.mmarca.openvitals.data.repository.MedicalDocumentsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.MedicalRecordsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.MindfulnessRepositoryImpl
 import tech.mmarca.openvitals.data.repository.NutritionRepositoryImpl
-import tech.mmarca.openvitals.data.repository.ScaleWeighInRepositoryImpl
 import tech.mmarca.openvitals.data.repository.SleepRepositoryImpl
 import tech.mmarca.openvitals.data.repository.VitalsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -33,11 +30,8 @@ import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
-import tech.mmarca.openvitals.data.repository.contract.ScaleWeighInRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.FoodRepository
-import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
-import tech.mmarca.openvitals.data.repository.contract.GarminWellnessRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
@@ -124,18 +118,4 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindVitalsRepository(impl: VitalsRepositoryImpl): VitalsRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindGarminWellnessRepository(impl: GarminWellnessRepositoryImpl): GarminWellnessRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindGarminSleepMinuteRepository(
-        impl: GarminSleepMinuteRepositoryImpl,
-    ): GarminSleepMinuteRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindScaleWeighInRepository(impl: ScaleWeighInRepositoryImpl): ScaleWeighInRepository
 }

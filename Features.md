@@ -1,6 +1,6 @@
 # Features
 
-This document is a functional inventory of the OpenVitals Android app. It is organized by what the user can view, what the user can insert/update/delete, and which settings are available.
+This document is a functional inventory of the OpenVitals Android app. It is organized by what the user can view, what the user can insert/update/delete, and which settings are available. Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) is the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, which writes what those devices record to Health Connect.
 
 For the route, widget, package, and documentation mapping, see [`docs/features/feature-map.md`](docs/features/feature-map.md).
 
@@ -222,18 +222,6 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View today's logged observations (bleeding, pain, mood, energy, symptoms, note).
 - Add a cycle home screen widget that shows the cycle day, the estimated range, and whether today is logged, with a button that hides them.
 
-### Watch Data
-
-- View measurements that only a paired Garmin watch produces and Health Connect has no record type for.
-- View stress with today's average.
-- View Body Battery with today's highest value.
-- View intensity minutes against the weekly target, counting vigorous minutes double.
-- View the watch's sleep score, time awake, times woken, and sleep need for last night.
-- View recovery time, training readiness, and acute and chronic training load.
-- View which of these a watch did not send, rather than a blank row.
-- View watch pairing state, last sync time, and paired-watch management.
-- Watch-recorded activities, sleep, heart rate, and other supported measures are viewed on the normal metric screens once written to Health Connect.
-
 ### Medical Records
 
 - View the medical records Health Connect holds, where Health Connect offers them (Android 14 and newer with a recent Health Connect module).
@@ -419,45 +407,6 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Read a report of what was merged, what was already present, and a per-record-type breakdown, and copy or share it.
 - Re-running a sync writes no duplicates.
 
-### Watch Sync
-
-- Pair a Garmin watch and copy the activity, sleep, and wellness files it recorded, over Bluetooth only.
-- Register a WearOS or other recognized smartwatch; its data reaches the app through Health Connect.
-- Write watch-recorded activities to Health Connect as exercise sessions with routes and series.
-- Write watch sleep sessions and stages, heart rate, resting heart rate, heart rate variability, respiratory rate, VO2 max, basal metabolic rate, and intraday steps, distance, and active calories to Health Connect.
-- Store watch-only measurements locally where Health Connect has no record type for them.
-- Re-syncing the same day writes no duplicates.
-- Sync a Garmin watch automatically every 30 minutes, hour, or two hours, chosen per watch and off by default.
-- Forward phone notifications to a paired watch, after an in-app disclosure and Android's notification access.
-- Silence individual apps so their notifications do not reach the watch.
-- Dismiss, reply to, and act on a forwarded notification from the watch.
-- Browse and change the watch's own settings tree and alarms, read live from the watch.
-- Make the watch alert so it can be found, and stop the alert.
-- Ring the phone from the watch's find-my-phone feature, even when the phone is silenced.
-- Keep the connection open whenever the watch is in range ("Stay connected"), the way the vendor's app does.
-- Stream the watch's live heart rate and steps to the device screen and the dashboard watch tile, over the held link.
-- Sync from the dashboard: a watch tile shows the last-synced watch with its battery and a sync button.
-- Show weather on the watch from a weather app on the phone that broadcasts it (such as Breezy Weather); no network access.
-- Feed the watch's calendar glance from the phone's calendar, off by default behind its own permission.
-- Control the phone's music from the watch: track details on the wrist, with play, pause, skip and volume, off by default.
-- Hand the watch a GPS ephemeris file the user imported, for fast GPS fixes without any download.
-- Send a named point to the watch's saved locations by typing its coordinates, in decimal degrees or the degrees and minutes geocaching uses, or by sharing a place from a maps app.
-- Set alarms on an older Garmin watch that has no settings tree: a list kept on the phone and sent to the watch as one file.
-- Rename, disable, or remove a paired watch.
-- File syncs are always user-initiated; there is no background or scheduled watch sync.
-
-### Scale Weigh-Ins
-
-- Hear a Xiaomi Body Composition Scale S400 and save each weigh-in as it happens, with the app open or closed, without connecting to the scale and without network access.
-- Let Android wake OpenVitals when someone steps on the scale (Android 12 and newer), so a weigh-in is saved with the app closed; a short silent notification shows while the result is read. Without that, and on older versions, weigh-ins are saved while the app is open.
-- Write the scale's weight and heart rate to Health Connect.
-- Write body fat, lean body mass and body water mass, estimated from the scale's impedance with published equations and the body profile's height and sex.
-- Keep each weigh-in's readings, the two impedance values included, on the device.
-- Hold a weigh-in Health Connect could not take (a missing permission, paused sync) and write it later.
-- Save what was heard when only part of a weigh-in arrives, such as a weight without impedance.
-- Leave out weigh-ins the scale assigned to another person.
-- Delete the last weigh-in with every record it wrote.
-
 ### Medical Records
 
 - Ask for all thirteen medical permissions once, the first time the area opens, in a request that holds no other permission.
@@ -522,7 +471,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Set the evening hour a night starts and the morning hour it ends. Sleep outside that window counts as a daytime nap.
 - Set the high heart-rate alert threshold in beats per minute.
 - Set the low heart-rate alert threshold in beats per minute.
-- Adjust Body Energy calibration and reset the tuning learned from a watch.
+- Adjust Body Energy calibration and reset it to automatic.
 
 ### Body Profile Settings
 
@@ -552,27 +501,6 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Bulk import multiple route files directly into Health Connect.
 - Open the CSV importer and map a CSV file's columns to body measurements and vitals.
 - Monitor import progress and read import reports.
-
-### Watch Settings
-
-- Pair a watch, and grant the nearby-device permission it needs.
-- Optionally allow Android to keep OpenVitals running while the watch is nearby, so a long sync is not interrupted.
-- Sync a paired watch, and open its watch-only data screen.
-- Turn notification forwarding on or off, and choose which apps are silenced.
-- Open the watch's own settings tree and its alarms.
-- Find a paired watch.
-- Rename a watch, switch it off without unpairing, or remove it.
-
-### Scale Settings
-
-- Add a scale the way a watch is added: a card list, an add dialog, and a device view behind the card.
-- Find the scale through Android's companion-device dialog, which names it and lets Android wake OpenVitals for it, then paste its Bluetooth key.
-- The first weigh-in tells the app which of the scale's users is yours.
-- See on the card and the device view whether the phone is listening, and grant the permission, switch on Bluetooth, or let Android wake the app again when it is not.
-- See the last weigh-in, and whether any weigh-in is still waiting to be saved.
-- Grant the Health Connect write permissions the scale can use.
-- Take over another of the scale's user slots when it files a weigh-in under one.
-- Rename the scale, change the key after the scale was paired again, or remove the scale.
 
 ### Sync With Another Phone Settings
 
@@ -610,8 +538,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 ### Privacy And App Information
 
 - View privacy notes explaining that OpenVitals uses no account, no cloud sync, no analytics, and no ads.
-- View that health data is read from and written to Health Connect on device, apart from watch-only measurements and the cycle journal, which Health Connect has no record type for and which stay in the app's local database.
+- View that health data is read from and written to Health Connect on device, apart from the cycle journal, which Health Connect has no record type for and which stays in the app's local database.
 - View the read-only dashboard/privacy positioning and health disclaimer.
 - View app version information.
-- The app declares no internet permission. Live BLE sensors, watch sync, notification forwarding, and phone-to-phone sync run over Bluetooth.
+- The app declares no internet permission. Live BLE sensors and phone-to-phone sync run over Bluetooth.
 - In diagnostics builds, save or share the app's logs, with addresses, identifiers, file locations, dates and error details masked, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.

@@ -31,7 +31,6 @@ object DashboardPresentationMapper {
         loadingWidgets: Set<DashboardWidgetId> = emptySet(),
         bodyEnergySetupCompleted: Boolean = false,
         includeUnsupported: Boolean = false,
-        watch: WatchWidgetDisplay? = null,
         medicalRecordsAvailable: Boolean = false,
         /** Tiles whose last read Health Connect refused. They are not sorted as empty. */
         degradedWidgets: Set<DashboardWidgetId> = emptySet(),
@@ -53,7 +52,6 @@ object DashboardPresentationMapper {
                     sleepGoalMs = sleepGoalMs,
                     isLoading = widgetId in loadingWidgets,
                     bodyEnergySetupCompleted = bodyEnergySetupCompleted,
-                    watch = watch,
                     medicalRecordsAvailable = medicalRecordsAvailable,
                 ) ?: return@forEach
                 if (!isSupported) unsupportedIds += widgetId
@@ -73,7 +71,6 @@ object DashboardPresentationMapper {
         sleepGoalMs: Long,
         isLoading: Boolean,
         bodyEnergySetupCompleted: Boolean,
-        watch: WatchWidgetDisplay? = null,
         medicalRecordsAvailable: Boolean = false,
     ): DashboardWidgetDisplayModel? = when (widgetId) {
         DashboardWidgetId.STEPS -> metricWidget(
@@ -415,10 +412,6 @@ object DashboardPresentationMapper {
             hasRecentHistory = DashboardMetric.CYCLE in data.recentHistoryMetrics,
             isLoading = isLoading,
         )
-        // No watch paired, no tile.
-        DashboardWidgetId.WATCH -> watch?.let {
-            DashboardWidgetDisplayModel(id = widgetId, watch = it, isLoading = isLoading)
-        }
         // No feature, no tile: a null here also keeps it out of edit mode's tray.
         DashboardWidgetId.MEDICAL_RECORDS ->
             if (medicalRecordsAvailable) DashboardWidgetDisplayModel(id = widgetId) else null

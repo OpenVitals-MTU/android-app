@@ -226,10 +226,6 @@ fun AppNavigation(
             currentRoute != Screen.Onboarding.route
         ) {
             navController.navigate(externalNavigationRoute) {
-                // A second shared place replaces the first form; it does not stack on it.
-                if (externalNavigationRoute.startsWith(Screen.WatchSendPoint.basePath)) {
-                    popUpTo(Screen.WatchSendPoint.route) { inclusive = true }
-                }
                 // singleTop only for argument-less destinations: a parameterized
                 // route would reuse the top entry's ViewModel with old arguments.
                 launchSingleTop = externalNavigationRoute == Screen.Dashboard.route ||
@@ -755,10 +751,6 @@ fun AppNavigation(
                 )
             }
 
-            watchRoutes(
-                navController = navController,
-            )
-
             settingsRoutes(
                 navController = navController,
                 onImportRouteFile = { uri ->
@@ -839,7 +831,6 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.CARDIO_LOAD -> R.string.metric_cardio_load
         DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
         DashboardWidgetId.CYCLE -> R.string.metric_cycle
-        DashboardWidgetId.WATCH -> R.string.metric_watch
         DashboardWidgetId.MEDICAL_RECORDS -> R.string.medical_records_title
     }
 

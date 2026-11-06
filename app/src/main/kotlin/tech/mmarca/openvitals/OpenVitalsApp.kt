@@ -42,15 +42,6 @@ class OpenVitalsApp : Application() {
                     .fromApplication(this, FlutterMigrationEntryPoint::class.java)
                     .openVitalsDatabase(),
             )
-        } else if (flutterMigrator.garminWellnessImportMissed()) {
-            // Months of samples: not on the main thread. Nothing at start-up waits for them.
-            thread(name = "flutter-wellness-import") {
-                flutterMigrator.importMissedGarminWellness(
-                    EntryPointAccessors
-                        .fromApplication(this, FlutterMigrationEntryPoint::class.java)
-                        .openVitalsDatabase(),
-                )
-            }
         }
         CrashReportHandler.install(this)
         AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())

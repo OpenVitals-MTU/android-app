@@ -11,7 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.util.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -218,7 +218,6 @@ class BleDeviceRepositoryTest {
         assertEquals(watch.id, stored.id)
         // Both roles on one entry, the way an Edge already was.
         assertEquals(BleDeviceKind.WATCH, stored.kind)
-        assertTrue(stored.isGarminGfdi)
         assertEquals(
             stored.id,
             repo.resolveCapabilityAssignments()[BleSensorCapability.HEART_RATE]?.id,
@@ -372,8 +371,6 @@ class BleDeviceRepositoryTest {
         assertEquals(DeviceIntegration.GARMIN, device.integration)
         assertEquals(Instant.ofEpochMilli(1_753_100_000_000), device.lastSyncedAt)
         assertTrue(device.isWatch)
-        assertTrue(device.isGarminWatch)
-        assertTrue(device.isGarminGfdi)
     }
 
     @Test

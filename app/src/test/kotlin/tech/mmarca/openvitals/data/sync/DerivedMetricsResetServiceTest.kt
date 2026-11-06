@@ -56,12 +56,9 @@ class DerivedMetricsResetServiceTest {
                 activityDrainGain = 0.8,
                 basalDrainGain = 1.1,
                 stressDrainGain = 0.9,
-                watchObservationCount = 12,
             ),
         )
         prefs.bodyEnergyGainsAlgorithmVersion = 11
-        prefs.bodyEnergyWatchFitEpoch = 2
-        prefs.bodyEnergyWatchFitWatermarkMillis = 1_700_000_000_000L
         prefs.bodyEnergyChainSeedMirror = "20600|62|55|1"
         prefs.bodyEnergyPermissionSignature = 4242
         chainSync = mockk { coEvery { syncAll(force = true) } answers { rebuildOrder += "chain" } }
@@ -98,14 +95,11 @@ class DerivedMetricsResetServiceTest {
 
         val calibration = prefs.bodyEnergyCalibration()
         assertFalse(calibration.hasPersonalGains)
-        assertFalse(calibration.hasWatchObservations)
         assertEquals(manualZones, calibration.manualZoneThresholdsBpm)
         assertTrue(calibration.useManualZones)
         assertTrue(calibration.setupCompleted)
 
         assertEquals(0, prefs.bodyEnergyGainsAlgorithmVersion)
-        assertEquals(0, prefs.bodyEnergyWatchFitEpoch)
-        assertEquals(0L, prefs.bodyEnergyWatchFitWatermarkMillis)
         assertNull(prefs.bodyEnergyChainSeedMirror)
         assertNull(prefs.bodyEnergyPermissionSignature)
     }

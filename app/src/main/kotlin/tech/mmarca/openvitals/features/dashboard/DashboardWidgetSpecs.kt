@@ -33,7 +33,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import android.text.format.DateUtils
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Accessible
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
@@ -43,7 +42,6 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.MedicalInformation
-import androidx.compose.material.icons.outlined.Watch
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeviceThermostat
@@ -58,15 +56,12 @@ import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.Straighten
-import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -156,7 +151,6 @@ internal fun dashboardWidgetSpecs(
     widgetIds: Collection<DashboardWidgetId>,
     isEditingDashboard: Boolean,
     onOpenMetric: (DashboardWidgetId) -> Unit,
-    onSyncWatch: () -> Unit = {},
 ): List<DashboardWidgetSpec> = buildList {
     val loadingMessage = stringResource(R.string.loading)
     val openMetric: (DashboardWidgetId) -> (() -> Unit)? = { widgetId ->
@@ -178,34 +172,6 @@ internal fun dashboardWidgetSpecs(
                     style = model.style,
                     loadingMessage = loadingMessage.takeIf { model.isLoading },
                     onClick = openMetric(widgetId),
-                )
-            }
-            model.id == DashboardWidgetId.WATCH -> {
-                add(
-                    DashboardWidgetSpec(widgetId, title) { modifier ->
-                        val watch = model.watch
-                        DashboardPillWidget(
-                            title = title,
-                            // The watch's name is the value; battery and last sync sit underneath.
-                            value = DisplayValue(watch?.name.orEmpty(), ""),
-                            icon = meta.icon,
-                            accentColor = meta.accentColor,
-                            // Subtitle, not message: a message replaces the value.
-                            message = loadingMessage.takeIf { model.isLoading },
-                            subtitle = watch?.let { watchSubtitle(it) },
-                            modifier = modifier,
-                            trailing = watch?.let { current ->
-                                {
-                                    WatchSyncButton(
-                                        isSyncing = current.isSyncing,
-                                        // A live button inside a dragged tile would fire on the grab.
-                                        onClick = if (isEditingDashboard) null else onSyncWatch,
-                                    )
-                                }
-                            },
-                            onClick = openMetric(widgetId),
-                        )
-                    },
                 )
             }
             model.id == DashboardWidgetId.MEDICAL_RECORDS -> {
@@ -284,68 +250,6 @@ internal fun dashboardWidgetSpecs(
             }
         }
     }
-}
-
-/** The sync action: a spinner while the sync runs, since the tile is where the user sees it. */
-private val WatchSyncButtonSize = 32.dp
-private val WatchSyncGlyphSize = 18.dp
-private val WatchSyncSpinnerSize = 20.dp
-private val WatchSyncSpinnerStroke = 2.dp
-
-@Composable
-private fun WatchSyncButton(isSyncing: Boolean, onClick: (() -> Unit)?) {
-    if (isSyncing) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(WatchSyncSpinnerSize),
-            strokeWidth = WatchSyncSpinnerStroke,
-        )
-        return
-    }
-    IconButton(
-        onClick = { onClick?.invoke() },
-        enabled = onClick != null,
-        modifier = Modifier.size(WatchSyncButtonSize),
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Sync,
-            contentDescription = stringResource(R.string.dashboard_watch_sync),
-            modifier = Modifier.size(WatchSyncGlyphSize),
-        )
-    }
-}
-
-/** The line under the watch's name: battery, last sync, other watches, whichever exist. */
-@Composable
-private fun watchSubtitle(watch: WatchWidgetDisplay): String? {
-    val isLive = watch.liveHeartRateBpm != null || watch.liveSteps != null
-    val parts = buildList {
-        watch.liveHeartRateBpm?.let { add(stringResource(R.string.dashboard_watch_live_hr, it)) }
-        watch.liveSteps?.let { add(stringResource(R.string.dashboard_watch_live_steps, it)) }
-        watch.batteryPercent?.let { add(stringResource(R.string.dashboard_watch_battery, it)) }
-        // While streaming, the live values replace the stale sync time.
-        watch.lastSyncedAt?.takeIf { !isLive }?.let {
-            add(
-                stringResource(
-                    R.string.dashboard_watch_last_sync,
-                    DateUtils.getRelativeTimeSpanString(
-                        it.toEpochMilli(),
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS,
-                    ).toString(),
-                ),
-            )
-        }
-        if (watch.additionalCount > 0) {
-            add(
-                pluralStringResource(
-                    R.plurals.dashboard_watch_more,
-                    watch.additionalCount,
-                    watch.additionalCount,
-                ),
-            )
-        }
-    }
-    return parts.joinToString(" · ").ifBlank { null }
 }
 
 private val dashboardRequiredMetricWidgets = setOf(
@@ -478,7 +382,6 @@ private fun dashboardWidgetTitle(widgetId: DashboardWidgetId): String =
             -> R.string.metric_weekly_cardio_load
             DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
             DashboardWidgetId.CYCLE -> R.string.metric_cycle
-            DashboardWidgetId.WATCH -> R.string.metric_watch
             DashboardWidgetId.MEDICAL_RECORDS -> R.string.medical_records_title
             DashboardWidgetId.WORKOUT -> R.string.metric_workout
         },
@@ -536,7 +439,6 @@ private fun dashboardWidgetMeta(widgetId: DashboardWidgetId): DashboardWidgetMet
         DashboardWidgetId.SKIN_TEMPERATURE -> DashboardWidgetMeta(Icons.Outlined.DeviceThermostat, VitalsColor)
         DashboardWidgetId.MINDFULNESS -> DashboardWidgetMeta(Icons.Outlined.SelfImprovement, MindfulnessColor)
         DashboardWidgetId.CYCLE -> DashboardWidgetMeta(Icons.Outlined.CalendarMonth, CycleColor)
-        DashboardWidgetId.WATCH -> DashboardWidgetMeta(Icons.Outlined.Watch, VitalsColor)
         DashboardWidgetId.MEDICAL_RECORDS -> DashboardWidgetMeta(Icons.Outlined.MedicalInformation, MedicalRecordsColor)
         DashboardWidgetId.WORKOUT -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.DirectionsRun, WorkoutColor)
     }

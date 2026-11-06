@@ -50,7 +50,7 @@ class ArchitectureDocTest {
             .isEmpty()
 
         // These three are described part by part, so a new part must be named too.
-        val unnamedParts = listOf("core", "data", "devices").flatMap { name ->
+        val unnamedParts = listOf("core", "data").flatMap { name ->
             File(root, name).listFiles { file -> file.isDirectory }.orEmpty()
                 .map { it.name }
                 .filterNot { part -> "`$part`" in rows.getValue(name) }

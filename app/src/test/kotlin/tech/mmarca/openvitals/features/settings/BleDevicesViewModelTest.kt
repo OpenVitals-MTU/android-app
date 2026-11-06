@@ -17,7 +17,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
-import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.util.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator

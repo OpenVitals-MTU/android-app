@@ -24,7 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -198,7 +197,6 @@ fun BodyEnergyCalibrationCard(
                             activityDrainGain = calibration.activityDrainGain,
                             basalDrainGain = calibration.basalDrainGain,
                             stressDrainGain = calibration.stressDrainGain,
-                            watchObservationCount = calibration.watchObservationCount,
                         ).normalized(),
                         typedBirthYear.takeIf { showBirthYear },
                     )
@@ -219,7 +217,7 @@ fun BodyEnergyCalibrationCard(
     }
 }
 
-/** What the watch has taught the model. The heading always shows; the rows once there is something. */
+/** The learned gains. Shown once a fit has moved one, so a fresh install sees nothing here. */
 @Composable
 private fun BodyEnergyPersonalTuningSection(
     calibration: BodyEnergyCalibration,
@@ -230,21 +228,7 @@ private fun BodyEnergyPersonalTuningSection(
         text = stringResource(R.string.body_energy_personalization_title),
         style = MaterialTheme.typography.bodyMedium,
     )
-    Text(
-        // English has no CLDR zero rule, so zero gets its own string.
-        text = if (calibration.watchObservationCount == 0) {
-            stringResource(R.string.body_energy_personalization_watch_none)
-        } else {
-            pluralStringResource(
-                R.plurals.body_energy_personalization_watch_body,
-                calibration.watchObservationCount,
-                calibration.watchObservationCount,
-            )
-        },
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    if (calibration.hasPersonalGains || calibration.hasWatchObservations) {
+    if (calibration.hasPersonalGains) {
         GainRow(
             label = stringResource(R.string.body_energy_gain_activity),
             value = calibration.activityDrainGain,
