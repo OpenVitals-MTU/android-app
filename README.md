@@ -34,7 +34,7 @@ No OpenVitals account is required, and the app has no `INTERNET` permission. Ope
 - Read recovery views derived on the phone: Daily Readiness, Body Energy and Training Readiness, together with HRV status, physiological stress, adaptive goals and explanation screens based on the data available.
 - Bring in Apple Health exports, CSV files of measurements, blood pressure readings, meals or the app's own workout exports, a cycle history exported by drip, route and workout files, and medical records as FHIR files, alone or in a zip, the older DSTU2 format included.
 - Generate PDF health reports fully on-device, with charts, statistics and sections for supported health data.
-- Track your cycle with a local day journal, estimates, reminders, pill tracking, backup and a home-screen widget alongside the records kept in Health Connect.
+- Track your cycle with a local day journal, estimates that count from a recorded LH test, temperature rise or mucus peak, reminders, pill tracking, a declared hormonal method, backup and a home-screen widget alongside the records kept in Health Connect. The night skin temperature and the overnight pulse, HRV and breathing a watch or ring records are drawn by cycle day, with the studies behind them, as information only.
 - Put widgets on the home screen for readiness, Body Energy, vitals, selected metrics and quick beverage logging.
 - Choose metric or imperial units, and pick the app language from fourteen translations or follow the system.
 
@@ -84,7 +84,7 @@ Supported synced data is written to Health Connect where OpenVitals has a matchi
 
 ### Bathroom scale
 
-Experimental [support for the Xiaomi Body Composition Scale S400](https://docs.openvitals.health/features/scales). Every weigh-in is saved to Health Connect as it happens, with the app open or closed, decoded from the scale's own Bluetooth broadcast with the key from your Xiaomi account. Weight and heart rate are saved as measured; body fat, lean mass and body water are estimated on the phone. OpenVitals never connects to the scale and never contacts Xiaomi.
+Experimental [support for the Xiaomi Body Composition Scale S400 and S400 Pro](https://docs.openvitals.health/features/scales). Every weigh-in is saved to Health Connect as it happens, with the app open or closed, decoded from the scale's own Bluetooth broadcast with the key from your Xiaomi account. Weight and heart rate are saved as measured; body fat, lean mass and body water are estimated on the phone. OpenVitals never connects to the scale and never contacts Xiaomi.
 
 ### Bluetooth sensors
 
@@ -100,7 +100,7 @@ Guidance can also be sent to a paired Garmin watch on its own switch, independen
 
 ### Wear OS watches
 
-A [Wear OS watch](https://docs.openvitals.health/features/smartwatches) running the OpenVitals Wear OS app records heart rate, steps and the height climbed minute by minute, and what a sleep estimate needs; off the wrist it rests the heart rate sensor. A sync from the phone, on a tap or on a schedule, copies the heart rate, the steps and the floors into Health Connect, with each minute's cadence and, once your weight is known, an estimate of the calories walking cost, and writes one estimated sleep session per night with the night's resting heart rate. A status card shows whether the watch is paired and the watch app answers, and the heart rate live while the screen is open. No vendor app is needed on the phone once the watch is paired. The watch app is still in development, for testers: it is not on any store yet and is [installed over adb](https://docs.openvitals.health/how-to/wear-os-sideload).
+A [Wear OS watch](https://docs.openvitals.health/features/smartwatches) running the OpenVitals Wear OS app records heart rate, steps and the height climbed minute by minute, and what a sleep estimate needs; off the wrist it rests the heart rate sensor. A sync from the phone, on a tap or on a schedule, copies the heart rate, the steps and the floors into Health Connect, with each minute's cadence and, once your weight is known, an estimate of the calories walking cost, and writes one estimated sleep session per night with the night's resting heart rate. A status card shows whether the watch is paired and the watch app answers, and the heart rate live while the screen is open. On the watch, three tiles show today's heart rate, steps and floors with the day's curve. No vendor app is needed on the phone once the watch is paired. The watch app is still in development, for testers: it is not on any store yet and is [installed over adb](https://docs.openvitals.health/how-to/wear-os-sideload).
 
 ### Sync with another phone
 
