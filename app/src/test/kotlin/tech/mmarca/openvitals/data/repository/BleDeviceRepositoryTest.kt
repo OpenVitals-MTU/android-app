@@ -269,6 +269,34 @@ class BleDeviceRepositoryTest {
     }
 
     @Test
+    fun `removeWatchEntries forgets watches and bike computers but keeps plain sensors`() {
+        val repo = newRepository()
+        val strap = repo.addStrap()
+        repo.addDevice(
+            displayName = "vívoactive 5",
+            address = "E0:48:24:D5:F7:10",
+            bluetoothName = "vívoactive 5",
+            capabilities = emptySet(),
+            kind = BleDeviceKind.WATCH,
+            integration = DeviceIntegration.GARMIN,
+        )
+        repo.addDevice(
+            displayName = "Edge 840",
+            address = "E0:48:24:D5:F7:20",
+            bluetoothName = "Edge 840",
+            capabilities = setOf(BleSensorCapability.CYCLING_POWER),
+            kind = BleDeviceKind.BIKE_COMPUTER,
+            integration = DeviceIntegration.GARMIN,
+        )
+
+        repo.removeWatchEntries()
+
+        assertEquals(listOf(strap.id), repo.devices.map { it.id })
+        // Persisted, not only published: a fresh repository reads the same list.
+        assertEquals(listOf(strap.id), newRepository().devices.map { it.id })
+    }
+
+    @Test
     fun `a bike computer with NO capabilities stays out`() {
         val repo = newRepository()
         repo.addStrap()

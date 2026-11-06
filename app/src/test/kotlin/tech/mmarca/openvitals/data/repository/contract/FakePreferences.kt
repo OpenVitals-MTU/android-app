@@ -57,6 +57,7 @@ class FakePreferences(
     initialLastExerciseType: Int? = null,
     override var unitSystem: UnitSystem = UnitSystem.METRIC,
     override var onboardingDone: Boolean = false,
+    override var openWatchMoveNoticeSeen: Boolean = false,
     override var appLanguage: AppLanguage = AppLanguage.SYSTEM,
     override var mindfulnessOptIn: Boolean = false,
     override var healthConnectMindfulnessEnabled: Boolean = false,

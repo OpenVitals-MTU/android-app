@@ -3173,6 +3173,10 @@
     <string name="food_invalid_amount">该份量过大，无法保存。请输入更小的数量。</string>
     <string name="food_write_failed">无法保存食物记录：%1$s</string>
     <string name="privacy_reconsent_no_browser">此手机上没有可以打开该链接的应用。政策位于 %1$s</string>
+    <string name="openwatch_move_title">手表和体重秤已迁移到 OpenWatch</string>
+    <string name="openwatch_move_body">Garmin 和 Wear OS 手表以及 Xiaomi 体重秤现在通过 OpenWatch 同步，它是同一项目的独立应用。OpenVitals 保留仪表盘，并读取 OpenWatch 写入 Health Connect 的全部数据，因此应用更小、打开更快。\n\n要继续同步手表或体重秤，请安装 OpenWatch 并在那里配对。你记录的数据不会丢失：它们仍保存在 Health Connect 中。</string>
+    <string name="openwatch_move_action_get">获取 OpenWatch</string>
+    <string name="openwatch_move_no_browser">此手机上没有可以打开该链接的应用。OpenWatch 位于 %1$s</string>
     <string name="app_lock_locked_title">OpenVitals 已锁定</string>
     <string name="app_lock_unlock_action">解锁</string>
     <string name="device_sync_host_option_body_compare">让另一台手机找到此手机。</string>

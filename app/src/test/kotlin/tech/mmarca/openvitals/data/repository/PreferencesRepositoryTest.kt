@@ -100,6 +100,13 @@ class PreferencesRepositoryTest {
         assertTrue(repo.onboardingDone)
     }
 
+    @Test fun `openWatchMoveNoticeSeen defaults false and round-trips`() {
+        val (repo, _) = newRepo()
+        assertFalse(repo.openWatchMoveNoticeSeen)
+        repo.openWatchMoveNoticeSeen = true
+        assertTrue(repo.openWatchMoveNoticeSeen)
+    }
+
     @Test fun `healthConnectSyncEnabled defaults true`() {
         val (repo, _) = newRepo()
         assertTrue(repo.healthConnectSyncEnabled)

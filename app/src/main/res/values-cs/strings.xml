@@ -3210,6 +3210,10 @@
     <string name="food_invalid_amount">Tato porce je na uložení příliš velká. Zadejte menší množství.</string>
     <string name="food_write_failed">Záznam jídla se nepodařilo uložit: %1$s</string>
     <string name="privacy_reconsent_no_browser">Žádná aplikace v tomto telefonu nedokáže odkaz otevřít. Zásady najdete na %1$s</string>
+    <string name="openwatch_move_title">Hodinky a váhy se přesunuly do OpenWatch</string>
+    <string name="openwatch_move_body">Hodinky Garmin a Wear OS a váha Xiaomi se nyní synchronizují přes OpenWatch, samostatnou aplikaci ze stejného projektu. OpenVitals si ponechává přehled a čte vše, co OpenWatch zapisuje do Health Connect, takže je aplikace menší a rychleji se otevírá.\n\nChcete-li dál synchronizovat hodinky nebo váhu, nainstalujte OpenWatch a spárujte je tam. Nic z toho, co jste zaznamenali, se neztratí: zůstává v Health Connect.</string>
+    <string name="openwatch_move_action_get">Získat OpenWatch</string>
+    <string name="openwatch_move_no_browser">Žádná aplikace v tomto telefonu nedokáže odkaz otevřít. OpenWatch najdete na %1$s</string>
     <string name="app_lock_locked_title">OpenVitals je uzamčen</string>
     <string name="app_lock_unlock_action">Odemknout</string>
     <string name="device_sync_host_option_body_compare">Nechte druhý telefon, aby tento našel.</string>

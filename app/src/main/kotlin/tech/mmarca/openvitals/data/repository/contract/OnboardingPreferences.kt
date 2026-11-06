@@ -7,6 +7,12 @@ interface OnboardingPreferences {
 
     var onboardingDone: Boolean
 
+    /**
+     * The one-time notice that watches and scales moved to OpenWatch. Set when
+     * onboarding completes, so a fresh install never sees it.
+     */
+    var openWatchMoveNoticeSeen: Boolean
+
     var appLanguage: AppLanguage
 
     var mindfulnessOptIn: Boolean

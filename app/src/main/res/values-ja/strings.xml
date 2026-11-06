@@ -3240,6 +3240,10 @@
     <string name="food_invalid_amount">この分量は大きすぎて保存できません。少ない量を入力してください。</string>
     <string name="food_write_failed">食事の記録を保存できませんでした: %1$s</string>
     <string name="privacy_reconsent_no_browser">このスマートフォンにはリンクを開けるアプリがありません。ポリシーは %1$s にあります</string>
+    <string name="openwatch_move_title">ウォッチと体重計は OpenWatch に移りました</string>
+    <string name="openwatch_move_body">Garmin と Wear OS のウォッチ、および Xiaomi の体重計は、同じプロジェクトの別アプリ OpenWatch で同期するようになりました。OpenVitals はダッシュボードを担当し、OpenWatch がヘルスコネクトに書き込んだデータをすべて読み取ります。これによりアプリは軽くなり、起動も速くなります。\n\nウォッチや体重計の同期を続けるには、OpenWatch をインストールしてそちらでペアリングしてください。記録したデータは失われず、ヘルスコネクトに残ります。</string>
+    <string name="openwatch_move_action_get">OpenWatch を入手</string>
+    <string name="openwatch_move_no_browser">このスマートフォンにはリンクを開けるアプリがありません。OpenWatch は %1$s にあります</string>
     <string name="app_lock_locked_title">OpenVitals はロックされています</string>
     <string name="app_lock_unlock_action">ロック解除</string>
     <string name="device_sync_host_option_body_compare">相手のスマートフォンにこの端末を見つけてもらいます。</string>

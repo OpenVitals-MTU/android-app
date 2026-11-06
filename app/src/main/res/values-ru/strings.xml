@@ -3211,6 +3211,10 @@
     <string name="food_invalid_amount">Эта порция слишком велика для сохранения. Введите меньшее количество.</string>
     <string name="food_write_failed">Не удалось сохранить запись о еде: %1$s</string>
     <string name="privacy_reconsent_no_browser">Ни одно приложение на этом телефоне не может открыть ссылку. Политика доступна по адресу %1$s</string>
+    <string name="openwatch_move_title">Часы и весы переехали в OpenWatch</string>
+    <string name="openwatch_move_body">Часы Garmin и Wear OS, а также весы Xiaomi теперь синхронизируются через OpenWatch — отдельное приложение того же проекта. OpenVitals остаётся панелью и читает всё, что OpenWatch записывает в Health Connect, поэтому приложение стало легче и быстрее открывается.\n\nЧтобы продолжить синхронизацию часов или весов, установите OpenWatch и выполните сопряжение там. Записанные данные не теряются: они остаются в Health Connect.</string>
+    <string name="openwatch_move_action_get">Получить OpenWatch</string>
+    <string name="openwatch_move_no_browser">Ни одно приложение на этом телефоне не может открыть ссылку. OpenWatch находится по адресу %1$s</string>
     <string name="app_lock_locked_title">OpenVitals заблокирован</string>
     <string name="app_lock_unlock_action">Разблокировать</string>
     <string name="device_sync_host_option_body_compare">Позвольте другому телефону найти этот.</string>
