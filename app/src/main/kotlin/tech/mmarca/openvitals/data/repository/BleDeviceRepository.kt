@@ -127,16 +127,8 @@ class BleDeviceRepository @Inject constructor(
     }
 
     fun removeDevice(deviceId: String) {
+        // Garmin-specific state is cleared by whoever forgets the watch.
         persist(devices.filterNot { it.id == deviceId })
-    }
-
-    /**
-     * Forgets the watches and bike computers the device layer registered before
-     * it moved to OpenWatch. Plain sensors (a strap, a cadence or power meter) stay.
-     */
-    fun removeWatchEntries() {
-        val kept = devices.filterNot { it.isWatch || it.isBikeComputer }
-        if (kept.size != devices.size) persist(kept)
     }
 
     fun setDeviceEnabled(deviceId: String, enabled: Boolean) {

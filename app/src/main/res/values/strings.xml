@@ -2144,12 +2144,6 @@
     <string name="privacy_reconsent_body">Our privacy policy has changed. Review and accept to continue syncing with Health Connect.</string>
     <string name="privacy_reconsent_action">Review policy</string>
     <string name="privacy_reconsent_no_browser">No app on this phone can open the link. The policy is at %1$s</string>
-    <!-- OpenWatch move notice (ui/components) -->
-    <string name="openwatch_move_title">Watches and scales moved to OpenWatch</string>
-    <string name="openwatch_move_body">Garmin and Wear OS watches and the Xiaomi scale now sync through OpenWatch, a separate app from the same project. OpenVitals keeps the dashboard and reads everything OpenWatch writes to Health Connect, so the app is smaller and faster to open.\n\nTo keep syncing a watch or scale, install OpenWatch and pair it there. Nothing you recorded is lost: it stays in Health Connect.</string>
-    <string name="openwatch_move_action_get">Get OpenWatch</string>
-    <string name="openwatch_move_no_browser">No app on this phone can open the link. OpenWatch is at %1$s</string>
-    <string name="openwatch_url" translatable="false">https://github.com/Hale-MTU/OpenWatch</string>
     <string name="settings_debug_logs_title">Diagnostics logs</string>
     <string name="settings_debug_logs_body">Share or save OpenVitals logs as a text file. Every line is kept so Health Connect and sync issues can be traced; device addresses, identifiers, file locations, dates and error details are masked. Read it before you share it.</string>
     <string name="settings_debug_logs_share">Share logs</string>

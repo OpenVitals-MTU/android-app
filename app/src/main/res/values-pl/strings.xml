@@ -2139,10 +2139,6 @@
     <string name="privacy_reconsent_body">Nasza polityka prywatności się zmieniła. Przejrzyj ją i zaakceptuj, aby kontynuować synchronizację z Health Connect.</string>
     <string name="privacy_reconsent_action">Przejrzyj politykę</string>
     <string name="privacy_reconsent_no_browser">Żadna aplikacja na tym telefonie nie może otworzyć linku. Polityka znajduje się pod adresem %1$s</string>
-    <string name="openwatch_move_title">Zegarki i wagi przeniesiono do OpenWatch</string>
-    <string name="openwatch_move_body">Zegarki Garmin i Wear OS oraz waga Xiaomi synchronizują się teraz przez OpenWatch, osobną aplikację z tego samego projektu. OpenVitals zachowuje pulpit i odczytuje wszystko, co OpenWatch zapisuje w Health Connect, dzięki czemu aplikacja jest mniejsza i szybciej się otwiera.\n\nAby dalej synchronizować zegarek lub wagę, zainstaluj OpenWatch i sparuj tam urządzenie. Nic z zapisanych danych nie ginie: pozostają w Health Connect.</string>
-    <string name="openwatch_move_action_get">Pobierz OpenWatch</string>
-    <string name="openwatch_move_no_browser">Żadna aplikacja na tym telefonie nie może otworzyć linku. OpenWatch znajdziesz pod adresem %1$s</string>
     <string name="settings_debug_logs_title">Logi diagnostyczne</string>
     <string name="settings_debug_logs_body">Udostępnij lub zapisz logi OpenVitals jako plik tekstowy. Każdy wiersz zostaje zachowany, aby można było prześledzić problemy z Health Connect i synchronizacją; adresy urządzeń, identyfikatory, lokalizacje plików, daty i szczegóły błędów są maskowane. Przeczytaj go przed udostępnieniem.</string>
     <string name="settings_debug_logs_share">Udostępnij logi</string>

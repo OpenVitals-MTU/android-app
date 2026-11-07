@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -67,7 +66,6 @@ import tech.mmarca.openvitals.features.recovery.HeartRateRecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
 import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
-import tech.mmarca.openvitals.features.settings.OpenWatchMoveNoticeViewModel
 import tech.mmarca.openvitals.features.sleep.SleepDetailScreen
 import tech.mmarca.openvitals.features.sleep.SleepDetailViewModel
 import tech.mmarca.openvitals.features.sleep.SleepScreen
@@ -78,7 +76,6 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.HealthConnectNewPermissionsPrompt
 import tech.mmarca.openvitals.ui.components.LocalAppBarState
-import tech.mmarca.openvitals.ui.components.OpenWatchMoveNoticePrompt
 import tech.mmarca.openvitals.ui.components.PrivacyReconsentPrompt
 
 internal const val CardioLoadDetailRoute = "activity/cardio_load"
@@ -774,11 +771,7 @@ fun AppNavigation(
         }
     }
     HealthConnectNewPermissionsPrompt()
-    // The move notice explains the change that also updated the policy, so it goes first.
-    val openWatchMoveNoticeViewModel = hiltViewModel<OpenWatchMoveNoticeViewModel>()
-    val openWatchMoveNoticeVisible by openWatchMoveNoticeViewModel.visible.collectAsStateWithLifecycle()
-    OpenWatchMoveNoticePrompt(openWatchMoveNoticeViewModel)
-    PrivacyReconsentPrompt(blocked = openWatchMoveNoticeVisible)
+    PrivacyReconsentPrompt()
 }
 
 private fun addEntryActionForCurrentRoute(

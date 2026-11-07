@@ -3191,10 +3191,6 @@
     <string name="food_invalid_amount">Cette portion est trop grande pour être enregistrée. Saisissez une quantité plus petite.</string>
     <string name="food_write_failed">Impossible d\'enregistrer l\'entrée d\'aliment : %1$s</string>
     <string name="privacy_reconsent_no_browser">Aucune application sur ce téléphone ne peut ouvrir le lien. La politique est disponible sur %1$s</string>
-    <string name="openwatch_move_title">Les montres et les balances ont déménagé vers OpenWatch</string>
-    <string name="openwatch_move_body">Les montres Garmin et Wear OS et la balance Xiaomi se synchronisent désormais via OpenWatch, une application distincte du même projet. OpenVitals garde le tableau de bord et lit tout ce qu\'OpenWatch écrit dans Santé Connect ; l\'application est ainsi plus légère et s\'ouvre plus vite.\n\nPour continuer à synchroniser une montre ou une balance, installez OpenWatch et associez l\'appareil là-bas. Rien de ce que vous avez enregistré n\'est perdu : tout reste dans Santé Connect.</string>
-    <string name="openwatch_move_action_get">Obtenir OpenWatch</string>
-    <string name="openwatch_move_no_browser">Aucune application de ce téléphone ne peut ouvrir le lien. OpenWatch est à l\'adresse %1$s</string>
     <string name="app_lock_locked_title">OpenVitals est verrouillé</string>
     <string name="app_lock_unlock_action">Déverrouiller</string>
     <string name="device_sync_host_option_body_compare">Laissez l\'autre téléphone trouver celui-ci.</string>

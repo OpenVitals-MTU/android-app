@@ -3172,10 +3172,6 @@
     <string name="food_invalid_amount">See portsjon on salvestamiseks liiga suur. Sisesta väiksem kogus.</string>
     <string name="food_write_failed">Toidukirjet ei õnnestunud salvestada: %1$s</string>
     <string name="privacy_reconsent_no_browser">Ükski rakendus selles telefonis ei saa linki avada. Poliitika asub aadressil %1$s</string>
-    <string name="openwatch_move_title">Kellad ja kaalud kolisid OpenWatchi</string>
-    <string name="openwatch_move_body">Garmini ja Wear OS-i kellad ning Xiaomi kaal sünkroonivad nüüd OpenWatchi kaudu, mis on sama projekti eraldi rakendus. OpenVitals jääb töölauaks ja loeb kõike, mida OpenWatch Health Connecti kirjutab, nii et rakendus on väiksem ja avaneb kiiremini.\n\nKella või kaalu sünkroonimise jätkamiseks paigalda OpenWatch ja seo seade seal. Midagi salvestatust ei lähe kaduma: see jääb Health Connecti.</string>
-    <string name="openwatch_move_action_get">Hangi OpenWatch</string>
-    <string name="openwatch_move_no_browser">Ükski selle telefoni rakendus ei saa linki avada. OpenWatch asub aadressil %1$s</string>
     <string name="app_lock_locked_title">OpenVitals on lukus</string>
     <string name="app_lock_unlock_action">Ava lukk</string>
     <string name="device_sync_host_option_body_compare">Lase teisel telefonil see telefon leida.</string>

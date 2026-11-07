@@ -3172,10 +3172,6 @@
     <string name="food_invalid_amount">Diese Portion ist zu groß zum Speichern. Gib eine kleinere Menge ein.</string>
     <string name="food_write_failed">Essenseintrag konnte nicht gespeichert werden: %1$s</string>
     <string name="privacy_reconsent_no_browser">Keine App auf diesem Telefon kann den Link öffnen. Die Richtlinie findest du unter %1$s</string>
-    <string name="openwatch_move_title">Uhren und Waagen sind zu OpenWatch umgezogen</string>
-    <string name="openwatch_move_body">Garmin- und Wear-OS-Uhren sowie die Xiaomi-Waage synchronisieren jetzt über OpenWatch, eine eigene App aus demselben Projekt. OpenVitals behält das Dashboard und liest alles, was OpenWatch in Health Connect schreibt. So ist die App kleiner und öffnet sich schneller.\n\nUm eine Uhr oder Waage weiter zu synchronisieren, installiere OpenWatch und kopple sie dort. Nichts von deinen Aufzeichnungen geht verloren: Sie bleiben in Health Connect.</string>
-    <string name="openwatch_move_action_get">OpenWatch holen</string>
-    <string name="openwatch_move_no_browser">Keine App auf diesem Telefon kann den Link öffnen. OpenWatch findest du unter %1$s</string>
     <string name="app_lock_locked_title">OpenVitals ist gesperrt</string>
     <string name="app_lock_unlock_action">Entsperren</string>
     <string name="device_sync_host_option_body_compare">Lass das andere Telefon dieses finden.</string>

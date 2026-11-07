@@ -144,10 +144,6 @@ class PreferencesRepository @Inject constructor(
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
         set(value) { prefs.edit { putBoolean(KEY_ONBOARDING_DONE, value) } }
 
-    override var openWatchMoveNoticeSeen: Boolean
-        get() = prefs.getBoolean(KEY_OPENWATCH_MOVE_NOTICE_SEEN, false)
-        set(value) { prefs.edit { putBoolean(KEY_OPENWATCH_MOVE_NOTICE_SEEN, value) } }
-
     /** Off by default: asking for the mindfulness permission crashes Health Connect on some devices. */
     override var mindfulnessOptIn: Boolean
         get() = prefs.getBoolean(KEY_MINDFULNESS_OPT_IN, false)
@@ -1287,7 +1283,6 @@ class PreferencesRepository @Inject constructor(
     companion object {
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
-        private const val KEY_OPENWATCH_MOVE_NOTICE_SEEN = "openwatch_move_notice_seen"
         private const val KEY_MINDFULNESS_OPT_IN = "mindfulness_opt_in"
         private const val KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED = "health_connect_mindfulness_enabled"
         private const val KEY_ACKNOWLEDGED_FEATURE_PREFIX = "acknowledged_feature_permissions_"

@@ -3147,10 +3147,6 @@
     <string name="activity_entry_route_import_replace_keep">Conservar la grabación</string>
     <string name="hydration_reminder_notification_body_unknown">Toca hidratarse. No hemos podido consultar tu total de hoy hace un momento.</string>
     <string name="privacy_reconsent_no_browser">No hay ninguna aplicación en este teléfono que pueda abrir el enlace. Ver la política en %1$s</string>
-    <string name="openwatch_move_title">Los relojes y las básculas se han movido a OpenWatch</string>
-    <string name="openwatch_move_body">Los relojes Garmin y Wear OS y la báscula Xiaomi ahora se sincronizan a través de OpenWatch, una aplicación aparte del mismo proyecto. OpenVitals conserva el panel y lee todo lo que OpenWatch escribe en Health Connect, así que la aplicación es más ligera y se abre más rápido.\n\nPara seguir sincronizando un reloj o una báscula, instala OpenWatch y empareja el dispositivo allí. No se pierde nada de lo que registraste: sigue en Health Connect.</string>
-    <string name="openwatch_move_action_get">Obtener OpenWatch</string>
-    <string name="openwatch_move_no_browser">Ninguna aplicación de este teléfono puede abrir el enlace. OpenWatch está en %1$s</string>
     <string name="app_lock_locked_title">OpenVitals está bloqueado</string>
     <string name="app_lock_unlock_action">Desbloquear</string>
     <string name="device_sync_host_option_body_compare">Hacer este teléfono visible para el otro.</string>
