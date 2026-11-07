@@ -23,7 +23,7 @@ No OpenVitals account is required, and the app has no `INTERNET` permission. Ope
 | --- | --- |
 | Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) |
 | F-Droid | [Install from F-Droid](https://f-droid.org/en/packages/tech.mmarca.openvitals/) |
-| GitHub releases | [Download signed release and debug APKs](https://github.com/Hale-MTU/android-app/releases) |
+| GitHub releases | [Download signed release and debug APKs](https://github.com/Hale-MTU/OpenVitals/releases) |
 | Source | [Build it yourself](#build-from-source) |
 
 ## What you can do with OpenVitals
@@ -193,10 +193,10 @@ Engineering docs stay in this repository:
 OpenVitals is still early. Useful feedback is specific: device model, Android version, Health Connect provider version, which permissions were granted, and what screen or workflow failed.
 
 - Try the latest beta from Google Play or GitHub releases
-- Report bugs and feature requests on [GitHub issues](https://github.com/Hale-MTU/android-app/issues)
+- Report bugs and feature requests on [GitHub issues](https://github.com/Hale-MTU/OpenVitals/issues)
 - Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/)
 - Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
-- Star or follow the project on [GitHub](https://github.com/Hale-MTU/android-app)
+- Star or follow the project on [GitHub](https://github.com/Hale-MTU/OpenVitals)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
 - Support ongoing development on [Liberapay](https://liberapay.com/hale.mtu/donate)
 
