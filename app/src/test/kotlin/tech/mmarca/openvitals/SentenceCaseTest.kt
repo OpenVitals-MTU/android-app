@@ -72,6 +72,8 @@ class SentenceCaseTest {
 
         /** Garmin's names, in the casing Garmin uses. */
         val ThirdPartyProductNames = listOf(
+            "Body Battery",
+            "Sleep Coach",
             "Training Readiness",
             "Intensity Minutes",
             "Stress Level",

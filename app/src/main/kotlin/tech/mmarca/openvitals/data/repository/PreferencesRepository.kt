@@ -144,10 +144,6 @@ class PreferencesRepository @Inject constructor(
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
         set(value) { prefs.edit { putBoolean(KEY_ONBOARDING_DONE, value) } }
 
-    override var openWatchMoveNoticeSeen: Boolean
-        get() = prefs.getBoolean(KEY_OPENWATCH_MOVE_NOTICE_SEEN, false)
-        set(value) { prefs.edit { putBoolean(KEY_OPENWATCH_MOVE_NOTICE_SEEN, value) } }
-
     /** Off by default: asking for the mindfulness permission crashes Health Connect on some devices. */
     override var mindfulnessOptIn: Boolean
         get() = prefs.getBoolean(KEY_MINDFULNESS_OPT_IN, false)
@@ -474,6 +470,7 @@ class PreferencesRepository @Inject constructor(
             putFloat(KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN, normalized.activityDrainGain.toFloat())
             putFloat(KEY_BODY_ENERGY_BASAL_DRAIN_GAIN, normalized.basalDrainGain.toFloat())
             putFloat(KEY_BODY_ENERGY_STRESS_DRAIN_GAIN, normalized.stressDrainGain.toFloat())
+            putInt(KEY_BODY_ENERGY_WATCH_OBSERVATION_COUNT, normalized.watchObservationCount)
         }
         _bodyEnergyCalibration.value = normalized
     }
@@ -482,6 +479,16 @@ class PreferencesRepository @Inject constructor(
     var bodyEnergyGainsAlgorithmVersion: Int
         get() = prefs.getInt(KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION, 0)
         set(value) { prefs.edit { putInt(KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION, value) } }
+
+    /** The watch-fit machinery generation the watermark below belongs to. */
+    var bodyEnergyWatchFitEpoch: Int
+        get() = prefs.getInt(KEY_BODY_ENERGY_WATCH_FIT_EPOCH, 0)
+        set(value) { prefs.edit { putInt(KEY_BODY_ENERGY_WATCH_FIT_EPOCH, value) } }
+
+    /** How far the watch evidence has already been consumed by the fit. */
+    var bodyEnergyWatchFitWatermarkMillis: Long
+        get() = prefs.getLong(KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS, 0L)
+        set(value) { prefs.edit { putLong(KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS, value) } }
 
     /**
      * `epochDay|endScore|startScore|chained` for the newest Body Energy day,
@@ -1056,6 +1063,7 @@ class PreferencesRepository @Inject constructor(
             activityDrainGain = prefs.getFloat(KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN, 1.0f).toDouble(),
             basalDrainGain = prefs.getFloat(KEY_BODY_ENERGY_BASAL_DRAIN_GAIN, 1.0f).toDouble(),
             stressDrainGain = prefs.getFloat(KEY_BODY_ENERGY_STRESS_DRAIN_GAIN, 1.0f).toDouble(),
+            watchObservationCount = prefs.getInt(KEY_BODY_ENERGY_WATCH_OBSERVATION_COUNT, 0),
         ).normalized()
 
     private fun readBodyProfile(): BodyProfile {
@@ -1287,7 +1295,6 @@ class PreferencesRepository @Inject constructor(
     companion object {
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
-        private const val KEY_OPENWATCH_MOVE_NOTICE_SEEN = "openwatch_move_notice_seen"
         private const val KEY_MINDFULNESS_OPT_IN = "mindfulness_opt_in"
         private const val KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED = "health_connect_mindfulness_enabled"
         private const val KEY_ACKNOWLEDGED_FEATURE_PREFIX = "acknowledged_feature_permissions_"
@@ -1335,7 +1342,7 @@ class PreferencesRepository @Inject constructor(
          * The "Last updated" date of PRIVACY.md. A user who accepted another value is asked
          * again. Change both together; PrivacyPolicyVersionTest fails when they differ.
          */
-        const val CURRENT_PRIVACY_POLICY_VERSION = "2026-11-06"
+        const val CURRENT_PRIVACY_POLICY_VERSION = "2026-10-23"
         private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
@@ -1374,7 +1381,10 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN = "body_energy_activity_drain_gain"
         private const val KEY_BODY_ENERGY_BASAL_DRAIN_GAIN = "body_energy_basal_drain_gain"
         private const val KEY_BODY_ENERGY_STRESS_DRAIN_GAIN = "body_energy_stress_drain_gain"
+        private const val KEY_BODY_ENERGY_WATCH_OBSERVATION_COUNT = "body_energy_watch_observation_count"
         private const val KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION = "body_energy_gains_algorithm_version"
+        private const val KEY_BODY_ENERGY_WATCH_FIT_EPOCH = "body_energy_watch_fit_epoch"
+        private const val KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS = "body_energy_watch_fit_watermark_millis"
         private const val KEY_BODY_ENERGY_CHAIN_SEED_MIRROR = "body_energy_chain_seed_mirror"
         private const val KEY_BODY_ENERGY_PERMISSION_SIGNATURE = "body_energy_permission_signature"
         private const val KEY_BODY_PROFILE_BIRTH_YEAR = "body_profile_birth_year"

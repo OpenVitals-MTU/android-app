@@ -20,8 +20,11 @@ import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.local.cycle.CycleJournalDao
 import tech.mmarca.openvitals.data.local.cycle.PillIntakeDao
 import tech.mmarca.openvitals.data.local.food.FoodDao
+import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
+import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayCacheDao
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentDao
+import tech.mmarca.openvitals.data.local.scale.ScaleWeighInDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -78,6 +81,21 @@ object AppModule {
     @Singleton
     fun provideVitalsDailyCacheDao(database: OpenVitalsDatabase): VitalsDailyCacheDao =
         database.vitalsDailyCacheDao()
+
+    @Provides
+    @Singleton
+    fun provideGarminWellnessDao(database: OpenVitalsDatabase): GarminWellnessDao =
+        database.garminWellnessDao()
+
+    @Provides
+    @Singleton
+    fun provideScaleWeighInDao(database: OpenVitalsDatabase): ScaleWeighInDao =
+        database.scaleWeighInDao()
+
+    @Provides
+    @Singleton
+    fun provideGarminSleepMinuteDao(database: OpenVitalsDatabase): GarminSleepMinuteDao =
+        database.garminSleepMinuteDao()
 
     @Provides
     @Singleton

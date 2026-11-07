@@ -6,7 +6,7 @@
 > **Navigation:** `Screen.Settings` and settings subsection routes; sections in `SettingsSection`.
 > **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Metric detail customization](metric-detail-customization.md).
 
-Settings centralize app preferences, Health Connect access, imports, sensors, phone-to-phone sync, goals, reminders, and diagnostics.
+Settings centralize app preferences, Health Connect access, imports, sensors, watches, phone-to-phone sync, goals, reminders, and diagnostics.
 
 ## Sections
 
@@ -15,6 +15,7 @@ Settings is a list of section cards. Tapping one opens it:
 - Display.
 - Activities.
 - Sensors and devices, for Bluetooth LE sensors.
+- Watches.
 - Nutrition.
 - Body profile.
 - Vitals, for the blood pressure guideline.
@@ -70,6 +71,10 @@ Weight and height are shared with health data. When a measurement is available f
 The same section holds the "Basal metabolic rate" card: an off-by-default switch that estimates the resting daily burn from the profile (Mifflin-St Jeor) and writes one value per day to Health Connect, leaving days another source already covers alone. See [Body metrics](body-metrics.md#basal-metabolic-rate-estimate).
 
 The same section holds the Metabolism card, which used to live behind caffeine settings. It collects the optional factors that change how quickly caffeine is cleared. Leaving them alone uses population averages.
+
+## Watches
+
+The Watches section pairs and manages Garmin watches, syncs what a watch recorded, and opens the watch-only data screen. It is deprecated: watch support is moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), and the section opens with a notice saying so. See [Watches](watches.md).
 
 ## Sync With Another Phone
 

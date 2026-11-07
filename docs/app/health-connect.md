@@ -32,12 +32,13 @@ OpenVitals writes to Health Connect only from explicit entry, recording, edit/de
 
 Large Apple Health imports run as explicit user-started background work with progress notifications while records are scanned and written.
 
-Records also reach Health Connect from two newer workflows, both user-started and on device:
+Records also reach Health Connect from three newer workflows, all user-started and all on device:
 
 - A CSV import from Settings, Data Importers, for point-in-time measurements such as weight, body composition, heart rate, and vitals.
+- The deprecated in-app Garmin watch sync (watches are moving to OpenWatch, which writes to Health Connect itself), which writes what the watch recorded and keeps watch-only series such as stress and Body Battery in OpenVitals' own local storage instead, because Health Connect has no type for them.
 - A phone-to-phone sync over Bluetooth, which copies records between two phones running OpenVitals.
 
-Both deduplicate, so running them again does not create duplicate records.
+All three deduplicate, so running them again does not create duplicate records.
 
 ## Medical Records
 

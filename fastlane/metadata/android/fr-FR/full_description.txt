@@ -13,6 +13,7 @@ Ce que vous pouvez faire
 * Importez des exports Apple Santé et des fichiers GPX, KML, KMZ, TCX, FIT et CSV
 * Créez un rapport de santé en PDF à partager avec votre médecin
 * Suivez votre cycle : règles, symptômes, température basale, estimation des prochaines règles et rappels de pilule
+* Associez une montre ou une balance à OpenWatch, notre application compagnon ; OpenVitals affiche ce qu'elle synchronise
 * Copiez vos données entre deux téléphones en Bluetooth, sans compte ni réseau
 * Gagnez des badges pour les pas, la distance, les étages, les entraînements, l'hydratation, le sommeil et la pleine conscience
 * Activez les rappels de boisson, de pleine conscience et du cycle

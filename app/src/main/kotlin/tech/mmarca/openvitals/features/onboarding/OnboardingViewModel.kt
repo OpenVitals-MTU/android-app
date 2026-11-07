@@ -244,7 +244,5 @@ class OnboardingViewModel @Inject constructor(
     fun completeOnboarding() {
         preferences.acceptCurrentPrivacyPolicy()
         preferences.onboardingDone = true
-        // A fresh install never had a watch here; the move notice is for updates.
-        preferences.openWatchMoveNoticeSeen = true
     }
 }

@@ -65,6 +65,8 @@ class FunctionLengthRatchetTest {
     private companion object {
         const val SourceRoot = "src/main/kotlin/tech/mmarca/openvitals"
 
+        /** The shared link module is held to the same limit. */
+
         /** The domain module keeps the app's package names, so its paths are reported as the app's. */
         const val DomainRoot = "../domain/src/main/kotlin/tech/mmarca/openvitals"
 

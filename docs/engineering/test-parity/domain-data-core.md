@@ -1,7 +1,5 @@
 # Flutter -> Kotlin test parity: domain/data/core/contract/state/navigation/di/bootstrap/l10n/widget_test
 
-The Body Energy watch-fit and the Garmin wellness table left this repository for OpenWatch; their sections left this file with them, and the summary counts predate that.
-
 ## test/domain/insights/activity_splits_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/ActivitySplitsTest.kt
 | Flutter case | Status | Kotlin test | Note |
@@ -98,6 +96,24 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/B
 | the waking-rest charge > a charging waking bucket reports quiet rest | PORTED | BodyEnergyTimelineTest.kt: `a charging waking bucket reports quiet rest` | — |
 | the waking-rest charge > but a larger drain still outranks it | PORTED | BodyEnergyTimelineTest.kt: `but a larger drain still outranks quiet rest` | — |
 | the age-derived max heart rate uses Tanaka, like the rest of the app | PORTED | BodyEnergyTimelineTest.kt: `the age-derived max heart rate uses Tanaka, like the rest of the app` | — |
+
+## test/domain/insights/body_energy_watch_calibration_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/BodyEnergyWatchCalibrationTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| buildWatchObservations > downsamples to one reading per bucket | PORTED | BodyEnergyWatchCalibrationTest.kt: `buildWatchObservations downsamples to one reading per bucket` | — |
+| buildWatchObservations > pairs each reading with the model score at that moment | PORTED | BodyEnergyWatchCalibrationTest.kt: `buildWatchObservations pairs each reading with the model score at that moment` | — |
+| buildWatchObservations > drops readings with no nearby point | PORTED | BodyEnergyWatchCalibrationTest.kt: `buildWatchObservations drops readings with no nearby point` | — |
+| buildWatchObservations > skips points the model could not measure | PORTED | BodyEnergyWatchCalibrationTest.kt: `buildWatchObservations skips points the model could not measure` | — |
+| buildWatchObservations > no samples, or no timeline, yields nothing | PORTED | BodyEnergyWatchCalibrationTest.kt: `no samples, or no timeline, yields nothing` | — |
+| the influence comes from the timeline, not a re-derivation | PORTED | BodyEnergyWatchCalibrationTest.kt: `the influence comes from the timeline, not a re-derivation` | — |
+| fitBodyEnergyGains with watch readings > no readings leaves the gains untouched | PORTED | BodyEnergyWatchCalibrationTest.kt: `no readings leaves the gains untouched` | — |
+| fitBodyEnergyGains with watch readings > a watch reading below prediction raises the drain gain | PORTED | BodyEnergyWatchCalibrationTest.kt: `a watch reading below prediction raises the drain gain` | — |
+| fitBodyEnergyGains with watch readings > one reading barely moves a gain | PORTED | BodyEnergyWatchCalibrationTest.kt: `one reading barely moves a gain` | — |
+| fitBodyEnergyGains with watch readings > watch readings are counted | PORTED | BodyEnergyWatchCalibrationTest.kt: `watch readings are counted` | — |
+| fitBodyEnergyGains with watch readings > a realistic day of disagreement converges without saturating | PORTED | BodyEnergyWatchCalibrationTest.kt: `a realistic day of disagreement converges without saturating` | — |
+| fitBodyEnergyGains with watch readings > a day of MAXIMAL disagreement does reach the clamp | PORTED | BodyEnergyWatchCalibrationTest.kt: `a day of MAXIMAL disagreement does reach the clamp` | — |
+| fitBodyEnergyGains with watch readings > gains stay within their bounds however extreme the disagreement | PORTED | BodyEnergyWatchCalibrationTest.kt: `gains stay within their bounds however extreme the disagreement` | — |
 
 ## test/domain/insights/caffeine_drink_profile_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/CaffeineDrinkProfileTest.kt
@@ -460,6 +476,23 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/preference
 | merges missing sections after the stored ones | PORTED | MetricDetailSectionIdTest.kt: `metricDetailSectionOrderFromStored_mergesMissingSections` | — |
 | ignores unknown values | PORTED | MetricDetailSectionIdTest.kt: `metricDetailSectionOrderFromStored_ignoresUnknownValues` | — |
 
+## test/domain/usecase/fit_body_energy_from_watch_use_case_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/usecase/FitBodyEnergyFromWatchUseCaseTest.kt + BodyEnergyWatchCalibrationTest.kt (the pure observation/fold pieces). The orchestrator was genuinely MISSING, not merely untested: both halves were ported but nothing joined them, so watch Body Battery never reached the gains. FitBodyEnergyFromWatchUseCase now runs after a Garmin sync, once the chain has been rebuilt.
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| with no samples it does nothing | DIVERGED | BodyEnergyWatchCalibrationTest.kt: `no samples, or no timeline, yields nothing`, `no readings leaves the gains untouched` | domain-level only; no assertion that persisted watchObservationCount stays 0 |
+| folds new readings in and moves the gains | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `an hour of watch samples counts once, however many samples it holds` | the DAO-to-prefs persistence path is now exercised end to end, not just the fold |
+| a second run does not re-count the same samples | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `syncing the same hour twice does not teach the model twice` | |
+| only samples newer than the watermark are fitted | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `a resumed run starts at the bucket after the watermark` | starts at watermark + one bucket, so the fitted hour is not re-read |
+| a failing timeline leaves the gains and watermark untouched | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `a throwing timeline read is treated as a day with no timeline`, `a failing sample read is swallowed and changes nothing` | |
+| samples that pair to nothing leave the watermark alone | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `a day whose timeline pairs nothing is held, then retired with the rest` | held while recent, retired past the two-day grace so it cannot wedge the watermark |
+| an hour contributes ONE observation however often you sync | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `an hour of watch samples counts once, however many samples it holds`, `syncing the same hour twice does not teach the model twice` | the multi-sync accumulation scenario is now covered across use-case runs |
+| successive hours each contribute one observation | DIVERGED | BodyEnergyWatchCalibrationTest.kt: `buildWatchObservations downsamples to one reading per bucket` | one-per-hour bucketing covered at domain level, not across successive use-case runs |
+| a cold day must not retire the days behind it > an unexamined older day blocks the run instead of being burned | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `a recent day the chain has not reached yet is waited for, not skipped`, `days are retired oldest first, and a cold recent day stops the run` | |
+| a cold day must not retire the days behind it > a cold day mid-window does not block the days behind it | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `a cold day older than the grace period is retired so the days behind it can move` | |
+| a cold day must not retire the days behind it > but a day past the lookback window is retired, not wedged | PORTED | FitBodyEnergyFromWatchUseCaseTest.kt: `a cold day older than the grace period is retired so the days behind it can move` | |
+| the gains stay in bounds across many runs | DIVERGED | BodyEnergyWatchCalibrationTest.kt: `gains stay within their bounds however extreme the disagreement`, `a day of MAXIMAL disagreement does reach the clamp` | bounds property covered per-fold, not across 24 persisted runs |
+
 ## test/domain/usecase/load_heart_period_use_case_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/usecase/LoadHeartPeriodUseCaseTest.kt
 | Flutter case | Status | Kotlin test | Note |
@@ -509,6 +542,18 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/repository/B
 | purgeAll empties both tables and the chain cursor | PORTED | BodyEnergyTimelineStoreTest.kt: `purgeAll clears the chain and its cursor` | — |
 | latestDay returns the newest stored day | N/A-FRAMEWORK | — | Kotlin DAO deliberately omits `latestDay` (KDoc: the signature-aware walk lives in the repository, covered by BodyEnergyChainTest) |
 | writeChainCursor leaves omitted fields untouched | PORTED | BodyEnergyTimelineStoreTest.kt: `recording a pass leaves the global signature intact` | real `writeChainCursor` null-preserving default-method logic exercised |
+
+## test/data/local/garmin_wellness_dao_test.dart
+Kotlin counterpart: none for the DAO itself (GarminWellnessDao referenced by no test); schema-version case maps to data/local/OpenVitalsDatabaseMigrationTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| stores and reads back a window, oldest first | N/A-FRAMEWORK | — | Room `@Query` SQL; instrumented-only, no androidTest DAO coverage exists |
+| re-syncing the same window overwrites rather than duplicating | N/A-FRAMEWORK | — | Room `OnConflictStrategy.REPLACE` on PK(metric, time_millis); PK shape is asserted in OpenVitalsDatabaseMigrationTest's MIGRATION_5_6 SQL check |
+| the two metrics do not collide at the same instant | N/A-FRAMEWORK | — | composite-PK SQLite behavior; PK shape asserted only via MIGRATION_5_6 SQL string |
+| latest returns the newest sample, or null when empty | N/A-FRAMEWORK | — | Room `@Query ORDER BY ... LIMIT 1`; instrumented-only |
+| an empty batch is a no-op | N/A-FRAMEWORK | — | Room insert of empty list; framework behavior |
+| the window is half-open: start inclusive, end exclusive | N/A-FRAMEWORK | — | the `>= <` predicate exists verbatim in the Kotlin `@Query` but is untestable on JVM; no androidTest |
+| the schema version was bumped for this table | DIVERGED | OpenVitalsDatabaseMigrationTest.kt: `version five migrates to the garmin wellness table` | Kotlin asserts MIGRATION_5_6 endVersion == 6, not the `@Database` version constant itself |
 
 ## test/data/local/open_vitals_database_migration_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabaseMigrationTest.kt
@@ -1635,7 +1680,7 @@ reason in their Note column.
 Kotlin behaves differently from Flutter here, or the seam the Flutter test
 Rows reclassified during the latest porting wave carry N/A-BEHAVIOR with a
 "blocked on behavior decision" note in place, rather than being repeated here:
-the history-sync drain isolation and re-drain,
+the watch-fit watermark use case, the history-sync drain isolation and re-drain,
 the Flutter-side anti-clobber migration guard, the reminder-apply serialization,
 the mid-load display clear, and the unsupported-write-permission filter.
 

@@ -43,15 +43,16 @@ class LogMessageInterpolationRatchetTest {
     }
 
     private fun sourceFiles() =
-        File(SourceRoot).walkTopDown() + File(DomainRoot).walkTopDown()
+        File(SourceRoot).walkTopDown() + File(DomainRoot).walkTopDown() + File(WearRoot).walkTopDown()
 
     private companion object {
         const val SourceRoot = "src/main/kotlin/tech/mmarca/openvitals"
         const val DomainRoot = "../domain/src/main/kotlin/tech/mmarca/openvitals"
+        const val WearRoot = "../wear/src/main/kotlin/tech/mmarca/openvitals"
         val LogCall = Regex("""\bLog\.(?:v|d|i|w|e|wtf)\(""")
         val SplicedMessage = Regex("""\$\{[^}]*\.(?:message|localizedMessage)\b[^}]*}|\$(?:e|error|throwable|cause)\b""")
 
-        // Bluetooth and foreground-service refusals: platform text, no record values.
-        const val Ceiling = 12
+        // Bluetooth, pairing and foreground-service refusals: platform text, no record values.
+        const val Ceiling = 30
     }
 }

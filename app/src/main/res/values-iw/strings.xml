@@ -41,6 +41,7 @@
     <string name="activity_entry_step_choose_exercise">בחירת תרגיל</string>
     <string name="activity_entry_steps_title">צעדים</string>
     <string name="activity_entry_steps_label">צעדים</string>
+    <string name="dashboard_watch_live_steps">%1$d צעדים</string>
     <string name="unit_steps">צעדים</string>
     <string name="workout_plan_step_rest">מנוחה</string>
     <string name="metric_steps">צעדים</string>

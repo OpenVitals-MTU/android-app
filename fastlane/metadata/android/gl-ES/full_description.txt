@@ -13,6 +13,7 @@ Que podes facer
 * Importa exportacións de Apple Health e ficheiros GPX, KML, KMZ, TCX, FIT e CSV
 * Crea un informe de saúde en PDF para compartir co teu médico
 * Segue o teu ciclo: períodos, síntomas, temperatura basal, estimación do seguinte período e recordatorios da pílula
+* Emparella un reloxo ou unha báscula con OpenWatch, a nosa aplicación complementaria; OpenVitals mostra o que sincroniza
 * Copia datos entre dous teléfonos por Bluetooth, sen conta e sen rede
 * Gaña insignias por pasos, distancia, andares, adestramentos, hidratación, sono e atención plena
 * Activa recordatorios de bebidas, de atención plena e do ciclo

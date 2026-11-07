@@ -2,7 +2,7 @@
 
 Follow this checklist when adding or extending a metric screen.
 
-For the recipes that are not "a metric screen" — a settings section, a Room table — see [Other Recipes](#other-recipes) at the end.
+For the recipes that are not "a metric screen" — a settings section, a Room table, a device integration — see [Other Recipes](#other-recipes) at the end.
 
 ## 1. Define The Contract
 
@@ -77,7 +77,7 @@ A settings section is six edits, and missing any one of them fails the build, a 
 1. Add an entry to the `SettingsSection` enum in `features/settings/SettingsSection.kt`, with a `titleRes` and a `summaryRes`.
 2. Add the two strings to `values/strings.xml` and, translated, to every `values-*/strings.xml`, then run `python3 scripts/verify-translations.py`.
 3. Add an icon branch to `SettingsSection.icon` in `features/settings/SettingsCards.kt`. It is an exhaustive `when`, so this is compulsory.
-4. Add a content branch to the `when` in `features/settings/SettingsScreenContent.kt`. Sections that are a bespoke screen rather than a card list map to `Unit` there (see `DEVICE_SYNC`).
+4. Add a content branch to the `when` in `features/settings/SettingsScreenContent.kt`. Sections that are a bespoke screen rather than a card list map to `Unit` there (see `WATCHES`, `SCALES` and `DEVICE_SYNC`).
 5. Add a `Screen` entry in `navigation/Screen.kt`, a `composable` in `navigation/AppNavigationSettingsRoutes.kt`, and the mapping in `settingsSectionRoute`.
 6. List the new `Screen` in `Screen.all`. `ScreenTitleTest` fails on one that is missing.
 
@@ -85,13 +85,13 @@ Sections hidden outside diagnostics builds are filtered in `SettingsScreenConten
 
 ### Add A Room Entity
 
-The database is at version 18. A new entity means:
+The database is at version 17. A new entity means:
 
 1. Add the `@Entity` and its DAO under `data/local/<area>/`.
-2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `VERSION` to 19.
-3. Add a `MIGRATION_18_19` in the companion object that creates the table, and add it to `ALL_MIGRATIONS`. Provide the DAO in `di/AppModule.kt`. Build once and commit the schema file Room writes to `app/schemas`.
+2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `VERSION` to 17.
+3. Add a `MIGRATION_17_18` in the companion object that creates the table, and add it to `ALL_MIGRATIONS`. Provide the DAO in `di/AppModule.kt`. Build once and commit the schema file Room writes to `app/schemas`.
 4. Give the migration a KDoc saying whether it copies data or only creates the table, and why. Every existing migration does.
-5. Prefer a natural composite primary key that makes a re-import idempotent, as `food_nutrients` does with `(food_id, nutrient)`.
+5. Prefer a natural composite primary key that makes a re-import idempotent, as `garmin_wellness_samples` does with `(metric, time_millis)`.
 
 Only add a table for data Health Connect cannot hold, or for a derived summary cache. Do not mirror Health Connect records.
 
@@ -103,4 +103,15 @@ When a repository is a seam that another subsystem writes through, split it:
 2. Put the implementation in `data/repository/` as `<Name>Impl`.
 3. `@Binds` it in `di/RepositoryModule.kt`.
 
-Keep the contract free of windowing, aggregation, and interpretation, as `CycleJournalRepository` is.
+Keep the contract free of windowing, aggregation, and interpretation, as `GarminWellnessRepository` is.
+
+### Add A Device Integration
+
+1. Implement the ports in `devices/core`: `DeviceClassifier` and `DeviceScanClassifier` for discovery, `WatchPairingPort` for bonding, `DeviceSyncPort` for sync.
+2. Register the classifier where the others are constructed, in `sensors/ble/BleSensorCoordinator`.
+3. Take a lease via `withRadioLease(address, RadioLeaseOwner.*)` around every BLE link. Do not invent a fifth owner tag without a reason.
+4. Keep protocol code transport-free so it is testable over an in-memory pipe; only the GATT client should touch `android.bluetooth`.
+5. Bind the new port in `di/DevicesModule.kt`. Do not add a Hilt module inside `devices/`. A `DeviceSyncPort` is bound `@IntoSet`; `CompositeDeviceSyncPort` routes each device to the port whose `canSync` claims it, so no two integrations may claim the same device.
+6. Write imported data through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`, so a re-sync upserts. Health Connect replaces a record only when its `clientRecordVersion` is higher, so a record that is rewritten as it grows needs a rising version.
+
+A device that only broadcasts, like the scale in `devices/xiaomi`, skips steps 1 to 3: it has nothing to classify in the sensor scan, no bond, no sync, and no link to lease. It still follows 4 to 6. If it is heard in the background, store what it said in Room before writing to Health Connect: a background write cannot ask for a permission, and the device will not say it twice. To be woken when it starts advertising, associate it through `CompanionDevicePairing` and bind a `CompanionPresenceObserver` `@IntoSet` in `di/DevicesModule.kt`; do not add a second `CompanionDeviceService`, Android reports to the primary one only.

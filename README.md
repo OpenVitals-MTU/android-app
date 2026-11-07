@@ -55,7 +55,11 @@ For the detailed feature inventory, see the [feature guide](https://docs.hale.ng
 
 ## Devices and integrations
 
-Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) lives in the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app, which writes what those devices record to Health Connect for OpenVitals to read.
+### Watches and scales
+
+Watch and scale support is moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app from the same project. It pairs Garmin and Wear OS watches and the Xiaomi S400 scale, and writes what they record to Health Connect, where OpenVitals reads it like any other source. Install OpenWatch to sync a watch or a scale.
+
+OpenVitals still carries its own Garmin watch and Xiaomi scale integration for the people who rely on it today. That in-app support is deprecated and will be removed in a coming release. Nothing recorded is lost when it goes: it is all in Health Connect.
 
 ### Bluetooth sensors
 
@@ -91,6 +95,7 @@ OpenVitals currently has screens or data handling for:
 - Goals
 - Achievements
 - Medical records
+- Garmin-only wellness data
 
 <details>
 <summary>What is covered in each area</summary>
@@ -105,6 +110,7 @@ OpenVitals currently has screens or data handling for:
 - **Goals:** configurable daily goals for supported activity metrics, workout minutes, hydration, sleep, nutrition and mindfulness.
 - **Achievements:** badges and progress for daily steps, lifetime distance, floors and other supported achievement categories.
 - **Medical records (beta):** the Health Connect medical-record categories available on Android 14 and newer with a recent Health Connect module. Records can be imported, typed in by hand and exported. They are shown as stored; OpenVitals does not interpret their clinical meaning. The area is still in development, so review what you import.
+- **Garmin-only data:** stress, Body Battery, intensity minutes, watch sleep metrics, recovery time, Garmin training readiness and acute/chronic training load when the paired watch supplies them.
 
 </details>
 
@@ -119,7 +125,7 @@ A fuller breakdown of what can be viewed, entered, edited, imported or exported 
 - OpenVitals opts out of Android cloud backup.
 - Health Connect remains the source of truth wherever it has a record type.
 - The dashboard is read-only by default; writes happen only through actions you explicitly start or enable.
-- Bluetooth is used for sensors and phone-to-phone sync. Data sent over Bluetooth goes only to devices or phones you pair or use with those features.
+- Bluetooth is used for sensors, paired watches, the scale and phone-to-phone sync. Data sent over Bluetooth goes only to devices or phones you pair or use with those features.
 - Files are exported or shared only when you choose to do so.
 
 Health Connect access is split into categories rather than requested as one block:
@@ -141,9 +147,11 @@ This includes things such as:
 
 - derived summary caches and Body Energy history;
 - food and drink catalogues;
+- Garmin-only wellness data and temporary per-minute watch data used for sleep processing;
+- the readings of each bathroom scale weigh-in;
 - the parts of the cycle journal that Health Connect cannot store, along with cycle exclusions and pill intakes;
 - metadata used by device sync;
-- recordings not yet saved, staged Apple Health imports, imported offline maps and elevation tiles;
+- downloaded watch files, recordings not yet saved, staged Apple Health imports, imported offline maps and elevation tiles;
 - medical documents you explicitly choose to keep;
 - the last phone-to-phone sync report, the last Apple Health import report and the last crash report, each holding counts, types and reasons rather than your values.
 
@@ -251,7 +259,7 @@ After launching the app:
 
 ## Architecture at a glance
 
-The repository has two Gradle modules: `:app` is the phone app and `:domain` holds its pure Kotlin models and calculations.
+The repository has two Gradle modules. `:app` is the phone app; `:domain` holds the app-local pure code the app depends on.
 
 The phone app uses:
 
@@ -260,9 +268,9 @@ The phone app uses:
 - Hilt for dependency injection;
 - the AndroidX Health Connect client behind `HealthConnectManager` and feature-specific repositories;
 - Room for derived caches and data Health Connect cannot represent. Health Connect remains the source of truth for record types it supports;
-- WorkManager for Apple Health imports and offline-map imports.
+- WorkManager for Apple Health imports, offline-map imports and the opt-in periodic Garmin watch-sync job.
 
-Watch and scale support is not in this repository: it lives in [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app that writes to Health Connect.
+The deprecated Garmin watch and Xiaomi scale integration lives under `devices/`, including the Garmin protocol stack, shared Bluetooth radio handling, companion-device pairing, notification forwarding and the scale listener. It is being retired in favour of [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect.
 
 Live Bluetooth LE sensor streaming during activity recording is separate under `sensors/ble/`.
 
@@ -273,10 +281,10 @@ See the [architecture documentation](docs/engineering/architecture.md) for the c
 ## Project layout
 
 - [`app/`](app): Android phone app module
-- [`domain/`](domain): pure Kotlin module with the app-local models, period math and insight calculations
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
 - [`app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/`](app/src/main/kotlin/tech/mmarca/openvitals/healthconnect): Health Connect readers, writers and the permission shell
+- [`app/src/main/kotlin/tech/mmarca/openvitals/devices/`](app/src/main/kotlin/tech/mmarca/openvitals/devices): Garmin watch and Xiaomi scale device layer, deprecated in favour of OpenWatch
 - [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components

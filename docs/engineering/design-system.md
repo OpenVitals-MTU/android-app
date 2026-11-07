@@ -120,8 +120,9 @@ Backlog in the golden's own priority order. None of these is a silent skip; each
 is a measured count as of 2026-08-04.
 
 1. **Sentence-case first-party strings** (audit F3). Several first-party strings
-   are title case. Garmin's product names — Training Readiness, Intensity
-   Minutes, Stress Level — are third-party terms and keep their casing. This is l10n churn across five catalogs.
+   are title case. Garmin's product names — Body Battery, Sleep Coach, Training
+   Readiness, Intensity Minutes, Stress Level — are third-party terms and keep
+   their casing. This is l10n churn across five catalogs.
 2. **Spacing / radius / alpha literals** (F5). 2,075 bare `dp` literals, 95
    hand-written alphas, 21 hand-built `RoundedCornerShape`s. Explicitly a
    per-screen migration with golden cover, not a sweep. **Rule for all new

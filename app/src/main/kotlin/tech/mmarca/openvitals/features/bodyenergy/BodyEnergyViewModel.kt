@@ -126,6 +126,7 @@ class BodyEnergyViewModel @Inject constructor(
                 activityDrainGain = 1.0,
                 basalDrainGain = 1.0,
                 stressDrainGain = 1.0,
+                watchObservationCount = 0,
                 setupCompleted = true,
             )
         )

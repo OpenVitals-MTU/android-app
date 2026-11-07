@@ -72,8 +72,8 @@ object FlutterPrefsKeyTable {
     const val MIGRATED_FLAG_KEY = "flutter_data_migrated"
 
     /**
-     * The flag of the Flutter wellness import, which ran before the watch code moved to OpenWatch.
-     * Still skipped so an old install's copy of it is not mapped as a preference.
+     * The watch wellness import has its own flag. It was added to the migration later, behind
+     * [MIGRATED_FLAG_KEY], which everyone who had already migrated had set. They never got it.
      */
     const val WELLNESS_IMPORTED_FLAG_KEY = "flutter_garmin_wellness_imported"
 

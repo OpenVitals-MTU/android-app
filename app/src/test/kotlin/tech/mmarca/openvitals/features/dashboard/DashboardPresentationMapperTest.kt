@@ -215,6 +215,26 @@ class DashboardPresentationMapperTest {
     }
 
     @Test
+    fun build_pairedWatch_materialisesTheWatchTile() {
+        val data = DashboardData(date = LocalDate.now(), steps = 8_000)
+
+        val display = build(
+            data,
+            watch = WatchWidgetDisplay(
+                deviceId = "watch-1",
+                name = "vívoactive 5",
+                batteryPercent = 62,
+                lastSyncedAt = Instant.parse("2026-08-12T10:26:00Z"),
+            ),
+        )
+
+        val widget = requireNotNull(display.widgets[DashboardWidgetId.WATCH])
+        assertEquals("vívoactive 5", widget.watch?.name)
+        // It has content, so it must not sort to the back of the carousel.
+        assertEquals(false, widget.showsNoDataMessage())
+    }
+
+    @Test
     fun build_fullySupportedDay_mapsBothRingsAndEveryTile() {
         val data = DashboardData(date = LocalDate.now(), steps = 8_000)
 
@@ -228,7 +248,7 @@ class DashboardPresentationMapperTest {
             display.widgets[DashboardWidgetId.WEEKLY_CARDIO_LOAD]?.style,
         )
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT -
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH -
                 DashboardWidgetId.MEDICAL_RECORDS,
             display.widgets.keys.toList(),
         )
@@ -252,7 +272,7 @@ class DashboardPresentationMapperTest {
 
         // No readings: the tiles are still there, empty, and the hero rings never disappear.
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT -
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH -
                 DashboardWidgetId.MEDICAL_RECORDS,
             display.widgets.keys.toList(),
         )
@@ -461,7 +481,7 @@ class DashboardPresentationMapperTest {
         )
 
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT -
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH -
                 DashboardWidgetId.MEDICAL_RECORDS,
             display.widgets.keys.toList(),
         )
@@ -489,6 +509,7 @@ class DashboardPresentationMapperTest {
         loadingWidgets: Set<DashboardWidgetId> = emptySet(),
         bodyEnergySetupCompleted: Boolean = false,
         includeUnsupported: Boolean = false,
+        watch: WatchWidgetDisplay? = null,
         medicalRecordsAvailable: Boolean = false,
     ): DashboardDisplayState =
         DashboardPresentationMapper.build(
@@ -499,6 +520,7 @@ class DashboardPresentationMapperTest {
             loadingWidgets = loadingWidgets,
             bodyEnergySetupCompleted = bodyEnergySetupCompleted,
             includeUnsupported = includeUnsupported,
+            watch = watch,
             medicalRecordsAvailable = medicalRecordsAvailable,
         )
 }

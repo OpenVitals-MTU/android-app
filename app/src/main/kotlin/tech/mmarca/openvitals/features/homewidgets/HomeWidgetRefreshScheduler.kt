@@ -22,7 +22,8 @@ import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
  * Owns the home widgets' background refresh: one `WorkManager` periodic work
  * at the interval the user chose, while any widget is placed; none
  * otherwise. The widget's own `updatePeriodMillis` tick is not honoured in
- * Doze; this one is.
+ * Doze; this one is. Mirrors
+ * [tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler].
  */
 @Singleton
 class HomeWidgetRefreshScheduler @Inject constructor(

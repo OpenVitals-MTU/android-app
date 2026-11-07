@@ -11,7 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.util.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -218,6 +218,7 @@ class BleDeviceRepositoryTest {
         assertEquals(watch.id, stored.id)
         // Both roles on one entry, the way an Edge already was.
         assertEquals(BleDeviceKind.WATCH, stored.kind)
+        assertTrue(stored.isGarminGfdi)
         assertEquals(
             stored.id,
             repo.resolveCapabilityAssignments()[BleSensorCapability.HEART_RATE]?.id,
@@ -269,34 +270,6 @@ class BleDeviceRepositoryTest {
     }
 
     @Test
-    fun `removeWatchEntries forgets watches and bike computers but keeps plain sensors`() {
-        val repo = newRepository()
-        val strap = repo.addStrap()
-        repo.addDevice(
-            displayName = "vívoactive 5",
-            address = "E0:48:24:D5:F7:10",
-            bluetoothName = "vívoactive 5",
-            capabilities = emptySet(),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.GARMIN,
-        )
-        repo.addDevice(
-            displayName = "Edge 840",
-            address = "E0:48:24:D5:F7:20",
-            bluetoothName = "Edge 840",
-            capabilities = setOf(BleSensorCapability.CYCLING_POWER),
-            kind = BleDeviceKind.BIKE_COMPUTER,
-            integration = DeviceIntegration.GARMIN,
-        )
-
-        repo.removeWatchEntries()
-
-        assertEquals(listOf(strap.id), repo.devices.map { it.id })
-        // Persisted, not only published: a fresh repository reads the same list.
-        assertEquals(listOf(strap.id), newRepository().devices.map { it.id })
-    }
-
-    @Test
     fun `a bike computer with NO capabilities stays out`() {
         val repo = newRepository()
         repo.addStrap()
@@ -332,14 +305,6 @@ class BleDeviceRepositoryTest {
             kind = BleDeviceKind.BIKE_COMPUTER,
             integration = DeviceIntegration.GARMIN,
         )
-        repo.addDevice(
-            displayName = "Galaxy Watch8",
-            address = "A8:D1:62:BE:3A:3B",
-            bluetoothName = "Galaxy Watch8",
-            capabilities = setOf(BleSensorCapability.HEART_RATE),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.WEAROS,
-        )
         val syncedAt = Instant.parse("2026-07-21T09:30:00Z")
         repo.markSynced(watch.id, syncedAt)
 
@@ -350,7 +315,6 @@ class BleDeviceRepositoryTest {
             listOf(
                 Triple(BleDeviceKind.WATCH, null, syncedAt),
                 Triple(BleDeviceKind.BIKE_COMPUTER, DeviceIntegration.GARMIN, null),
-                Triple(BleDeviceKind.WATCH, DeviceIntegration.WEAROS, null),
             ),
             reloaded.map { Triple(it.kind, it.integration, it.lastSyncedAt) },
         )
@@ -399,6 +363,29 @@ class BleDeviceRepositoryTest {
         assertEquals(DeviceIntegration.GARMIN, device.integration)
         assertEquals(Instant.ofEpochMilli(1_753_100_000_000), device.lastSyncedAt)
         assertTrue(device.isWatch)
+        assertTrue(device.isGarminWatch)
+        assertTrue(device.isGarminGfdi)
+    }
+
+    @Test
+    fun registryJson_dropsTheWearOsWatchesThatMovedToOpenWatch() {
+        // A Wear OS watch registered before that integration moved to OpenWatch is forgotten,
+        // not read back as a legacy Garmin; the Garmin watch beside it stays.
+        val json = """
+            [{"id":"ble-1","displayName":"Galaxy Watch8","address":"A8:D1:62:BE:3A:3B",
+              "bluetoothName":"Galaxy Watch8","capabilities":[],"enabled":true,
+              "wheelCircumferenceMm":null,"batteryPercent":null,"batteryUpdatedAt":null,
+              "addedAt":1753000000000,"kind":"WATCH","integration":"WEAROS","lastSyncedAt":null},
+             {"id":"ble-2","displayName":"vívoactive 5","address":"AA:BB:CC:DD:EE:05",
+              "bluetoothName":"vívoactive 5","capabilities":[],"enabled":true,
+              "wheelCircumferenceMm":null,"batteryPercent":null,"batteryUpdatedAt":null,
+              "addedAt":1753000000000,"kind":"WATCH","integration":"GARMIN","lastSyncedAt":null}]
+        """.trimIndent()
+
+        val decoded = BleDeviceRegistryJson.decode(json)
+
+        assertEquals(listOf("ble-2"), decoded.map { it.id })
+        assertEquals(DeviceIntegration.GARMIN, decoded.single().integration)
     }
 
     @Test

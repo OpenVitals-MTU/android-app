@@ -14,7 +14,7 @@ Sleep can show:
 
 - Sleep sessions for the selected period.
 - Day summaries and period summaries.
-- Sleep stage timelines where Health Connect stage data is available.
+- Sleep stage timelines where Health Connect stage data is available. For a Garmin watch that does not record stages, OpenVitals estimates them; see [Watches](watches.md).
 - Duration, efficiency, score, continuity, goal progress, and recovery context.
 - Session lists and session details.
 - Previous-period comparisons, baselines, confidence, and source labels.

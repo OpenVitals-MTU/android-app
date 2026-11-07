@@ -14,7 +14,6 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
-import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,6 +29,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
+import tech.mmarca.openvitals.devices.core.DeviceClassification
+import tech.mmarca.openvitals.devices.core.DeviceClassifier
+import tech.mmarca.openvitals.devices.core.DeviceScanClassifier
+import tech.mmarca.openvitals.devices.core.classifyDevice
+import tech.mmarca.openvitals.devices.garmin.GarminDeviceClassifier
+import tech.mmarca.openvitals.devices.garmin.GarminScanClassifier
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
@@ -80,6 +85,9 @@ class BleSensorCoordinator @Inject constructor(
     private var scanCallback: ScanCallback? = null
     private val scanResults = ConcurrentHashMap<String, BleDiscoveredDevice>()
 
+    /** Per-integration classifiers: scan-time evidence, and the `(integration, kind)` verdict. */
+    private val scanClassifiers: List<DeviceScanClassifier> = listOf(GarminScanClassifier())
+    private val deviceClassifiers: List<DeviceClassifier> = listOf(GarminDeviceClassifier())
     private var metricsTimeoutTickerScheduled = false
     private val metricsTimeoutTicker = object : Runnable {
         override fun run() = synchronized(stateLock) {
@@ -400,14 +408,28 @@ class BleSensorCoordinator @Inject constructor(
         val serviceCapabilities = advertisedUuids
             .flatMap { BleUuids.capabilitiesForService(it) }
             .toSet()
+        // Which integration claims this advertisement as a sync watch. The
+        // scanner carries no protocol knowledge of its own.
+        val advertisedUuidStrings = advertisedUuids.map { it.toString() }
+        val advertisesSync =
+            scanClassifiers.any { it.advertisesSyncService(advertisedUuidStrings) }
+        // Atomic per key: advertisements for the same device land on the scan thread.
         scanResults.compute(address) { _, existing -> BleDiscoveredDevice(
             address = address,
             name = device.name ?: existing?.name,
             rssi = result.rssi,
             suggestedCapabilities = (existing?.suggestedCapabilities.orEmpty() + serviceCapabilities).toSet(),
+            // Sticky across advertisements: one sighting of the member service settles it.
+            advertisesSyncService = advertisesSync || (existing?.advertisesSyncService ?: false),
         ) }
         publishScanResults()
     }
+
+    /**
+     * Maps a discovered device to how it registers: Garmin watch, Edge, or a plain sensor.
+     */
+    fun classifyDiscoveredDevice(device: BleDiscoveredDevice): DeviceClassification =
+        classifyDevice(device, deviceClassifiers)
 
     private fun publishScanResults() {
         _discoveredDevices.value = scanResults.values.sortedWith(

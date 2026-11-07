@@ -10,10 +10,6 @@ Onboarding prepares OpenVitals for local Health Connect use without requiring an
 
 For the exact permission reference, see [Permissions](../app/permissions.md). For platform behavior, see [Health Connect](../app/health-connect.md).
 
-## After The Move To OpenWatch
-
-An install that was onboarded before watches and scales moved to [OpenWatch](https://github.com/Hale-MTU/OpenWatch) sees a one-time notice on its first open after the update: what moved, why the app is lighter for it, and a "Get OpenWatch" button that opens the project page (a toast carries the address on a phone without a browser). Closing it, by either button or a tap outside, sets `openWatchMoveNoticeSeen` in the app's preferences and runs `LegacyDeviceDataCleaner`: the watch and bike-computer entries leave the stored sensor list and the preference files of the removed Garmin, Wear OS and scale stores are deleted. Health Connect is untouched. A fresh install marks the flag at onboarding and never sees the notice. The notice shows before the privacy re-consent dialog, which waits for it (`OpenWatchMoveNoticeViewModel`, `ui/components/OpenWatchMoveNoticeDialog.kt`).
-
 ## First Run
 
 Onboarding introduces the app, checks Health Connect availability, and helps the user grant useful permission groups. It runs as a short sequence of steps, and a step that does not apply to the device is skipped entirely:
@@ -55,8 +51,9 @@ Body Energy calibration and the body profile are not part of onboarding. They ar
 Android's own permissions are requested where and when the feature that needs them is used, never at first run:
 
 - Location, for GPS activity recording.
-- Nearby devices, for Bluetooth LE sensors and for sync with another phone.
+- Nearby devices, for Bluetooth LE sensors, for pairing a watch, and for sync with another phone.
 - Notifications, for reminders and for recording, import, and sync progress.
+- Notification access, only for forwarding phone notifications to a watch, and only after an in-app disclosure. Android grants it from its own settings screen.
 
 The app declares no internet permission and removes the ones its dependencies would otherwise contribute. See [Permissions](../app/permissions.md).
 

@@ -387,7 +387,7 @@ Kotlin counterpart: none
 | leaving the screen with a flow open resets it without notifying the dying element | N/A-FRAMEWORK | — | Riverpod dispose/notify regression; no Compose analogue |
 
 ## test/features/settings/ble_devices_view_model_test.dart
-Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/BleDevicesViewModelTest.kt (sensor add/edit flow), plus domain/model/BleDeviceKindTest.kt. The Garmin watch-onboarding half left with the device layer (now OpenWatch); its rows are gone from this table.
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/BleDevicesViewModelTest.kt (sensor add/edit flow) and app/src/test/kotlin/tech/mmarca/openvitals/features/watches/WatchesViewModelTest.kt + WatchDeviceViewModelTest.kt (the Garmin watch-onboarding half, which lives in features/watches in the Kotlin port); plus devices/core/DeviceClassificationTest.kt, domain/model/BleDeviceKindTest.kt, devices/garmin/OnboardGarminWatchUseCaseTest.kt
 
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
@@ -404,6 +404,18 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings
 | enabledDeviceCount survives the conversion | PORTED | BleDevicesViewModelTest.kt: `enabledDeviceCount counts only the enabled devices` | the derived getter is now asserted through the VM state |
 | copyWith still clears a nullable field when passed null | N/A-FRAMEWORK | — | Dart copyWith `_unset` sentinel semantics |
 | the freezed state compares by value | N/A-FRAMEWORK | — | Kotlin data class equality is language-guaranteed |
+| Garmin watch onboarding > selecting a watch skips the capability probe entirely | PORTED | WatchesViewModelTest.kt: `selecting a watch skips the capability probe entirely` | probe-call count asserted at 0 with the probe armed |
+| Garmin watch onboarding > a sensor still goes through the probe | PORTED | BleDevicesViewModelTest.kt: `selecting a device auto-discovers capabilities via the GATT probe` | classification only |
+| Garmin watch onboarding > selecting an Edge skips the probe like a watch | PORTED | WatchesViewModelTest.kt: `selecting an Edge skips the probe like a watch` | classification only |
+| Garmin watch onboarding > onboarding registers the watch and closes the sheet | PORTED | WatchesViewModelTest.kt: `onboarding registers the watch and closes the sheet` | OnboardGarminWatchUseCase untested |
+| Garmin watch onboarding > onboarding an Edge registers it as a bike computer | PORTED | WatchesViewModelTest.kt: `onboarding an Edge registers it as a bike computer` | plus devices/garmin/OnboardGarminWatchUseCaseTest.kt: `registers an Edge as a bike computer with no capabilities` |
+| Garmin watch onboarding > a refused pairing keeps the sheet open and explains why | PORTED | WatchesViewModelTest.kt: `a refused pairing keeps the sheet open and explains why` | REFUSED branch exists in OnboardGarminWatchUseCase, untested |
+| Garmin watch onboarding > a declined companion association is recorded, not failed | PORTED | WatchesViewModelTest.kt: `a declined companion association is recorded, not failed` | registry half already covered by devices/garmin/OnboardGarminWatchUseCaseTest.kt |
+| Garmin watch onboarding > the no-companion flag survives the sheet closing, then clears | PORTED | WatchesViewModelTest.kt: `the no-companion flag survives the sheet closing, then clears` |  |
+| Garmin watch onboarding > a blank name falls back to the advertised one | PORTED | WatchesViewModelTest.kt: `a blank name falls back to the advertised one` |  |
+| Garmin watch onboarding > forgetting a watch also drops its bond and association | PORTED | WatchDeviceViewModelTest.kt: `forgetting a watch also drops its bond, association and Garmin state` | end-to-end through WatchDeviceViewModel.removeDevice incl. GarminDeviceStateStore.clear |
+| Garmin watch onboarding > forgetting a sensor touches neither bond nor association | PORTED | WatchDeviceViewModelTest.kt: `forgetting a sensor touches neither bond nor association` |  |
+| Garmin watch onboarding > a watch can be renamed even though it has no capabilities | PORTED | WatchDeviceViewModelTest.kt: `a watch can be renamed even though it has no capabilities` | Kotlin renames watches through WatchDeviceViewModel, not the sensor edit flow |
 
 ## test/features/settings/body_energy_diagnostics_card_test.dart
 Kotlin counterpart: none (Body Energy diagnostics feature not ported; features/settings/DiagnosticsCards.kt has no such card)
@@ -490,6 +502,23 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/diagnostics/
 | share failure surfaces the failure snackbar | N/A-WIDGET | — | |
 | share degrades gracefully when the native channel is missing | N/A-FRAMEWORK | — | |
 
+## test/features/settings/device_sync_view_model_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/DeviceSyncControllerTest.kt (declares itself the port of this file), plus devices/core/RadioLeasesTest.kt, devices/garmin/GarminSessionTest.kt, features/watches/WatchSettingsLinksTest.kt
+
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| a sync with nothing new still stamps the device | DIVERGED | DeviceSyncControllerTest.kt: `a successful sync ends idle with the file count` | lastSyncedAt stamping moved into GarminWatchSyncService and is unasserted |
+| refuses to sync while a recording is active (shared radio) | DIVERGED | RadioLeasesTest.kt: `a held lease excludes another owner on the same address` (+ GarminWatchActionsControllerTest: `a find is refused while a sync holds the radio`) | recording guard replaced by address-scoped radio leases |
+| passes the previously-synced keys down to the service | DIVERGED | GarminSessionTest.kt (runSync alreadySynced skip) | dedup honored at session layer; store-to-service wiring untested |
+| reports progress scoped to the syncing device | PORTED | DeviceSyncControllerTest.kt: `reports progress scoped to the syncing device` | |
+| a transport failure surfaces its message and stamps nothing | DIVERGED | DeviceSyncControllerTest.kt: `a failure surfaces its message and ends idle` | "stamps nothing" not asserted |
+| refuses a second sync while one is running | PORTED | DeviceSyncControllerTest.kt: `refuses a second sync while one is running` | |
+| ignores a device that is not a watch | PORTED | DeviceSyncControllerTest.kt: `ignores a device the port does not claim` | |
+| ignores an unknown device id | PORTED | DeviceSyncControllerTest.kt: `ignores an unknown device id` | |
+| clear() resets the banner | PORTED | DeviceSyncControllerTest.kt: `clear resets the banner but never a running sync` | Kotlin is stronger (also guards running sync) |
+| an unavailable write path fails cleanly instead of hanging the row | DIVERGED | DeviceSyncControllerTest.kt: `a failure surfaces its message and ends idle` | no assertion that files are not remembered as synced / device not stamped |
+| the open-link registry belongs to the container, not the library | N/A-FRAMEWORK | — | Riverpod container-scoping; Kotlin uses DI scoping, link lifecycle covered by WatchSettingsLinksTest.kt |
+
 ## test/features/settings/fit_import_view_model_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/FitFolderImportTest.kt (the SAF folder walk lives in `RouteFolderScanner`, mocked at the seam; `SettingsViewModel.importFitFolder` drives it)
 
@@ -503,6 +532,25 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings
 | one unreadable file fails that file, not the folder | PORTED | FitFolderImportTest.kt: `one unreadable file fails that file, not the folder` | scan error stays null; failure lands on the bulk-import surface |
 | a failed scan surfaces, and imports nothing | PORTED | FitFolderImportTest.kt: `a failed scan surfaces, and imports nothing` | `fitFolderScanError`, importer never called |
 | — | KOTLIN-ONLY | FitFolderImportTest.kt: `a second pick while scanning is ignored`, `a fresh pick clears the outcome of the previous one` | busy guard shared with the route bulk import; outcome lines reset per pick |
+
+## test/features/settings/garmin_body_energy_invalidation_test.dart
+Kotlin counterpart: none (no garminEarliestAffectedDay equivalent; Kotlin instead revisits unsettled days — BodyEnergyChainSyncServiceTest.kt: `a forced pass bypasses the throttle, so a watch sync is acted on at once`, `a later pass skips settled days and revisits only unsettled ones`)
+
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| garminEarliestAffectedDay > is the oldest dated file, whatever order they arrive in | N/A-FRAMEWORK | none | mechanism replaced by unsettled-day revisiting (BodyEnergyChainSyncService); no Kotlin analogue |
+| garminEarliestAffectedDay > ignores undated files rather than guessing at them | N/A-FRAMEWORK | none | mechanism replaced by unsettled-day revisiting; no Kotlin analogue |
+| garminEarliestAffectedDay > is null when the watch dated nothing | N/A-FRAMEWORK | none | mechanism replaced by unsettled-day revisiting; no Kotlin analogue |
+| garminEarliestAffectedDay > is null for an empty sync | N/A-FRAMEWORK | none | mechanism replaced by unsettled-day revisiting; no Kotlin analogue |
+| garminEarliestAffectedDay > resolves the local day, not the UTC one | N/A-FRAMEWORK | none | mechanism replaced by unsettled-day revisiting; no Kotlin analogue |
+## test/features/settings/garmin_watch_actions_view_model_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/GarminWatchActionsControllerTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| find is a toggle: a second tap stops it | PORTED | GarminWatchActionsControllerTest.kt: `find is a toggle - a second tap stops it` | |
+| stopping twice before the watch answers does not throw | PORTED | GarminWatchActionsControllerTest.kt: `stopping twice before the watch answers does not throw` | |
+| a refused find is reported as a flag, not a message | PORTED | GarminWatchActionsControllerTest.kt: `a refused find is reported as a flag, not a message` | |
+| a find is refused while a sync holds the radio | PORTED | GarminWatchActionsControllerTest.kt: `a find is refused while a sync holds the radio` | Kotlin adds an extra non-GFDI no-op case |
 
 ## test/features/settings/health_connect_sources_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/HealthConnectSourcesTest.kt
@@ -590,6 +638,56 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings
 | settings root shows the support card and version footer | PORTED | SettingsRootTest: `theSupportCardOffersItsThreeRoutesOut`, `theVersionFooterNamesTheBuildABugReportWouldQuote` | Compose instrumentation; runs on a device, not in CI |
 | selecting a theme mode persists through the repository | PORTED | SettingsViewModelTest.kt: `selectAppThemeMode persists preference and updates ui state` | |
 
+## test/features/settings/watch_data_screen_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/WatchMetricsTest.kt, SleepCoachReadingTest.kt (over the extracted `sleepCoachReading()` seam)
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| shows only the metrics the watch has actually sent | DIVERGED | WatchMetricsTest.kt: `resolves the latest reading of each stored metric` | presence/absence logic covered; seconds→"17 min" display formatting not asserted anywhere |
+| names what is missing once, at the foot | PORTED | WatchMetricsTest.kt: `names what the watch never sent, in declaration order` | |
+| Sleep Coach reads as a comparison, not a bare number | PORTED | SleepCoachReadingTest.kt: `Sleep Coach reads as a comparison, not a bare number` | seam - sleepCoachReading() extracted from WatchDataScreen.kt |
+| an empty table says so instead of rendering empty sections | PORTED | WatchMetricsTest.kt: `an empty table is empty, not a map of blanks` | |
+| vigorous intensity minutes count double, as Garmin counts them | PORTED | WatchMetricsTest.kt: `vigorous intensity minutes count double, as Garmin counts them` | |
+| the weekly goal counts the whole week, not just today | PORTED | WatchMetricsTest.kt: `the weekly total sums each day's FINAL running total` | Kotlin also excludes last week's samples |
+
+## test/features/settings/watch_device_screen_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/WatchDeviceViewModelTest.kt (rename/forget), devices/core/DeviceClassificationTest.kt, features/watches/WatchSettingsLinksTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| opening and dismissing the rename dialog does not throw | N/A-FRAMEWORK | | Flutter TextEditingController dispose-during-route-exit regression |
+| renaming applies the new name | PORTED | WatchDeviceViewModelTest.kt: `renaming trims the new name and persists it` | plus `a blank rename is refused rather than blanking the row` |
+| the device view offers Data and Sync, and nothing measured | PORTED | WatchDeviceRowsTest: `aWatchOffersBothDataAndSync` (actions row only; the "nothing measured" half needs WatchDeviceViewModel) | Compose instrumentation; runs on a device, not in CI |
+| a bike computer syncs, offers its live-sensor role, and has no wellness Data view | PORTED | WatchDeviceRowsTest: `aBikeComputerSyncsButHasNoWellnessDataView`, `aBikeComputerOffersItsLiveSensorRole` | Compose instrumentation; runs on a device, not in CI |
+| Alarms, Find and the whole settings tree are live | PORTED | WatchDeviceRowsTest: `alarmsAndFindAreLiveActions`, `theOnDeviceSettingsRowOpensTheWatchsOwnSettingsTree` | Compose instrumentation; runs on a device, not in CI |
+
+## test/features/settings/watch_notification_apps_screen_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/WatchNotificationAppsViewModelTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| a phone with no launchable apps says so rather than showing an empty list | PORTED | WatchNotificationAppsScreenTest: `aPhoneWithNoLaunchableAppsSaysSoRatherThanShowingAnEmptyList` | Compose instrumentation; runs on a device, not in CI |
+| every app reads as sending to the watch until it is silenced | PORTED | WatchNotificationAppsViewModelTest.kt: `the app list carries the stored blocklist` | default-unblocked (blocklist, not allowlist) asserted |
+| silencing an app reaches the native filter | PORTED | WatchNotificationAppsViewModelTest.kt: `blocking an app persists it and pushes the config` | Kotlin filter reads the store natively; push asserted |
+| an app that cannot be listed leaves the screen usable rather than stuck loading | PORTED | WatchNotificationAppsViewModelTest.kt: `an app list that cannot be read leaves the screen usable, not stuck loading` | no Kotlin test for loadApps with a throwing gateway (error-tolerant loading) |
+
+## test/features/settings/watch_notifications_view_model_test.dart
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/WatchNotificationAppsViewModelTest.kt, app/src/test/kotlin/tech/mmarca/openvitals/data/repository/WatchNotificationPrefsStoreTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| the switch reads off until notification access is granted | PORTED | WatchNotificationAppsViewModelTest.kt: `active means both gates open, not just the switch` | accessGranted also asserted in `access is re-read at enable time` |
+| turning it on without access opens system settings and does NOT enable | PORTED | WatchNotificationAppsViewModelTest.kt: `without notification access the system screen opens and nothing is enabled` | |
+| access granted while the screen was open still lets the switch turn on | PORTED | WatchNotificationAppsViewModelTest.kt: `access is re-read at enable time, not trusted from stale state` | |
+| enabling pushes the config the native filter runs on | DIVERGED | WatchNotificationAppsViewModelTest.kt: `refresh reads both gates and mirrors the config to the filter` | push asserted on refresh and on block, not specifically on the enable transition |
+| turning it off pushes the config again, so capture stops at once | DIVERGED | WatchNotificationAppsViewModelTest.kt: `disabling needs no gates and takes effect at once` | disable outcome asserted, but no config-push assertion on disable |
+| the choice survives a rebuild of the view-model | PORTED | WatchNotificationPrefsStoreTest.kt: `enabled round-trips through storage` | rebuild = fresh store over the same prefs |
+| the disclosure is shown before notification access is requested | DIVERGED | WatchNotificationAppsViewModelTest.kt: `enabling without prior consent shows the disclosure and enables nothing` | disclosure-first is structural in the Kotlin flow, but settings-not-yet-opened ordering is not explicitly asserted |
+| declining the disclosure enables nothing and opens nothing | DIVERGED | WatchNotificationAppsViewModelTest.kt: `declining the disclosure leaves the feature off and consent unset` | does not assert the settings screen was not opened / config not pushed |
+| the disclosure is shown once, not on every toggle | PORTED | WatchNotificationAppsViewModelTest.kt: `consent is remembered, so a second enable does not re-prompt` | plus store test `disclosure acceptance is remembered independently of enabled` |
+| switching off never asks for consent | DIVERGED | WatchNotificationAppsViewModelTest.kt: `disabling needs no gates and takes effect at once` | Kotlin disables with consent already granted, so never-prompts-on-disable is not distinguishably proven |
+| the build's diagnostics flag travels to the native side | N/A-FRAMEWORK | | Flutter-plugin BuildConfig plumbing; the Kotlin filter is in-process (devices/notifications/NotificationFilterTest covers filtering itself) |
+| the blocklist > every app is listed as sending until it is silenced | PORTED | WatchNotificationAppsViewModelTest.kt: `the app list carries the stored blocklist` | plus `blocked count counts only blocked apps` |
+| the blocklist > silencing an app reaches the native filter | PORTED | WatchNotificationAppsViewModelTest.kt: `blocking an app persists it and pushes the config` | |
+| the blocklist > a silenced app stays silenced across a rebuild | PORTED | WatchNotificationPrefsStoreTest.kt: `the blocklist round-trips as a set` | |
+| the blocklist > un-silencing removes it again | PORTED | WatchNotificationAppsViewModelTest.kt: `blocking an app persists it and pushes the config` (unblock half) + WatchNotificationPrefsStoreTest.kt: `setBlocked adds and removes one package` | |
+| revoking access in system settings turns the switch off again | PORTED | WatchNotificationAppsViewModelTest.kt: `active means both gates open, not just the switch` | active=false when access is gone |
 ## test/features/imports/csv/csv_datetime_format_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/csv/CsvDateTimeFormatTest.kt
 
@@ -1345,8 +1443,6 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/onboardi
 | the required set is Activity and Sleep, and nothing that cannot be granted | PORTED | OnboardingViewModelTest.kt: `a fresh install derives every row outstanding` | set EQUALITY plus route_read/mindfulness/cycle exclusion |
 
 ## Summary
-
-The device layer (Garmin watch sync, watch screens, notification forwarding) left this repository for OpenWatch, and its sections left this file with it. The counts below predate that and still include them.
 
 Counts are per Flutter test case. The csv_row_converter_test.dart row is collapsed in its table but counted at its true size (43 cases, all PORTED).
 

@@ -4,10 +4,9 @@ import java.time.Instant
 
 /**
  * What a registered Bluetooth device is. A [SENSOR] streams live GATT values
- * and owns capabilities. [WATCH] and [BIKE_COMPUTER] are the kinds the watch
- * integration registered before it moved to OpenWatch; a stored entry of
- * either kind still parses, and only its live role (a non-empty
- * [BleSensorDevice.capabilities]) counts here.
+ * and owns capabilities. A [WATCH] holds FIT files pulled over GFDI. A
+ * [BIKE_COMPUTER] does both. File sync keys off [BleSensorDevice.isGarminGfdi],
+ * the live role off a non-empty [BleSensorDevice.capabilities].
  */
 enum class BleDeviceKind(
     /** Persisted form, so a rename cannot orphan stored devices. */
@@ -25,12 +24,13 @@ enum class BleDeviceKind(
 }
 
 /**
- * Which integration owned a [BleDeviceKind.WATCH], kept so a stored entry
- * written before the watches moved to OpenWatch still parses. Null for a sensor.
+ * Which integration owns a [BleDeviceKind.WATCH]. Garmin speaks GFDI. Null
+ * for a sensor, and for a Garmin watch stored before this field existed. A
+ * stored value no entry matches (the Wear OS integration that moved to
+ * OpenWatch) parses as null, and the registry drops that entry.
  */
 enum class DeviceIntegration(val storageName: String) {
     GARMIN("GARMIN"),
-    WEAROS("WEAROS"),
     ;
 
     companion object {
@@ -79,6 +79,14 @@ data class BleSensorDevice(
     /** A Garmin Edge: a GFDI sync device that is also a candidate live sensor. */
     val isBikeComputer: Boolean
         get() = kind == BleDeviceKind.BIKE_COMPUTER
+
+    /** Driven over GFDI: a Garmin watch or bike computer. The file-sync concept. */
+    val isGarminGfdi: Boolean
+        get() = kind == BleDeviceKind.WATCH || kind == BleDeviceKind.BIKE_COMPUTER
+
+    /** A Garmin watch. For file-sync eligibility use [isGarminGfdi]. */
+    val isGarminWatch: Boolean
+        get() = isWatch
 
     /**
      * Can hold live capabilities and join a recording: a sensor, a bike
@@ -236,4 +244,10 @@ data class BleDiscoveredDevice(
     val name: String?,
     val rssi: Int?,
     val suggestedCapabilities: Set<BleSensorCapability>,
+    /**
+     * The advertisement carried a member service a classifier recognised:
+     * a file-sync watch to onboard. The advertised service, not a GATT UUID,
+     * which no advertisement carries.
+     */
+    val advertisesSyncService: Boolean = false,
 )

@@ -26,7 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import kotlinx.coroutines.flow.MutableStateFlow
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.util.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
 import tech.mmarca.openvitals.domain.model.BleHeartRateSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer

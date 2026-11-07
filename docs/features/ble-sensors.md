@@ -4,11 +4,11 @@
 > **Audience:** Users and contributors.
 > **Implementation:** `features/settings`, `features/manualentry/activity/recording`.
 > **Navigation:** `Screen.SettingsSensors`, `Screen.ActivityEntry`.
-> **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Permissions](../app/permissions.md).
+> **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Watches](watches.md), [Permissions](../app/permissions.md).
 
 OpenVitals has experimental Bluetooth LE support for activity recording.
 
-A sensor streams while an activity is recorded. A watch that broadcasts its heart rate over Bluetooth LE is a sensor like any other here; syncing what a watch recorded afterwards is the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app's job.
+A sensor streams while an activity is recorded, whereas a watch hands over what it recorded afterwards. Syncing a watch is the job of [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect; the deprecated in-app Garmin sync is described in [Watches](watches.md).
 
 ## Supported Recording Signals
 

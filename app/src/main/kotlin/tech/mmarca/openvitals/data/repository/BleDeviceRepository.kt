@@ -127,16 +127,8 @@ class BleDeviceRepository @Inject constructor(
     }
 
     fun removeDevice(deviceId: String) {
+        // Garmin-specific state is cleared by whoever forgets the watch.
         persist(devices.filterNot { it.id == deviceId })
-    }
-
-    /**
-     * Forgets the watches and bike computers the device layer registered before
-     * it moved to OpenWatch. Plain sensors (a strap, a cadence or power meter) stay.
-     */
-    fun removeWatchEntries() {
-        val kept = devices.filterNot { it.isWatch || it.isBikeComputer }
-        if (kept.size != devices.size) persist(kept)
     }
 
     fun setDeviceEnabled(deviceId: String, enabled: Boolean) {
@@ -196,6 +188,9 @@ class BleDeviceRepository @Inject constructor(
  */
 internal object BleDeviceRegistryJson {
 
+    /** The storage name of the Wear OS integration, which moved to OpenWatch. */
+    private const val LegacyWearOsIntegration = "WEAROS"
+
     fun encode(devices: List<BleSensorDevice>): String =
         JSONArray(
             devices.map { device ->
@@ -231,6 +226,8 @@ internal object BleDeviceRegistryJson {
             buildList {
                 for (index in 0 until array.length()) {
                     val item = array.getJSONObject(index)
+                    // The Wear OS integration moved to OpenWatch: a watch it registered is forgotten on read.
+                    if (item.optString("integration") == LegacyWearOsIntegration) continue
                     val capabilities = buildSet {
                         val caps = item.optJSONArray("capabilities")
                         if (caps != null) {
