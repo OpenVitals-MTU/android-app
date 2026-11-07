@@ -23,7 +23,7 @@ No OpenVitals account is required, and the app has no `INTERNET` permission. Ope
 | --- | --- |
 | Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) |
 | F-Droid | [Install from F-Droid](https://f-droid.org/en/packages/tech.mmarca.openvitals/) |
-| GitHub releases | [Download signed release and debug APKs](https://github.com/OpenVitals-MTU/android-app/releases) |
+| GitHub releases | [Download signed release and debug APKs](https://github.com/Hale-MTU/android-app/releases) |
 | Source | [Build it yourself](#build-from-source) |
 
 ## What you can do with OpenVitals
@@ -38,7 +38,7 @@ No OpenVitals account is required, and the app has no `INTERNET` permission. Ope
 - Put widgets on the home screen for readiness, Body Energy, vitals, selected metrics and quick beverage logging.
 - Choose metric or imperial units, and pick the app language from fourteen translations or follow the system.
 
-For the detailed feature inventory, see the [feature guide](https://docs.openvitals.health/app/features).
+For the detailed feature inventory, see the [feature guide](https://docs.hale.ngo/openvitals/app/features/).
 
 ## Screenshots
 
@@ -55,21 +55,21 @@ For the detailed feature inventory, see the [feature guide](https://docs.openvit
 
 ## Devices and integrations
 
-Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) lives in the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, which writes what those devices record to Health Connect for OpenVitals to read.
+Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) lives in the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app, which writes what those devices record to Health Connect for OpenVitals to read.
 
 ### Bluetooth sensors
 
-Activity recording can use [Bluetooth LE sensors](https://docs.openvitals.health/features/ble-sensors) for heart rate, cycling power, speed and cadence. Wheel-sensor distance can be used on rides without GPS.
+Activity recording can use [Bluetooth LE sensors](https://docs.hale.ngo/openvitals/features/ble-sensors/) for heart rate, cycling power, speed and cadence. Wheel-sensor distance can be used on rides without GPS.
 
-A connected heart-rate sensor can also be used during strength training and for the [heart-rate recovery test](https://docs.openvitals.health/features/heart-rate-recovery).
+A connected heart-rate sensor can also be used during strength training and for the [heart-rate recovery test](https://docs.hale.ngo/openvitals/features/heart-rate-recovery/).
 
 ### CoMaps
 
-While [CoMaps](https://docs.openvitals.health/features/comaps-navigation-context) is navigating, OpenVitals can show its turn guidance on the offline activity map during a recording, and optionally save the guidance with the activity on-device.
+While [CoMaps](https://docs.hale.ngo/openvitals/features/comaps-navigation-context/) is navigating, OpenVitals can show its turn guidance on the offline activity map during a recording, and optionally save the guidance with the activity on-device.
 
 ### Sync with another phone
 
-OpenVitals can [copy selected Health Connect records](https://docs.openvitals.health/features/device-sync) between two nearby phones over Bluetooth. If the cycle category is selected, its local journal, excluded cycles and declared cycle context are carried with it too.
+OpenVitals can [copy selected Health Connect records](https://docs.hale.ngo/openvitals/features/device-sync/) between two nearby phones over Bluetooth. If the cycle category is selected, its local journal, excluded cycles and declared cycle context are carried with it too.
 
 Both phones show the same six-digit code before anything is transferred. The records are then encrypted for that sync session.
 
@@ -108,7 +108,7 @@ OpenVitals currently has screens or data handling for:
 
 </details>
 
-A fuller breakdown of what can be viewed, entered, edited, imported or exported is in the [feature guide](https://docs.openvitals.health/app/features).
+A fuller breakdown of what can be viewed, entered, edited, imported or exported is in the [feature guide](https://docs.hale.ngo/openvitals/app/features/).
 
 ## Privacy
 
@@ -151,7 +151,7 @@ These are stored in app-private storage on the device. Some local data can leave
 
 </details>
 
-See the [privacy policy](https://docs.openvitals.health/app/privacy) for the full text.
+See the [privacy policy](https://docs.hale.ngo/openvitals/app/privacy/) for the full text.
 
 ## Platform requirements
 
@@ -172,14 +172,14 @@ Health Connect platform notes:
 
 ## Documentation
 
-The user documentation lives at [docs.openvitals.health](https://docs.openvitals.health/):
+The user documentation lives at [docs.hale.ngo](https://docs.hale.ngo/):
 
-- [Install](https://docs.openvitals.health/app/install), [getting started](https://docs.openvitals.health/app/getting-started), [Health Connect setup](https://docs.openvitals.health/app/health-connect), [permissions](https://docs.openvitals.health/app/permissions), [privacy](https://docs.openvitals.health/app/privacy) and [FAQ](https://docs.openvitals.health/app/faq)
-- [Feature guide](https://docs.openvitals.health/features): one page per feature, grouped by what you do with the app
-- [Feature map](https://docs.openvitals.health/features/feature-map): map from features to routes, widgets, and packages
-- [How-to guides](https://docs.openvitals.health/how-to): step-by-step workflows such as offline maps and elevation tiles
-- [Build from source](https://docs.openvitals.health/developers/build) and [contributing](https://docs.openvitals.health/developers/contributing)
-- [Support](https://docs.openvitals.health/support)
+- [Install](https://docs.hale.ngo/openvitals/app/install/), [getting started](https://docs.hale.ngo/openvitals/app/getting-started/), [Health Connect setup](https://docs.hale.ngo/openvitals/app/health-connect/), [permissions](https://docs.hale.ngo/openvitals/app/permissions/), [privacy](https://docs.hale.ngo/openvitals/app/privacy/) and [FAQ](https://docs.hale.ngo/openvitals/app/faq/)
+- [Feature guide](https://docs.hale.ngo/openvitals/features/): one page per feature, grouped by what you do with the app
+- [Feature map](https://docs.hale.ngo/openvitals/features/feature-map/): map from features to routes, widgets, and packages
+- [How-to guides](https://docs.hale.ngo/openvitals/how-to/): step-by-step workflows such as offline maps and elevation tiles
+- [Build from source](https://docs.hale.ngo/openvitals/developers/build/) and [contributing](https://docs.hale.ngo/openvitals/developers/contributing/)
+- [Support](https://docs.hale.ngo/openvitals/support/)
 
 Engineering docs stay in this repository:
 
@@ -193,10 +193,10 @@ Engineering docs stay in this repository:
 OpenVitals is still early. Useful feedback is specific: device model, Android version, Health Connect provider version, which permissions were granted, and what screen or workflow failed.
 
 - Try the latest beta from Google Play or GitHub releases
-- Report bugs and feature requests on [GitHub issues](https://github.com/OpenVitals-MTU/android-app/issues)
+- Report bugs and feature requests on [GitHub issues](https://github.com/Hale-MTU/android-app/issues)
 - Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/)
 - Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
-- Star or follow the project on [GitHub](https://github.com/OpenVitals-MTU/android-app)
+- Star or follow the project on [GitHub](https://github.com/Hale-MTU/android-app)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
 - Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)
 
@@ -262,7 +262,7 @@ The phone app uses:
 - Room for derived caches and data Health Connect cannot represent. Health Connect remains the source of truth for record types it supports;
 - WorkManager for Apple Health imports and offline-map imports.
 
-Watch and scale support is not in this repository: it lives in [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch), a separate app that writes to Health Connect.
+Watch and scale support is not in this repository: it lives in [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app that writes to Health Connect.
 
 Live Bluetooth LE sensor streaming during activity recording is separate under `sensors/ble/`.
 

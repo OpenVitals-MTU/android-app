@@ -149,7 +149,7 @@ internal fun SettingsVersionText() {
             R.string.settings_app_version,
             BuildConfig.VERSION_NAME,
             BuildConfig.VERSION_CODE,
-        ),
+        ) + "\n" + stringResource(R.string.settings_app_publisher),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,

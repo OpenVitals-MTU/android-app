@@ -30,7 +30,7 @@ Every device feature is built around keeping that true:
 
 ## Paired Devices
 
-Watches and scales are not paired with OpenVitals. The separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app syncs them and writes what they record to Health Connect, which OpenVitals then reads like any other source.
+Watches and scales are not paired with OpenVitals. The separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app syncs them and writes what they record to Health Connect, which OpenVitals then reads like any other source.
 
 ### Phone-To-Phone Sync
 

@@ -34,12 +34,12 @@ commit with the release notes, and pushes in one motion.
   A locale under 70% (Hebrew, `values-iw`, started 2026-10) is not in the
   picker and must not be announced as a language.
 - `gh` is not installed on this laptop. Check GitHub state with `curl` against
-  `https://api.github.com/repos/OpenVitals-MTU/android-app/...` (anonymous,
+  `https://api.github.com/repos/Hale-MTU/android-app/...` (anonymous,
   60 calls an hour) or in the browser.
 - The release workflow is enabled. A tag pushed while it is disabled starts
   nothing, and enabling it afterwards does not replay the push (2.14.0). Check
   `state` is `active` in
-  `curl -s https://api.github.com/repos/OpenVitals-MTU/android-app/actions/workflows/release.yml`.
+  `curl -s https://api.github.com/repos/Hale-MTU/android-app/actions/workflows/release.yml`.
 
 ## 1. Version code (read this before touching anything)
 
@@ -70,7 +70,7 @@ run. Only the release workflow's schedule (00:00 UTC, often started some minutes
 by GitHub) and manual runs of `.github/workflows/release.yml` with target
 `nightly` build nightlies; a push to main runs tests only. Near midnight UTC,
 or while a manual run is going, check the runs first
-(`https://github.com/OpenVitals-MTU/android-app/actions/workflows/release.yml`). Either way,
+(`https://github.com/Hale-MTU/android-app/actions/workflows/release.yml`). Either way,
 compute the code and name the fastlane files immediately before running the
 release script, and afterwards verify the script's printed `versionCode`
 matches the filenames.
@@ -190,7 +190,7 @@ either way: Zulip readers see it first too.
   so `npm run typecheck` picks up a global TypeScript that fails on the
   repo's `baseUrl` (TS5102), unrelated to the edit. Parse-check the edited
   files with `node -e` and `stripTypeScriptTypes` from `node:module` instead,
-  or rely on CI. A push to `main` deploys to openvitals.health. The repo has no git identity: commit with
+  or rely on CI. A push to `main` deploys to hale.ngo. The repo has no git identity: commit with
   `-c user.name=Manuel -c user.email=manuel@mmarca.tech`. Commit
   `content: <what changed>, for X.Y.Z` and push.
 

@@ -40,7 +40,7 @@ Progress, imported and failed counts, and any warning show on the FIT card for a
 
 FIT uses the same activity review screen as route import after the file is selected from Settings. Like TCX, FIT files do not need GPS route points; OpenVitals imports supported activity, course, or workout details and attaches a route only when usable route samples are present.
 
-Syncing a watch over Bluetooth is not part of OpenVitals: the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app does that and writes to Health Connect. This importer reads FIT files you already have, such as those copied from a watch's storage or exported by its vendor's service.
+Syncing a watch over Bluetooth is not part of OpenVitals: the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app does that and writes to Health Connect. This importer reads FIT files you already have, such as those copied from a watch's storage or exported by its vendor's service.
 
 ## Limits
 

@@ -8,7 +8,7 @@
 
 OpenVitals has experimental Bluetooth LE support for activity recording.
 
-A sensor streams while an activity is recorded. A watch that broadcasts its heart rate over Bluetooth LE is a sensor like any other here; syncing what a watch recorded afterwards is the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app's job.
+A sensor streams while an activity is recorded. A watch that broadcasts its heart rate over Bluetooth LE is a sensor like any other here; syncing what a watch recorded afterwards is the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app's job.
 
 ## Supported Recording Signals
 

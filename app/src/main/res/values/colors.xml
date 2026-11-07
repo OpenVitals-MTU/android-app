@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FBD6AC</color>
-    <color name="ic_launcher_foreground_accent">#5396a5</color>
+    <!-- The OpenVitals logo in the Hale palette: the disc, the heartbeat and its dot. -->
+    <color name="ic_launcher_disc">#006E8F</color>
+    <color name="ic_launcher_wave">#CFE6EC</color>
+    <color name="ic_launcher_dot">#E0735A</color>
 </resources>

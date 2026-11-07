@@ -167,7 +167,7 @@ The manifest explicitly removes inherited network permissions from dependencies:
 
 The `android.hardware.wifi` feature is removed the same way.
 
-These removals preserve the local app's internet-free boundary, and every device feature added since is built to keep it: phone-to-phone sync runs over Bluetooth Classic. Watches and scales are handled by the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, so OpenVitals declares no companion-device, notification-access or calendar permission. It deliberately does not request `QUERY_ALL_PACKAGES`.
+These removals preserve the local app's internet-free boundary, and every device feature added since is built to keep it: phone-to-phone sync runs over Bluetooth Classic. Watches and scales are handled by the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app, so OpenVitals declares no companion-device, notification-access or calendar permission. It deliberately does not request `QUERY_ALL_PACKAGES`.
 
 ## File And Route Intents
 
