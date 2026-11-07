@@ -396,4 +396,25 @@
     <string name="vo2_method_metabolic_cart">Εργαστηριακή εξέταση (ανάλυση αερίων)</string>
     <string name="vo2_method_cooper">Τεστ Cooper</string>
     <string name="vo2_method_multistage">Τεστ Beep (πολλαπλών σταδίων)</string>
+    <string name="activity_splits_laps_title">Γύροι</string>
+    <string name="activity_splits_laps_body">Καταγράφηκε από τη συσκευή ή την εφαρμογή που αποθήκευσε αυτή τη δραστηριότητα.</string>
+    <string name="activity_splits_derived_title">Ενδιάμεσοι χρόνοι · κάθε %1$s</string>
+    <string name="activity_splits_estimated_title">Ενδιάμεσοι χρόνοι · εκτιμώμενοι</string>
+    <string name="activity_splits_estimated_body">Αυτή η δραστηριότητα δεν περιλαμβάνει δεδομένα απόστασης ανά χρονικό διάστημα, επομένως κάθε ενδιάμεσος χρόνος εμφανίζει τον μέσο ρυθμό της δραστηριότητας.</string>
+    <string name="activity_splits_partial">Εν μέρει</string>
+    <string name="activity_splits_faster">%1$s ταχύτερα από τον μέσο όρο</string>
+    <string name="activity_splits_slower">%1$s πιο αργά από τον μέσο όρο</string>
+    <string name="activity_speed_per_split_title">Ταχύτητα · κάθε %1$s</string>
+    <string name="activity_speed_per_lap_title">Ταχύτητα · ανά γύρο</string>
+    <string name="activity_speed_splits_label">Ενδιάμεσοι χρόνοι</string>
+    <string name="activity_speed_laps_label">Γύροι</string>
+    <string name="settings_activity_split_distance_title">Απόσταση ενδιάμεσου χρόνου</string>
+    <string name="settings_activity_split_distance_body">Καθορίζει κάθε πότε χωρίζονται οι ενδιάμεσοι χρόνοι στην οθόνη λεπτομερειών της δραστηριότητας, όταν η καταγραφή δεν περιλαμβάνει δικούς της γύρους.</string>
+    <string name="activity_route_open_failed">Καμία εφαρμογή χαρτών δεν μπόρεσε να ανοίξει αυτή τη διαδρομή.</string>
+    <string name="activity_detail_analysis_title">Ανάλυση διαδρομής</string>
+    <string name="activity_detail_tab_markers">Δείκτες</string>
+    <string name="activity_detail_no_markers">Δεν υπάρχουν ακόμη δείκτες</string>
+    <string name="activity_recording_voice_summary">Χρόνος %1$s. Απόσταση %2$s. Μέση ταχύτητα %3$s. Τρέχων γύρος %4$d.</string>
+    <string name="activity_recording_voice_lap">Γύρος %1$d. %2$s</string>
+    <string name="activity_recording_voice_idle">Σε αδράνεια.</string>
 </resources>
