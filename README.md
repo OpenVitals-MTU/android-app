@@ -5,8 +5,8 @@
 # OpenVitals
 
 <p align="center">
-    <a href="https://liberapay.com/manuel.mmarca.tech/donate"><img alt="Liberapay receiving" src="https://img.shields.io/liberapay/receives/manuel.mmarca.tech.svg?logo=liberapay"></a>
-    <a href="https://liberapay.com/manuel.mmarca.tech/donate"><img alt="Liberapay patrons" src="https://img.shields.io/liberapay/patrons/manuel.mmarca.tech.svg?logo=liberapay"></a>
+    <a href="https://liberapay.com/hale.mtu/donate"><img alt="Liberapay receiving" src="https://img.shields.io/liberapay/receives/hale.mtu.svg?logo=liberapay"></a>
+    <a href="https://liberapay.com/hale.mtu/donate"><img alt="Liberapay patrons" src="https://img.shields.io/liberapay/patrons/hale.mtu.svg?logo=liberapay"></a>
 </p>
 
 Privacy-first Health Connect dashboard, activity tracker, and manual entry app for Android.
@@ -198,7 +198,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
 - Star or follow the project on [GitHub](https://github.com/Hale-MTU/android-app)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
-- Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)
+- Support ongoing development on [Liberapay](https://liberapay.com/hale.mtu/donate)
 
 ## Build from source
 
