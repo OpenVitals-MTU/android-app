@@ -33,25 +33,36 @@ class BleDeviceKindTest {
         assertNull(device.integration)
         assertNull(device.lastSyncedAt)
         assertFalse(device.isWatch)
+        assertFalse(device.isGarminGfdi)
         assertTrue(device.isLiveSensorCapable)
-        // A sensor is not a bike computer, whatever its integration.
+        // A sensor is neither kind of watch nor a bike computer, whatever its integration.
+        assertFalse(device.isGarminWatch)
+        assertFalse(device.isWearosWatch)
         assertFalse(device.isBikeComputer)
         val stamped = device(integration = DeviceIntegration.GARMIN)
+        assertFalse(stamped.isGarminWatch)
+        assertFalse(stamped.isWearosWatch)
         assertFalse(stamped.isBikeComputer)
     }
 
     @Test
     fun `an explicit Garmin watch is a Garmin watch`() {
         val watch = device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.GARMIN)
-        // A watch streams nothing live.
+        assertTrue(watch.isGarminWatch)
+        assertFalse(watch.isWearosWatch)
+        // A watch pulls FIT files over GFDI and streams nothing live.
+        assertTrue(watch.isGarminGfdi)
         assertFalse(watch.isLiveSensorCapable)
     }
 
     @Test
     fun `a null-integration watch is legacy Garmin`() {
-        // A watch stored before the integration field existed still parses.
+        // A Garmin watch stored before the integration field existed must keep reading as Garmin.
         val watch = device(kind = BleDeviceKind.WATCH)
         assertTrue(watch.isWatch)
+        assertTrue(watch.isGarminWatch)
+        assertTrue(watch.isGarminGfdi)
+        assertFalse(watch.isWearosWatch)
         assertFalse(watch.isLiveSensorCapable)
     }
 
@@ -59,6 +70,9 @@ class BleDeviceKindTest {
     fun `a wearos watch is a watch but never on the Garmin sync path`() {
         val watch = device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.WEAROS)
         assertTrue(watch.isWatch)
+        assertTrue(watch.isWearosWatch)
+        assertFalse(watch.isGarminWatch)
+        assertFalse(watch.isGarminGfdi)
         assertFalse(watch.isLiveSensorCapable)
     }
 
@@ -67,6 +81,9 @@ class BleDeviceKindTest {
         val edge = device(kind = BleDeviceKind.BIKE_COMPUTER, integration = DeviceIntegration.GARMIN)
         assertFalse(edge.isWatch)
         assertTrue(edge.isBikeComputer)
+        assertTrue(edge.isGarminGfdi)
+        assertFalse(edge.isGarminWatch)
+        assertFalse(edge.isWearosWatch)
         assertTrue(edge.isLiveSensorCapable)
     }
 

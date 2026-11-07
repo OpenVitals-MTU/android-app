@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyNeutralStartScore
 import tech.mmarca.openvitals.domain.insights.BodyEnergySeedSource
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
+import tech.mmarca.openvitals.domain.insights.BodyEnergyWatchFitEpoch
 import tech.mmarca.openvitals.domain.insights.bodyEnergySeedScore
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
@@ -637,6 +638,7 @@ class BodyEnergyChainTest {
                 sleepChargeGain = 0.8,
                 activityDrainGain = 1.1,
                 basalDrainGain = 0.72,
+                watchObservationCount = 39,
             )
         )
 
@@ -646,7 +648,45 @@ class BodyEnergyChainTest {
         assertEquals(1.0, after.sleepChargeGain, 0.0)
         assertEquals(1.0, after.activityDrainGain, 0.0)
         assertEquals(1.0, after.basalDrainGain, 0.0)
+        assertEquals(0, after.watchObservationCount)
         assertEquals(BodyEnergyTimelineAlgorithmVersion, prefs.bodyEnergyGainsAlgorithmVersion)
+    }
+
+    @Test
+    fun `the reset rewinds the watch fit watermark so the gains can relearn`() = runTest {
+        // Without this the model relearns from 1.0 while the watermark says every sample is consumed.
+        // The calibration is the default, with no personal gains: the early return used to skip it.
+        prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
+
+        load(repo(), today)
+
+        assertEquals(0L, prefs.bodyEnergyWatchFitWatermarkMillis)
+    }
+
+    @Test
+    fun `the watermark rewinds on an install already at this algorithm version`() = runTest {
+        // The rewind used to hang off the version reset, which returns early when the version matches.
+        prefs.bodyEnergyGainsAlgorithmVersion = BodyEnergyTimelineAlgorithmVersion
+        prefs.bodyEnergyWatchFitEpoch = 0
+        prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
+
+        load(repo(), today)
+
+        assertEquals(0L, prefs.bodyEnergyWatchFitWatermarkMillis)
+        assertEquals(BodyEnergyWatchFitEpoch, prefs.bodyEnergyWatchFitEpoch)
+    }
+
+    @Test
+    fun `the watermark is not rewound again once that epoch is recorded`() = runTest {
+        // Otherwise every load refits the gains from the same week of samples.
+        prefs.bodyEnergyGainsAlgorithmVersion = BodyEnergyTimelineAlgorithmVersion
+        prefs.bodyEnergyWatchFitEpoch = BodyEnergyWatchFitEpoch
+        val watermark = now.toEpochMilli()
+        prefs.bodyEnergyWatchFitWatermarkMillis = watermark
+
+        load(repo(), today)
+
+        assertEquals(watermark, prefs.bodyEnergyWatchFitWatermarkMillis)
     }
 
     @Test

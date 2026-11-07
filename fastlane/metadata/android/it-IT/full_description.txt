@@ -13,6 +13,7 @@ Cosa puoi fare
 * Importa esportazioni di Apple Health e file GPX, KML, KMZ, TCX, FIT e CSV
 * Crea un report sulla salute in PDF da condividere con il tuo medico
 * Segui il tuo ciclo: mestruazioni, sintomi, temperatura basale corporea, stima delle prossime mestruazioni e promemoria della pillola
+* Sincronizza gli orologi Garmin compatibili direttamente via Bluetooth
 * Copia i dati tra due telefoni via Bluetooth, senza account e senza rete
 * Ottieni medaglie per passi, distanza, piani, allenamenti, idratazione, sonno e consapevolezza
 * Attiva i promemoria per idratazione, consapevolezza e ciclo

@@ -17,7 +17,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.util.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig

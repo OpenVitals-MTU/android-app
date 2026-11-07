@@ -74,7 +74,7 @@ Licence and attribution are the user's responsibility.
 3. Go to Settings, Activities, Elevation correction.
 4. Tap Import elevation tile and pick a file. Repeat for each tile.
 5. Leave Correct altitude from tiles switched on.
-6. Import a route file or finish a GPS recording. The review screen and the activity's elevation profile now come from the tile.
+6. Import a route file, sync a watch, or finish a GPS recording. The review screen and the activity's elevation profile now come from the tile.
 
 The import copies the file into app storage and validates its size. It takes about a second.
 

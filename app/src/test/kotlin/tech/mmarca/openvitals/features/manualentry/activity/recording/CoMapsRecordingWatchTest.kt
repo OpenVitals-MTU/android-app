@@ -113,6 +113,28 @@ class CoMapsRecordingWatchTest {
     }
 
     @Test
+    fun `a watch alone reaches the wrist and nothing else`() = runTest {
+        val fixture = fixture(recordingIntegrationOn = false)
+        fixture.watch.sync(idle)
+        assertEquals(0, fixture.repository.subscriptions)
+
+        fixture.feed.request(CoMapsGuidanceFeed.Reason.WATCH, true)
+        provider.emit(guidance("Kalevala"))
+
+        assertEquals(1, fixture.repository.subscriptions)
+        // The vendor layer sees it...
+        assertEquals(
+            "Kalevala",
+            (fixture.feed.guidance.value as CoMapsNavigationState.Active).snapshot.nextStreet,
+        )
+        // ...and the recording screen does not, because nobody asked it to.
+        assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Disabled)
+        assertTrue(fixture.watch.samples().isEmpty())
+
+        fixture.scope.cancel()
+    }
+
+    @Test
     fun `a recording alone still shows and still banks`() = runTest {
         val fixture = fixture(recordingIntegrationOn = true)
 
@@ -128,18 +150,49 @@ class CoMapsRecordingWatchTest {
     }
 
     @Test
-    fun `letting go takes the feed down`() = runTest {
+    fun `both on share one subscription and both see it`() = runTest {
         val fixture = fixture(recordingIntegrationOn = true)
 
+        fixture.feed.request(CoMapsGuidanceFeed.Reason.WATCH, true)
+        fixture.watch.sync(gpsRecording)
+        provider.emit(guidance("Aleksanterinkatu"))
+
+        assertEquals(1, fixture.repository.subscriptions)
+        assertTrue(fixture.feed.guidance.value is CoMapsNavigationState.Active)
+        assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Active)
+
+        // The recording ends. The wrist keeps the feed; the recording view goes dark.
+        fixture.watch.sync(idle)
+        assertEquals(1, fixture.repository.subscriptions)
+        assertTrue(fixture.feed.guidance.value is CoMapsNavigationState.Active)
+        assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Disabled)
+        assertTrue(fixture.watch.samples().isEmpty())
+
+        // Guidance arriving afterwards is the wrist's alone.
+        provider.emit(guidance("Esplanadi"))
+        assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Disabled)
+        assertTrue(fixture.watch.samples().isEmpty())
+
+        fixture.scope.cancel()
+    }
+
+    @Test
+    fun `the last one to let go takes the feed down`() = runTest {
+        val fixture = fixture(recordingIntegrationOn = true)
+
+        fixture.feed.request(CoMapsGuidanceFeed.Reason.WATCH, true)
         fixture.watch.sync(gpsRecording)
         provider.emit(guidance("Bulevardi"))
         assertEquals(1, fixture.repository.subscriptions)
+
+        fixture.feed.request(CoMapsGuidanceFeed.Reason.WATCH, false)
+        assertEquals(1, fixture.repository.subscriptions)
+        assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Active)
 
         fixture.watch.sync(idle)
         assertEquals(0, fixture.repository.subscriptions)
         assertTrue(fixture.feed.guidance.value is CoMapsNavigationState.Disabled)
         assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Disabled)
-        assertTrue(fixture.watch.samples().isEmpty())
 
         fixture.scope.cancel()
     }

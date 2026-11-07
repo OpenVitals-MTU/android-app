@@ -8,13 +8,16 @@ import java.io.File
 import kotlinx.coroutines.runBlocking
 import tech.mmarca.openvitals.data.local.beverage.BeverageDao
 import tech.mmarca.openvitals.data.local.beverage.BeverageEntity
+import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
+import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 
 /**
  * Imports the beverage catalog from the Flutter drift database at
  * `app_flutter/openvitals.db`. The tables are column-identical and the
  * drift catalog is newer, so the Room table is replaced. Ids stay stable.
  *
- * The derived caches and the body-energy tables are left alone. The source is
+ * `garmin_wellness_samples` is imported by [importGarminWellness]. The
+ * derived caches and the body-energy tables are left alone. The source is
  * opened read-only; a live WAL sidecar is handled via a cache copy.
  */
 class FlutterDatabaseImporter(private val context: Context) {
@@ -29,6 +32,24 @@ class FlutterDatabaseImporter(private val context: Context) {
         }
         runBlocking { beverageDao.replaceAll(beverages) }
         Log.i(TAG, "Imported ${beverages.size} beverages from the Flutter database.")
+    }
+
+    /**
+     * Copies the watch-only wellness samples into Room. Both tables are keyed
+     * on `(metric, time_millis)`, so the upsert converges and deletes nothing.
+     */
+    fun importGarminWellness(dao: GarminWellnessDao) {
+        val samples = readTable("garmin_wellness_samples", ::queryGarminWellness) ?: return
+        if (samples.isEmpty()) {
+            Log.i(TAG, "Flutter wellness table is empty; nothing to import.")
+            return
+        }
+        runBlocking {
+            samples.chunked(WELLNESS_UPSERT_CHUNK).forEach { chunk ->
+                dao.upsertSamples(chunk)
+            }
+        }
+        Log.i(TAG, "Imported ${samples.size} Garmin wellness samples from the Flutter database.")
     }
 
     private fun <T> readTable(tableName: String, query: (SQLiteDatabase) -> T): T? {
@@ -75,6 +96,24 @@ class FlutterDatabaseImporter(private val context: Context) {
             scratchDir.deleteRecursively()
         }
     }
+
+    private fun queryGarminWellness(database: SQLiteDatabase): List<GarminWellnessSampleEntity> =
+        database.rawQuery(
+            "SELECT metric, time_millis, value FROM garmin_wellness_samples",
+            null,
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) {
+                    add(
+                        GarminWellnessSampleEntity(
+                            metric = cursor.getString(0),
+                            timeMillis = cursor.getLong(1),
+                            value = cursor.getLong(2),
+                        ),
+                    )
+                }
+            }
+        }
 
     private fun queryBeverages(database: SQLiteDatabase): List<BeverageEntity> =
         database.rawQuery("SELECT * FROM beverages", null).use { cursor ->

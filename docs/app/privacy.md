@@ -25,14 +25,49 @@ The manifest removes `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_WIFI_STATE`
 Every device feature is built around keeping that true:
 
 - Phone-to-phone sync uses Bluetooth Classic (RFCOMM), not Wi-Fi. A Wi-Fi or TCP transfer would require `INTERNET`; Bluetooth keeps it a direct link between the two phones.
+- Watch sync and notification forwarding talk to the watch over Bluetooth only.
 - Offline maps are imported as local map packs; nothing is downloaded.
-- Diagnostics and import reports are generated on device and shared only if the user chooses to. They hold structure, not data: counts, record types, reasons and masked error text. See [Text that leaves the app is structure, not data](../engineering/architecture.md#5-text-that-leaves-the-app-is-structure-not-data).
+- Diagnostics and import reports are generated on device and shared only if the user chooses to. They hold structure, not data: counts, record types, reasons and masked error text. See [Text that leaves the app is structure, not data](../engineering/architecture.md#6-text-that-leaves-the-app-is-structure-not-data).
 
 ## Paired Devices
 
-Watches and scales are not paired with OpenVitals. The separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app syncs them and writes what they record to Health Connect, which OpenVitals then reads like any other source.
+### Garmin Watches
 
-### Phone-To-Phone Sync
+A paired watch's recorded files are read over Bluetooth and imported on the device. Wellness series a watch records but Health Connect has no type for, such as stress and Body Battery, are stored in the app's own local database; the rest is written to Health Connect. Nothing about a watch is sent off the phone.
+
+What a watch leaves outside Health Connect has one owner, `GarminLocalData`: file copies (30 days), per-minute sleep data (45 days) and the watch-only wellness series. The first two age out at app start and inside a sync, and are deleted with the last Garmin watch. The wellness series is the user's record, so it is deleted only when the user ticks that option while removing the last watch, or clears the app's storage.
+
+Pairing uses Android's companion device manager. The association exists so Android keeps OpenVitals running while the watch is in range and a multi-minute sync can finish.
+
+### Notification Forwarding
+
+If, and only if, the user grants Android notification access, OpenVitals reads incoming phone notifications so they can be shown on a paired watch. OpenVitals shows a prominent disclosure explaining this before sending the user to the Android settings screen that grants it.
+
+- The content is used for one purpose: displaying the notification on the paired watch.
+- It is held in a bounded in-memory buffer. It is not written to a file, a database, or Health Connect.
+- It is sent to nothing but the paired watch, over Bluetooth. The app has no internet permission, so there is no other route out.
+- Individual apps can be blocked from reaching the watch, the feature can be switched off in OpenVitals, and access can be revoked from Android settings at any time.
+
+### Music Controls On The Watch
+
+With "Music controls on watch" switched on, OpenVitals reads what the phone is playing so the paired watch can show and control it. Android shows media players only to an app with notification access, so the same grant is used, behind its own prominent disclosure.
+
+- What is read: the player app's name, the track, artist and album, the track length and the playback position.
+- It is read only while the switch is on and a Garmin watch is paired. It is sent to nothing but that watch, over Bluetooth, and is never stored.
+- Granting access for music does not switch notification forwarding on. While forwarding is off, notifications are not kept or forwarded.
+
+### Calendar On The Watch
+
+If, and only if, the per-watch "Calendar on watch" toggle is switched on (off by default; enabling it asks for Android's calendar permission), OpenVitals reads the phone's calendar to answer the watch's calendar glance.
+
+- Events are read only while answering a watch that asked, and only within the window the watch named.
+- They are held in memory only; nothing is written to a file, a database, or Health Connect.
+- They are sent to nothing but the paired watch, over Bluetooth. The app has no internet permission, so there is no other route out.
+- Declined and cancelled meetings are not sent.
+
+### Weather And Ephemeris
+
+Weather shown on the watch comes from a weather app on the phone that broadcasts it (such as Breezy Weather); OpenVitals itself never contacts a weather service. GPS ephemeris files are imported by hand and handed to the watch when it asks; nothing is downloaded. Both go to the watch and nowhere else.
 
 ### Phone-To-Phone Sync
 

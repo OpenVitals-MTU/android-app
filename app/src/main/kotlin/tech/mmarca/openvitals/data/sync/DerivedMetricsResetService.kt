@@ -53,7 +53,7 @@ class DerivedMetricsResetService(
         return rebuildScope.launch { rebuild() }
     }
 
-    /** Back to a fresh install: neutral gains, no mirror. The version goes to zero. */
+    /** Back to a fresh install: neutral gains, no evidence, no mirror. Version and epoch go to zero. */
     private fun resetLearnedPreferences() {
         val current = preferencesRepository.bodyEnergyCalibration()
         preferencesRepository.setBodyEnergyCalibration(
@@ -62,9 +62,12 @@ class DerivedMetricsResetService(
                 activityDrainGain = 1.0,
                 basalDrainGain = 1.0,
                 stressDrainGain = 1.0,
+                watchObservationCount = 0,
             ),
         )
         preferencesRepository.bodyEnergyGainsAlgorithmVersion = 0
+        preferencesRepository.bodyEnergyWatchFitEpoch = 0
+        preferencesRepository.bodyEnergyWatchFitWatermarkMillis = 0L
         preferencesRepository.bodyEnergyChainSeedMirror = null
         preferencesRepository.bodyEnergyPermissionSignature = null
     }

@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.devices.garmin.GarminRealtimeState
+import tech.mmarca.openvitals.devices.garmin.GarminRealtimeStore
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -39,6 +41,7 @@ import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.HistorySyncScheduler
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import java.time.LocalDate
+import tech.mmarca.openvitals.features.watches.DeviceSyncController
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.healthconnect.withHealthConnectReadOutcome
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
@@ -91,6 +94,7 @@ data class DashboardUiState(
     val degradedWidgets: Set<DashboardWidgetId> = emptySet(),
     /** When Health Connect's refusal ends, epoch millis, or null while it is answering. */
     val rateLimitDeadlineEpochMillis: Long? = null,
+    val watch: WatchWidgetDisplay? = null,
     val sensorStatus: DashboardSensorStatus = DashboardSensorStatus(),
 )
 
@@ -151,6 +155,8 @@ class DashboardViewModel @Inject constructor(
     private val bleDeviceRepository: BleDeviceRepository? = null,
     private val bleSensorCoordinator: BleSensorCoordinator? = null,
     private val historySyncScheduler: HistorySyncScheduler? = null,
+    private val deviceSyncController: DeviceSyncController? = null,
+    private val garminRealtimeStore: GarminRealtimeStore? = null,
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
     private val chainSyncService: BodyEnergyChainSyncService? = null,
     private val medicalRecords: MedicalRecordsRepository? = null,
@@ -257,6 +263,34 @@ class DashboardViewModel @Inject constructor(
                 _uiState.update { it.copy(sensorStatus = sensorStatus) }
             }
         }
+        // The watch tile is device state, not day data; nothing else rebuilds it.
+        val syncStates = deviceSyncController?.state?.map { it.syncingDeviceId } ?: flowOf(null)
+        val liveReadings = garminRealtimeStore?.readings ?: flowOf(GarminRealtimeState())
+        viewModelScope.launch {
+            combine(
+                deviceRepository.devicesFlow,
+                syncStates,
+                liveReadings,
+            ) { devices, syncingDeviceId, live ->
+                devices.toWatchWidgetDisplay(syncingDeviceId = syncingDeviceId, live = live)
+            }
+                .distinctUntilChanged()
+                .collect { watch ->
+                    if (watch != _uiState.value.watch) {
+                        _uiState.update { it.copy(watch = watch) }
+                        rebuildDisplay()
+                    }
+                }
+        }
+    }
+
+    /** Syncs the watch the tile shows. A no-op while any sync runs. */
+    fun syncWatchNow() {
+        val deviceId = _uiState.value.watch?.deviceId ?: return
+        deviceSyncController?.syncDevice(
+            deviceId,
+            listenAfter = DeviceSyncController.MANUAL_SYNC_LINGER,
+        )
     }
 
     fun deleteActivityEntry(entryId: String) {
@@ -724,6 +758,12 @@ class DashboardViewModel @Inject constructor(
             loadingWidgets = loadingWidgets,
             degradedWidgets = _uiState.value.degradedWidgets,
             bodyEnergySetupCompleted = prefs.bodyEnergyCalibration().setupCompleted,
+            // From the registry, not ui state: a display built before the device
+            // flow's first emission would drop the tile.
+            watch = bleDeviceRepository?.devices?.toWatchWidgetDisplay(
+                syncingDeviceId = deviceSyncController?.state?.value?.syncingDeviceId,
+                live = garminRealtimeStore?.readings?.value ?: GarminRealtimeState(),
+            ),
             // Only edit mode shows unsupported metrics, in the add tray.
             includeUnsupported = _uiState.value.isEditingDashboard,
             medicalRecordsAvailable = medicalRecords?.isAvailable() == true,

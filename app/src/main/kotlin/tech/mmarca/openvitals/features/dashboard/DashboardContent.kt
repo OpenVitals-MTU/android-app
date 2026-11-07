@@ -97,6 +97,7 @@ internal fun DashboardContent(
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     onAddWidget: (DashboardWidgetId) -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
+    onSyncWatch: () -> Unit = {},
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
     onEditActivity: (String) -> Unit,
@@ -133,6 +134,7 @@ internal fun DashboardContent(
         widgetIds = specWidgetIds,
         isEditingDashboard = isEditingDashboard,
         onOpenMetric = onOpenMetric,
+        onSyncWatch = onSyncWatch,
     )
     val specsById = remember(specs) { specs.associateBy { it.id } }
     val visibleIds = remember(

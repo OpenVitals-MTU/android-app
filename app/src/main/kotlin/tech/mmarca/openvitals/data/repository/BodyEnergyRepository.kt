@@ -27,6 +27,7 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergySeedSource
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineInputs
+import tech.mmarca.openvitals.domain.insights.BodyEnergyWatchFitEpoch
 import tech.mmarca.openvitals.domain.insights.calculateBodyEnergyTimeline
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
@@ -231,6 +232,7 @@ class BodyEnergyRepositoryImpl(
      * zones, the profile and the setup flag are untouched.
      */
     private fun resetGainsIfAlgorithmChanged() {
+        rewindWatchFitIfEpochChanged()
         if (preferencesRepository.bodyEnergyGainsAlgorithmVersion == BodyEnergyTimelineAlgorithmVersion) {
             return
         }
@@ -242,10 +244,22 @@ class BodyEnergyRepositoryImpl(
                     activityDrainGain = 1.0,
                     basalDrainGain = 1.0,
                     stressDrainGain = 1.0,
+                    watchObservationCount = 0,
                 )
             )
         }
         preferencesRepository.bodyEnergyGainsAlgorithmVersion = BodyEnergyTimelineAlgorithmVersion
+    }
+
+    /**
+     * Rewinds the watch fit watermark once per [BodyEnergyWatchFitEpoch], so a
+     * relearn has evidence to read. Separate from the algorithm version, which
+     * would discard the stored chain.
+     */
+    private fun rewindWatchFitIfEpochChanged() {
+        if (preferencesRepository.bodyEnergyWatchFitEpoch == BodyEnergyWatchFitEpoch) return
+        preferencesRepository.bodyEnergyWatchFitWatermarkMillis = 0L
+        preferencesRepository.bodyEnergyWatchFitEpoch = BodyEnergyWatchFitEpoch
     }
 
     /**

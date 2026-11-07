@@ -260,6 +260,7 @@ androidComponents {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":wearlink"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
 
@@ -362,6 +363,10 @@ tasks.withType<Test>().configureEach {
     mustRunAfter(":domain:testCiUnitTest")
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
+    }
+    // A night pulled off a watch, replayed by WearNightReplayTest (scripts/README.md).
+    providers.systemProperty("openvitals.wearNightLines").orNull?.let { path ->
+        systemProperty("openvitals.wearNightLines", path)
     }
     // StringFormatSpecifierTest reads the source strings off disk rather than
     // through R, so Gradle cannot infer the dependency and would call the task

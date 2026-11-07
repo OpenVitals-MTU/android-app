@@ -56,7 +56,8 @@ android {
 }
 
 dependencies {
-    // Public types of this module reference it.
+    // Public types of this module reference both.
+    api(project(":wearlink"))
     api(libs.health.connect.client)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.zxing.core)

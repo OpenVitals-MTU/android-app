@@ -62,6 +62,14 @@ const val CYCLE_ENTRY_SECTION_ARG = "cycleEntrySection"
 const val CYCLE_ENTRY_QUERY_PATTERN =
     "?$CYCLE_ENTRY_DATE_ARG={$CYCLE_ENTRY_DATE_ARG}&$CYCLE_ENTRY_SECTION_ARG={$CYCLE_ENTRY_SECTION_ARG}"
 const val STRESS_DATE_ARG = "stressDate"
+const val WATCH_DEVICE_ID_ARG = "watchDeviceId"
+const val WATCH_SETTINGS_SCREEN_ID_ARG = "screenId"
+const val WATCH_POINT_LATITUDE_ARG = "lat"
+const val WATCH_POINT_LONGITUDE_ARG = "lon"
+const val WATCH_POINT_NAME_ARG = "name"
+
+/** Set when another app shared something that held no position. */
+const val WATCH_POINT_UNREADABLE_ARG = "unreadable"
 const val BODY_ENERGY_DATE_ARG = "bodyEnergyDate"
 const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
 
@@ -201,6 +209,11 @@ sealed class Screen(
     data object SettingsDisplay : Screen("settings/display", R.string.settings_display_group_title)
     data object SettingsActivities : Screen("settings/activities", R.string.settings_activities_group_title)
     data object SettingsSensors : Screen("settings/sensors", R.string.settings_sensors_group_title)
+    data object SettingsWatches : Screen("settings/watches", R.string.settings_watches_group_title)
+    data object SettingsScales : Screen("settings/scales", R.string.settings_scales_group_title)
+
+    /** The one scale's device view. Titled by the scale's name, like a watch. */
+    data object ScaleDevice : Screen("scale")
     data object SettingsNutrition : Screen("settings/nutrition", R.string.settings_nutrition_group_title)
     data object SettingsCalories : Screen("settings/calories", R.string.settings_nutrition_group_title)
     data object SettingsCaffeine : Screen("settings/caffeine", R.string.settings_nutrition_group_title)
@@ -246,6 +259,63 @@ sealed class Screen(
         fun createRoute(kind: ManualRecordKind, id: String? = null): String =
             "medical_records/entry/${kind.name}" + (id?.let { "?$MEDICAL_ENTRY_ID_ARG=${Uri.encode(it)}" } ?: "")
     }
+    data object WatchDevice : Screen("watch/{$WATCH_DEVICE_ID_ARG}") {
+        fun createRoute(watchDeviceId: String): String =
+            "watch/${Uri.encode(watchDeviceId)}"
+    }
+    data object WatchData : Screen("watch/{$WATCH_DEVICE_ID_ARG}/data", R.string.settings_watch_data_title) {
+        fun createRoute(watchDeviceId: String): String =
+            "watch/${Uri.encode(watchDeviceId)}/data"
+    }
+    data object WatchNotifications : Screen("watch/{$WATCH_DEVICE_ID_ARG}/notifications", R.string.screen_watch_notifications) {
+        fun createRoute(watchDeviceId: String): String =
+            "watch/${Uri.encode(watchDeviceId)}/notifications"
+    }
+
+    /** Alarms kept on the phone, for a watch with no settings tree. */
+    data object WatchAlarms : Screen("watch/{$WATCH_DEVICE_ID_ARG}/alarms", R.string.settings_watch_action_alarms) {
+        fun createRoute(watchDeviceId: String): String =
+            "watch/${Uri.encode(watchDeviceId)}/alarms"
+    }
+
+    /** The watch's own settings tree. */
+    data object WatchSettings :
+        Screen("watch/{$WATCH_DEVICE_ID_ARG}/settings/{$WATCH_SETTINGS_SCREEN_ID_ARG}", R.string.settings_watch_on_device_settings) {
+        fun createRoute(watchDeviceId: String, screenId: Int): String =
+            "watch/${Uri.encode(watchDeviceId)}/settings/$screenId"
+    }
+
+    /**
+     * Send a point to a watch. Every argument is optional: a shared location
+     * arrives with a position and no watch, the watch screen with a watch only.
+     */
+    data object WatchSendPoint : Screen(
+        "watch_send_point?$WATCH_DEVICE_ID_ARG={$WATCH_DEVICE_ID_ARG}" +
+            "&$WATCH_POINT_LATITUDE_ARG={$WATCH_POINT_LATITUDE_ARG}" +
+            "&$WATCH_POINT_LONGITUDE_ARG={$WATCH_POINT_LONGITUDE_ARG}" +
+            "&$WATCH_POINT_NAME_ARG={$WATCH_POINT_NAME_ARG}" +
+            "&$WATCH_POINT_UNREADABLE_ARG={$WATCH_POINT_UNREADABLE_ARG}",
+        R.string.settings_watch_point_title,
+    ) {
+        fun createRoute(
+            watchDeviceId: String? = null,
+            latitude: Double? = null,
+            longitude: Double? = null,
+            name: String? = null,
+            unreadable: Boolean = false,
+        ): String {
+            val query = buildList {
+                watchDeviceId?.let { add("$WATCH_DEVICE_ID_ARG=${Uri.encode(it)}") }
+                if (latitude != null && longitude != null) {
+                    add("$WATCH_POINT_LATITUDE_ARG=$latitude")
+                    add("$WATCH_POINT_LONGITUDE_ARG=$longitude")
+                }
+                name?.let { add("$WATCH_POINT_NAME_ARG=${Uri.encode(it)}") }
+                if (unreadable) add("$WATCH_POINT_UNREADABLE_ARG=true")
+            }
+            return if (query.isEmpty()) basePath else "$basePath?${query.joinToString("&")}"
+        }
+    }
     data object Achievements : Screen("achievements", R.string.screen_achievements)
 
     companion object {
@@ -289,6 +359,9 @@ sealed class Screen(
                 SettingsDisplay,
                 SettingsActivities,
                 SettingsSensors,
+                SettingsWatches,
+                SettingsScales,
+                ScaleDevice,
                 SettingsNutrition,
                 SettingsCalories,
                 SettingsCaffeine,
@@ -312,6 +385,12 @@ sealed class Screen(
                 MedicalDocuments,
                 MedicalRecordEntry,
                 SettingsMedicalImport,
+                WatchDevice,
+                WatchData,
+                WatchNotifications,
+                WatchAlarms,
+                WatchSettings,
+                WatchSendPoint,
                 Achievements,
             )
         }

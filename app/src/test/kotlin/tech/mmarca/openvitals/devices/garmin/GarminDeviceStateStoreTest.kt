@@ -1,0 +1,215 @@
+package tech.mmarca.openvitals.devices.garmin
+
+import java.time.DayOfWeek
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
+
+class GarminDeviceStateStoreTest {
+
+    private lateinit var prefs: FakeSharedPreferences
+    private lateinit var store: GarminDeviceStateStore
+
+    private val deviceId = "ble-watch-1"
+
+    @Before
+    fun setUp() {
+        prefs = FakeSharedPreferences()
+        store = GarminDeviceStateStore(prefs)
+    }
+
+    @Test
+    fun `large packets are on until switched off for that address`() {
+        assertTrue(store.highMtu("AA:BB:CC:DD:EE:FF"))
+
+        store.setHighMtu("aa:bb:cc:dd:ee:ff", false)
+
+        // The address is the key, whatever its case; another watch keeps the default.
+        assertFalse(GarminDeviceStateStore(prefs).highMtu("AA:BB:CC:DD:EE:FF"))
+        assertTrue(store.highMtu("11:22:33:44:55:66"))
+    }
+
+    @Test
+    fun `synced file keys start empty and round-trip through storage`() {
+        assertTrue(store.syncedFileKeys(deviceId).isEmpty())
+
+        store.recordSyncedFileKeys(deviceId, listOf("128/49/1", "128/32/2"))
+
+        // A second store over the same prefs is the real round-trip.
+        assertEquals(
+            setOf("128/49/1", "128/32/2"),
+            GarminDeviceStateStore(prefs).syncedFileKeys(deviceId),
+        )
+    }
+
+    @Test
+    fun `synced file keys merge without duplicating across runs`() {
+        store.recordSyncedFileKeys(deviceId, listOf("128/49/1"))
+        store.recordSyncedFileKeys(deviceId, listOf("128/49/1", "128/32/2"))
+
+        assertEquals(setOf("128/49/1", "128/32/2"), store.syncedFileKeys(deviceId))
+    }
+
+    @Test
+    fun `synced file keys are scoped per device`() {
+        store.recordSyncedFileKeys(deviceId, listOf("128/49/1"))
+
+        assertTrue(store.syncedFileKeys("ble-watch-2").isEmpty())
+    }
+
+    @Test
+    fun `an empty synced-keys write is a no-op`() {
+        store.recordSyncedFileKeys(deviceId, emptyList())
+        assertTrue(store.syncedFileKeys(deviceId).isEmpty())
+    }
+
+    @Test
+    fun `the synced-keys set is capped, dropping the oldest keys first`() {
+        // Push past the 4000 cap in two batches so ordering is observable.
+        store.recordSyncedFileKeys(deviceId, (0 until 3999).map { "old/$it" })
+        store.recordSyncedFileKeys(deviceId, listOf("new/a", "new/b"))
+
+        val keys = store.syncedFileKeys(deviceId)
+        assertEquals(4000, keys.size)
+        // Newest survive; the very oldest was dropped.
+        assertTrue("new/a" in keys)
+        assertTrue("new/b" in keys)
+        assertFalse("old/0" in keys)
+    }
+
+    @Test
+    fun `capabilities round-trip through storage by wire name`() {
+        assertTrue(store.capabilities(deviceId).isEmpty())
+
+        store.recordCapabilities(
+            deviceId,
+            setOf(GarminCapability.SYNC, GarminCapability.FIND_MY_WATCH),
+        )
+
+        // A second store over the same prefs proves the wireName format persists.
+        assertEquals(
+            setOf(GarminCapability.SYNC, GarminCapability.FIND_MY_WATCH),
+            GarminDeviceStateStore(prefs).capabilities(deviceId),
+        )
+    }
+
+    @Test
+    fun `an empty capabilities write is a no-op`() {
+        store.recordCapabilities(deviceId, emptySet())
+        assertTrue(store.capabilities(deviceId).isEmpty())
+    }
+
+    @Test
+    fun `clear forgets everything kept for the watch, so a re-pairing starts clean`() {
+        store.recordSyncedFileKeys(deviceId, listOf("128/49/1"))
+        store.recordCapabilities(deviceId, setOf(GarminCapability.SYNC))
+        store.setStayConnected(deviceId, false)
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
+        store.setAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
+        store.recordSentAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
+
+        store.clear(deviceId)
+
+        // The keys are gone from storage, not only the in-memory view.
+        val reloaded = GarminDeviceStateStore(prefs)
+        assertTrue(reloaded.syncedFileKeys(deviceId).isEmpty())
+        assertTrue(reloaded.capabilities(deviceId).isEmpty())
+        // Re-pairing is a fresh watch, and a fresh watch gets the default.
+        assertTrue(reloaded.stayConnected(deviceId))
+        assertEquals(AutoSyncInterval.OFF, reloaded.autoSyncInterval(deviceId))
+        assertTrue(reloaded.alarms(deviceId).isEmpty())
+        assertNull(reloaded.sentAlarms(deviceId))
+    }
+
+    @Test
+    fun `automatic sync is off until it is chosen, and survives a restart`() {
+        assertEquals(AutoSyncInterval.OFF, store.autoSyncInterval(deviceId))
+
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.HOURLY)
+
+        assertEquals(
+            AutoSyncInterval.HOURLY,
+            GarminDeviceStateStore(prefs).autoSyncInterval(deviceId),
+        )
+    }
+
+    @Test
+    fun `automatic sync is scoped per device`() {
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_30_MINUTES)
+
+        assertEquals(AutoSyncInterval.OFF, store.autoSyncInterval("ble-watch-2"))
+    }
+
+    @Test
+    fun `automatic sync is stored as minutes, not as an ordinal`() {
+        // The stored value must survive a build that adds or drops an interval.
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
+
+        assertEquals(120, prefs.getInt("garmin_auto_sync_minutes_$deviceId", 0))
+    }
+
+    @Test
+    fun `stay connected is on until the wearer says otherwise`() {
+        assertTrue(store.stayConnected(deviceId))
+
+        store.setStayConnected(deviceId, false)
+
+        // The default loses to a choice: a wearer who turned the link off must not get it back.
+        assertFalse(GarminDeviceStateStore(prefs).stayConnected(deviceId))
+    }
+
+    @Test
+    fun `sync protocol starts unknown and records proven legacy`() {
+        assertEquals(GarminSyncProtocol.UNKNOWN, store.syncProtocol(deviceId))
+
+        store.recordSyncProtocol(deviceId, GarminSyncProtocol.LEGACY)
+
+        assertEquals(GarminSyncProtocol.LEGACY, GarminDeviceStateStore(prefs).syncProtocol(deviceId))
+    }
+
+    @Test
+    fun `file sync protocol remains enabled and clear forgets it`() {
+        store.recordSyncProtocol(deviceId, GarminSyncProtocol.FILE_SYNC)
+        assertEquals(GarminSyncProtocol.FILE_SYNC, store.syncProtocol(deviceId))
+
+        store.clear(deviceId)
+
+        assertEquals(GarminSyncProtocol.UNKNOWN, store.syncProtocol(deviceId))
+    }
+
+    @Test
+    fun `alarms round-trip through storage in order`() {
+        val alarms = listOf(
+            GarminAlarm(
+                hour = 6,
+                minute = 30,
+                days = setOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY),
+                enabled = false,
+                sound = GarminAlarmSound.VIBRATION,
+                backlight = false,
+                label = GarminAlarmLabel.WAKE_UP,
+            ),
+            GarminAlarm(hour = 22, minute = 5),
+        )
+        assertTrue(store.alarms(deviceId).isEmpty())
+
+        store.setAlarms(deviceId, alarms)
+
+        assertEquals(alarms, GarminDeviceStateStore(prefs).alarms(deviceId))
+    }
+
+    @Test
+    fun `sent alarms are unknown until a send is recorded`() {
+        assertNull(store.sentAlarms(deviceId))
+
+        store.recordSentAlarms(deviceId, emptyList())
+
+        // An empty list that was sent is not the same as nothing sent.
+        assertEquals(emptyList<GarminAlarm>(), store.sentAlarms(deviceId))
+    }
+}

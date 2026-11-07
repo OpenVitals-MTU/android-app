@@ -23,6 +23,33 @@ The detail view can show a summary, timeline, confidence, and context for the se
 
 Body Energy supports calibration during onboarding and in Recovery settings. Calibration helps the local estimate better fit the user, and can be reset when needed.
 
+### Learning from a Garmin watch
+
+If a Garmin watch is paired, its own Body Battery is used as evidence. The watch
+measures what this app models, so where the two disagree the difference is
+attributed to whichever gain was driving that moment, and the gain is nudged.
+This happens automatically after a sync — there is nothing to turn on.
+
+Three rules keep it honest:
+
+- **An hour counts once.** The watch emits roughly a sample a minute; at most one
+  per hour is used, and a watermark records how far the evidence has been
+  consumed. Syncing ten times in an hour teaches the model exactly as much as
+  syncing once, because otherwise the learning rate would depend on how often
+  the user tapped Sync rather than on the data.
+- **Nothing is learned from a stale prediction.** The fit runs after the day's
+  timeline has been rebuilt with the newly-synced data. Comparing the watch
+  against a model that has not yet seen the sleep the same sync just delivered
+  would teach it from an artefact of when data arrived.
+- **A day is never skipped silently.** If the timeline for a day is not ready,
+  its readings are kept for the next run rather than discarded. A day that stays
+  unusable for more than two days is given up on, so one permanently-cold day
+  cannot block every day behind it.
+
+A first run looks back at most a week, so installing with months of watch
+history does not try to fit all of it at once. The whole path is best-effort: a
+failure to calibrate never fails the sync that triggered it.
+
 ## How The Battery Moves
 
 The score is a running balance, not a daily reset: a day opens where the
@@ -40,9 +67,9 @@ time. Sleep charges per minute slept, scaled by three things:
 else is happening, scaled by measured BMR), from active energy expenditure, from
 heart-rate-derived stress, and from recovery debt after a hard session.
 
-Each component is scaled by a personal gain — see [Calibration](#calibration).
-The gains are the only per-user tuning; everything else above is the same model
-for everyone.
+Each component is scaled by a personal gain that the watch fit nudges — see
+[Calibration](#calibration). The gains are the only per-user tuning; everything
+else above is the same model for everyone.
 
 ## Sleep Quality And Charge
 
@@ -65,8 +92,9 @@ The rules that keep it honest:
 
 - **An ordinary night charges exactly what it always did.** The factor is
   centred, not added: a middling night is neutral, better nights charge more,
-  worse nights less. This is not only taste — a factor that sat above neutral
-  on the ordinary night would inflate every night rather than tell them apart.
+  worse nights less. This is not only taste — the sleep gain is fitted against
+  watch readings, and a factor that sat above neutral on the ordinary night
+  would inflate every night rather than tell them apart.
 - **The swing is bounded to ±20%.** No single night of broken staging can undo
   hours actually slept, and duration stays the dominant term.
 - **A night with no deep/REM staging is left alone.** A source that writes only

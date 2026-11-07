@@ -13,6 +13,7 @@ Co możesz robić
 * Importuj eksporty Apple Health oraz pliki GPX, KML, KMZ, TCX, FIT i CSV
 * Utwórz raport zdrowotny PDF i udostępnij go lekarzowi
 * Śledź cykl: miesiączki, objawy, podstawową temperaturę ciała, szacowany termin następnej miesiączki i przypomnienia o pigułce
+* Synchronizuj obsługiwane zegarki Garmin bezpośrednio przez Bluetooth
 * Kopiuj dane między dwoma telefonami przez Bluetooth, bez konta i bez sieci
 * Zdobywaj odznaki za kroki, dystans, piętra, treningi, nawodnienie, sen i mindfulness
 * Włącz przypomnienia o napojach, mindfulness i cyklu

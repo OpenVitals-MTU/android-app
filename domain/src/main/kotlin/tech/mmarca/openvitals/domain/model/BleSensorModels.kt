@@ -4,10 +4,9 @@ import java.time.Instant
 
 /**
  * What a registered Bluetooth device is. A [SENSOR] streams live GATT values
- * and owns capabilities. [WATCH] and [BIKE_COMPUTER] are the kinds the watch
- * integration registered before it moved to OpenWatch; a stored entry of
- * either kind still parses, and only its live role (a non-empty
- * [BleSensorDevice.capabilities]) counts here.
+ * and owns capabilities. A [WATCH] holds FIT files pulled over GFDI. A
+ * [BIKE_COMPUTER] does both. File sync keys off [BleSensorDevice.isGarminGfdi],
+ * the live role off a non-empty [BleSensorDevice.capabilities].
  */
 enum class BleDeviceKind(
     /** Persisted form, so a rename cannot orphan stored devices. */
@@ -25,8 +24,9 @@ enum class BleDeviceKind(
 }
 
 /**
- * Which integration owned a [BleDeviceKind.WATCH], kept so a stored entry
- * written before the watches moved to OpenWatch still parses. Null for a sensor.
+ * Which integration owns a [BleDeviceKind.WATCH]. Garmin speaks GFDI; WearOS
+ * is a live heart-rate source whose data arrives via Health Connect. Null
+ * for a sensor, and for a Garmin watch stored before this field existed.
  */
 enum class DeviceIntegration(val storageName: String) {
     GARMIN("GARMIN"),
@@ -79,6 +79,19 @@ data class BleSensorDevice(
     /** A Garmin Edge: a GFDI sync device that is also a candidate live sensor. */
     val isBikeComputer: Boolean
         get() = kind == BleDeviceKind.BIKE_COMPUTER
+
+    /** Driven over GFDI: a Garmin watch or bike computer, never WearOS. The file-sync concept. */
+    val isGarminGfdi: Boolean
+        get() = (kind == BleDeviceKind.WATCH || kind == BleDeviceKind.BIKE_COMPUTER) &&
+            integration != DeviceIntegration.WEAROS
+
+    /** A Garmin watch. For file-sync eligibility use [isGarminGfdi]. */
+    val isGarminWatch: Boolean
+        get() = isWatch && integration != DeviceIntegration.WEAROS
+
+    /** A WearOS watch: live heart rate over BLE, recorded data via Health Connect. */
+    val isWearosWatch: Boolean
+        get() = isWatch && integration == DeviceIntegration.WEAROS
 
     /**
      * Can hold live capabilities and join a recording: a sensor, a bike
@@ -236,4 +249,15 @@ data class BleDiscoveredDevice(
     val name: String?,
     val rssi: Int?,
     val suggestedCapabilities: Set<BleSensorCapability>,
+    /**
+     * The advertisement carried a member service a classifier recognised:
+     * a file-sync watch to onboard. The advertised service, not a GATT UUID,
+     * which no advertisement carries.
+     */
+    val advertisesSyncService: Boolean = false,
+    /**
+     * Bonded devices only: the Classic service UUIDs the bond's SDP record
+     * lists, lowercase. An app listening on the device shows up here.
+     */
+    val classicServiceUuids: Set<String> = emptySet(),
 )

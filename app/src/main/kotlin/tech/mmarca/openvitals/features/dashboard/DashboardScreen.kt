@@ -153,6 +153,7 @@ fun DashboardScreen(
                     onRemoveWidget = viewModel::removeDashboardWidget,
                     onAddWidget = viewModel::addDashboardWidget,
                     onOpenMetric = onOpenMetric,
+                    onSyncWatch = viewModel::syncWatchNow,
                     onOpenActivities = onOpenActivities,
                     onOpenActivity = onOpenActivity,
                     onEditActivity = onEditActivity,

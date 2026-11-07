@@ -13,6 +13,7 @@ Was du tun kannst
 * Exporte aus Apple Health sowie GPX-, KML-, KMZ-, TCX-, FIT- und CSV-Dateien importieren
 * Einen Gesundheitsbericht als PDF erstellen, den du mit deinem Arzt teilen kannst
 * Deinen Zyklus verfolgen: Perioden, Symptome, Basaltemperatur, Schätzung der nächsten Periode und Pillen-Erinnerungen
+* Unterstützte Garmin-Uhren direkt über Bluetooth synchronisieren
 * Daten per Bluetooth zwischen zwei Telefonen kopieren, ohne Konto und ohne Netzwerk
 * Abzeichen für Schritte, Distanz, Etagen, Trainings, Hydrierung, Schlaf und Achtsamkeit sammeln
 * Erinnerungen fürs Trinken, für Achtsamkeit und für deinen Zyklus einschalten

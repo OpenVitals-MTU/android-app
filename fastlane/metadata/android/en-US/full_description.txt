@@ -13,6 +13,7 @@ What you can do
 * Import Apple Health exports and GPX, KML, KMZ, TCX, FIT and CSV files
 * Build a PDF health report to share with your doctor
 * Track your cycle: periods, symptoms, basal temperature, next-period estimates and pill reminders
+* Sync supported Garmin watches directly over Bluetooth
 * Copy data between two phones over Bluetooth, with no account and no network
 * Earn badges for steps, distance, floors, workouts, hydration, sleep and mindfulness
 * Turn on reminders for drinking, mindfulness and your cycle

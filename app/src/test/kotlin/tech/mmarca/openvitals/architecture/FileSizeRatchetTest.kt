@@ -14,7 +14,7 @@ import org.junit.Test
 class FileSizeRatchetTest {
 
     private val lineCounts: Map<String, Int> by lazy {
-        (File(SourceRoot).walkTopDown() + File(DomainRoot).walkTopDown())
+        (File(SourceRoot).walkTopDown() + File(SharedRoot).walkTopDown() + File(DomainRoot).walkTopDown())
             .filter { it.isFile && it.extension == "kt" }
             .associate { it.rootRelativePath() to it.readLines().size }
     }
@@ -51,10 +51,14 @@ class FileSizeRatchetTest {
     private companion object {
         const val SourceRoot = "src/main/kotlin/tech/mmarca/openvitals"
 
+        /** The shared link module is held to the same limit; its paths are reported with a `wearlink/` prefix. */
+        const val SharedRoot = "../wearlink/src/main/kotlin/tech/mmarca/openvitals"
+
         /** The domain module keeps the app's package names, so its paths are reported as the app's. */
         const val DomainRoot = "../domain/src/main/kotlin/tech/mmarca/openvitals"
 
         fun File.rootRelativePath(): String = when {
+            invariantSeparatorsPath.contains("/wearlink/") -> "wearlink/" + relativeTo(File(SharedRoot)).invariantSeparatorsPath
             invariantSeparatorsPath.contains("/domain/src/") -> relativeTo(File(DomainRoot)).invariantSeparatorsPath
             else -> relativeTo(File(SourceRoot)).invariantSeparatorsPath
         }
@@ -73,8 +77,11 @@ class FileSizeRatchetTest {
             "features/heart/HeartMetricSharedSections.kt" to 1400,
             "data/repository/PreferencesRepository.kt" to 1450,
             "features/body/BodyMetricContent.kt" to 1050,
+            "devices/garmin/wellness/GarminFitWellness.kt" to 1250,
             "features/activity/ActivitiesOverviewSections.kt" to 1200,
             "features/devicesync/store/SyncRecordCodec.kt" to 1150,
+            "features/watches/WatchDeviceScreen.kt" to 1100,
+            "devices/garmin/GarminMessages.kt" to 1100,
             "data/repository/dashboard/DashboardDataLoader.kt" to 1050,
             "navigation/AppNavigation.kt" to 1050,
             "domain/insights/BodyEnergyTimeline.kt" to 1050,
@@ -82,6 +89,7 @@ class FileSizeRatchetTest {
             "features/reports/pdf/ReportPdfWriter.kt" to 1000,
             "features/manualentry/activity/recording/ActivityRecordingDashboard.kt" to 1000,
             "features/body/BodyMetricSharedSections.kt" to 900,
+            "devices/garmin/GarminSession.kt" to 950,
             "features/homewidgets/HomeReadinessWidgets.kt" to 950,
             "features/activity/maps/OfflineRouteMap.kt" to 900,
             "features/vitals/HeartVitalsOverviewScreen.kt" to 850,

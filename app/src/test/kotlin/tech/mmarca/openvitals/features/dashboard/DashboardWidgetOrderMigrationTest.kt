@@ -26,7 +26,7 @@ class DashboardWidgetOrderMigrationTest {
     private val allIds = DashboardWidgetId.entries.map { it.name }.toSet()
 
     @Test
-    fun `a layout saved before a widget existed gains it where the default puts it`() {
+    fun `a layout saved before the watch widget existed gains it where the default puts it`() {
         val stored = listOf(
             DashboardWidgetId.STEPS.name,
             DashboardWidgetId.SLEEP.name,
@@ -40,10 +40,11 @@ class DashboardWidgetOrderMigrationTest {
             persist = recorder::persist,
         )
 
-        // The default order puts medical records after CYCLE.
+        // The default order puts the watch after the hero rings, before SLEEP, and medical records after CYCLE.
         assertEquals(
             listOf(
                 DashboardWidgetId.STEPS,
+                DashboardWidgetId.WATCH,
                 DashboardWidgetId.SLEEP,
                 DashboardWidgetId.CYCLE,
                 DashboardWidgetId.MEDICAL_RECORDS,
@@ -53,7 +54,7 @@ class DashboardWidgetOrderMigrationTest {
         // Only the new id moved: the kept widgets stay in the user's order.
         assertEquals(
             listOf(DashboardWidgetId.STEPS.name, DashboardWidgetId.SLEEP.name, DashboardWidgetId.CYCLE.name),
-            recorder.order?.filterNot { it == DashboardWidgetId.MEDICAL_RECORDS.name },
+            recorder.order?.filterNot { it == DashboardWidgetId.WATCH.name || it == DashboardWidgetId.MEDICAL_RECORDS.name },
         )
         assertEquals(allIds, recorder.known)
     }
@@ -62,7 +63,7 @@ class DashboardWidgetOrderMigrationTest {
     fun `a widget already in the layout is never inserted twice`() {
         val stored = listOf(
             DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.MEDICAL_RECORDS.name,
+            DashboardWidgetId.WATCH.name,
             DashboardWidgetId.SLEEP.name,
         )
         val recorder = Recorder()
@@ -74,10 +75,10 @@ class DashboardWidgetOrderMigrationTest {
             persist = recorder::persist,
         )
 
-        assertEquals(1, result.count { it == DashboardWidgetId.MEDICAL_RECORDS })
-        assertEquals(1, recorder.order?.count { it == DashboardWidgetId.MEDICAL_RECORDS.name } ?: 1)
+        assertEquals(1, result.count { it == DashboardWidgetId.WATCH })
+        assertEquals(1, recorder.order?.count { it == DashboardWidgetId.WATCH.name } ?: 1)
         // And it stays where the user put it.
-        assertEquals(1, result.indexOf(DashboardWidgetId.MEDICAL_RECORDS))
+        assertEquals(1, result.indexOf(DashboardWidgetId.WATCH))
     }
 
     @Test
@@ -110,7 +111,7 @@ class DashboardWidgetOrderMigrationTest {
         // Writing an order here would read as "the user removed everything".
         assertNull(recorder.order)
         assertEquals(allIds, recorder.known)
-        assertTrue(DashboardWidgetId.MEDICAL_RECORDS in result)
+        assertTrue(DashboardWidgetId.WATCH in result)
     }
 
     @Test
@@ -126,7 +127,7 @@ class DashboardWidgetOrderMigrationTest {
         )
 
         assertEquals(first, second)
-        assertEquals(1, second.count { it == DashboardWidgetId.MEDICAL_RECORDS })
+        assertEquals(1, second.count { it == DashboardWidgetId.WATCH })
         // The second pass had nothing to do.
         assertEquals(1, recorder.writes)
     }
@@ -161,8 +162,8 @@ class DashboardWidgetOrderMigrationTest {
             persist = recorder::persist,
         )
 
-        assertTrue(DashboardWidgetId.MEDICAL_RECORDS in result)
-        // After SLEEP, which is where the default order puts it.
-        assertTrue(result.indexOf(DashboardWidgetId.MEDICAL_RECORDS) > result.indexOf(DashboardWidgetId.SLEEP))
+        assertTrue(DashboardWidgetId.WATCH in result)
+        // Before SLEEP, which is where the default order puts it.
+        assertTrue(result.indexOf(DashboardWidgetId.WATCH) < result.indexOf(DashboardWidgetId.SLEEP))
     }
 }

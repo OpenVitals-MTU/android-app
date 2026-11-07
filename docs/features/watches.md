@@ -1,0 +1,390 @@
+# Watches
+
+> **Status:** Current implemented behavior. Experimental.
+> **Audience:** Users and contributors.
+> **Implementation:** `devices/core`, `devices/garmin`, `devices/wearos`, `devices/notifications`, `features/watches`.
+> **Navigation:** `Screen.SettingsWatches`, `Screen.WatchDevice`, `Screen.WatchData`, `Screen.WatchNotifications`, `Screen.WatchSettings`, `Screen.WatchAlarms`, `Screen.WatchSendPoint`; settings section `WATCHES`.
+> **Related:** [Feature map](feature-map.md), [Bluetooth LE sensors](ble-sensors.md), [FIT files import](fit-files-import.md), [Body Energy](body-energy.md), [Permissions](../app/permissions.md), [Privacy](../app/privacy.md).
+
+OpenVitals has experimental support for wrist devices. Settings, Watches pairs a watch and copies what it recorded onto the phone over Bluetooth. There is no watch-vendor account and no network step; the app declares no internet permission.
+
+Support differs sharply by make:
+
+- **Garmin** watches are read over Garmin's own Bluetooth protocol. Sync, the watch-only data screen, notification forwarding, the watch's settings tree, and find-my-watch are all Garmin features.
+- **WearOS** watches run the OpenVitals Wear OS companion app (`:wear`). The phone app checks whether the watch is paired and whether the watch app answers, and syncs the heart rate and steps the watch app recorded into Health Connect, plus a sleep session per night estimated from the movement and heart rate the watch app recorded. No vendor app is needed on the phone once the watch is paired.
+
+## Wear OS Companion App
+
+OpenVitals includes a Wear OS companion app (`:wear`) that runs directly on wrist devices.
+
+The companion app communicates with the phone app over standard Android Bluetooth RFCOMM sockets using a dedicated service UUID (`4838d728-6e5a-4b95-a29d-a60032338301`). This design uses standard Android OS (AOSP) APIs only, maintaining 100% open-source compatibility suitable for F-Droid without depending on closed-source Google Play Services libraries.
+
+The watch app runs `WearAppService`, a `connectedDevice` foreground service with an ongoing "Phone link" notification, so it stays reachable after the app is closed. It starts once the watch app has the Nearby devices permission (`BLUETOOTH_CONNECT`, asked on first launch), reopens its listener when Bluetooth comes back on, and answers a `PING` line with `PONG`. `WearBootReceiver` starts it again after a watch restart or an app update, as long as the permission is granted.
+
+The watch app also offers three tiles, added from the watch's tile list: **Heart rate**, **Steps** and **Floors**. Each shows today's value in the metric's colour from the phone app and the day's curve from midnight to midnight, drawn up to now, over the hours 0, 6, 12, 18 and 24: the heart rate as quarter-hour means, broken where the watch stored none (off the wrist or charging), the steps and floors as a running total. The steps are the ones the watch counted itself, so they can fall short of the phone app's total, which adds the phone's own steps and other apps' from Health Connect. The heart rate is the newest sample with its age; one older than an hour shows as a dash. Under its curve is the day's lowest and highest sample. The floors are counted as the phone counts them before writing them to Health Connect: only the height that enough steps carry (`AscentCredit`), three metres a floor, both rounded down; under the curve are the metres that counted. A value whose permission is off, or whose sensor the watch lacks, shows as a dash with the reason. The tiles only read the watch's metric store and start no sensor; a tile counts as stale five minutes after it was drawn, so Wear OS asks for a new one. Tapping a tile opens the watch app. Verified on a TicWatch Pro 5 with Wear OS 4.
+
+When opening a paired Wear OS watch on its device screen in Settings, Watches:
+- **Paired**: OpenVitals looks for the watch among the phone's bonded devices. The address stored at onboarding comes from the BLE scan, and Wear OS watches advertise with a private address, so the match falls back to the name (a trailing ` LE` ignored). There is no guess beyond that: another bonded watch is never reported as this one.
+- **Found when adding**: the Watches scan offers a bonded device as a Wear OS watch when its name is a known smartwatch family or its service list names the OpenVitals Wear OS app. A wrist-watch Bluetooth class alone is not enough, since Garmin, Fitbit and Huawei watches report it too. The service list Android caches at pairing predates the app, so the scan re-queries it (SDP) for bonded dual-mode devices that nothing has claimed yet and that are not audio, peripheral or imaging devices. A watch with an unknown name is therefore found once the OpenVitals Wear OS app runs on it.
+- **App answers**: the phone pings the watch over RFCOMM, giving up after 8 seconds. No answer means the watch is off or out of range, or the watch app is not running; a bond alone is never shown as connected.
+- **Permission**: without Nearby devices on the phone, the card shows a grant callout instead of a status.
+- **Check again**: the "Validate Wear OS App" button re-runs the check.
+
+The UUID and the protocol words come from the shared `:wearlink` module on both sides.
+
+### Watch Sync
+
+The watch app records heart rate on its own, from the moment it is granted heart rate access, with the screen off and the app closed: the same foreground service that answers the phone keeps the sensor on, batched so the watch wakes once every few minutes rather than once per beat. It keeps one sample every ten seconds and a week of history, pruning older samples itself.
+
+It counts steps the same way, from the watch's own step counter, once it is granted physical activity access: one count per clock minute, a week of history. Steps taken while the watch app was not running, for example after a restart of the watch, are spread evenly over the minutes in between. The watch's screen shows whether step counting is on and offers the grant if it is not. A watch without a step counter simply records none.
+
+While the watch is off the wrist for a minute, it stops measuring heart rate, which is what costs the most battery, and starts again as soon as it is back on. Turning the screen on or taking the watch off the charger also restarts it, in case the watch cannot tell it was put on while the sensor rests. A watch without an off-body sensor measures all the time. Not yet tried on a watch.
+
+It measures the height climbed from the barometer, which needs no permission: a rise counts once it reaches 3 m, so the barometer's small wobble does not add up, and then with all of its metres; one value per clock minute, a week of history. The phone turns the metres into floors, 3 m each, keeping partial floors so a day's total adds up. The barometer cannot tell stairs from an elevator, so the phone keeps the height only when the watch counted at least 10 steps per floor's height in that minute and the one before. A watch without a barometer records none.
+
+On the phone, the Watch Sync card on the watch's device screen has a Sync watch button. A sync first asks the watch for every heart rate sample newer than the last one already written, one page of up to 2000 samples at a time, writes each page to Health Connect as one heart rate record per clock hour before asking for the next, and remembers how far it got after each page. A sync interrupted half-way therefore resumes where it stopped, and a page written twice updates rather than duplicates. Then the step minutes, written as one steps record per minute; each pull takes the last minute again, because the watch keeps adding late steps to it, and a minute that grew replaces its record. If OpenVitals may not write steps to Health Connect, the steps and floors stay on the watch and the rest of the sync goes on. Each minute is also written as a cadence (steps per minute) and, once your weight is known from Health Connect or the body profile, as an estimate of the calories walking cost above rest. That estimate uses the cadence equation of Moore and colleagues (Med Sci Sports Exerc 2021), which holds for level walking: the extra cost of hills and stairs is not counted, so it tends to come in low. A minute inside a workout that Health Connect holds, a run or a ride, gets no estimate. A run that no app recorded is not recognised, though: its minutes are estimated as fast walking, beyond the range the equation was fitted on. An estimate, once written, stays: a weight entered later, or a workout saved to Health Connect after the sync, does not change the minutes already estimated. Without a weight it is skipped, and the card says what is missing. If you withheld Health Connect access for one of these estimates, the sync writes the rest. The estimate covers the minutes synced once the weight is known and the access given; minutes synced before stay without one. An automatic sync with the app closed and no background access to Health Connect cannot see other apps' weights and workouts, so it writes no estimate for its minutes. Then the ascent minutes, pulled the same way and written as one floors record per minute that had the steps, and the same metres again as elevation gained. Distance is not sent by the watch: the opt-in "distance from steps" setting under Activities turns the watch's steps into distance like any other steps in Health Connect. Then the sleep minutes follow, as the Sleep section describes. The card reports how many heart rate samples and minutes of steps the run brought and how many nights of sleep it estimated, or that there was nothing new. A sync is refused while an activity is being recorded, as for Garmin.
+
+On Android 16 the heart rate sensor sits behind the Health Connect `READ_HEART_RATE` permission rather than `BODY_SENSORS`; the watch app asks for the right one, then for the background grant, on first launch. Without the grant the link still answers, and the watch screen says heart rate access is off.
+
+### Sleep
+
+A Wear OS watch does not hand its sleep to anyone: the vendor's watch app keeps it for the vendor's phone app, and nothing on the watch writes it to the watch's own Health Connect. So the watch app records what a sleep estimate needs and the phone estimates the night, following the published actigraphy methods step by step.
+
+On the watch, one row per clock minute: the accelerometer's movement count (readings whose acceleration jumped, scaled onto the scale the estimator was fitted on; a still wrist counts nothing, a turn in bed a short burst), the per-axis mean and spread of the acceleration, the arm's angle and how much it changed, the minute's mean heart rate and its spread, and flags for the charger, the off-body sensor, a lost pulse and a screen wake-up. The accelerometer needs no permission. A week of minutes is kept.
+
+**Turn on bedtime mode at night.** A sleeping Galaxy Watch8 wakes its processor only every few minutes while the arm is still, and its accelerometer keeps just the last 48 seconds, so on a night without bedtime mode most minutes arrive with no movement in them and the phone may find no night at all. While bedtime mode is on, the watch is on the wrist and off the charger, the watch app keeps the processor awake so every minute is recorded whole; the rest of the day it lets the watch sleep. The watch app's screen says which: recording every minute, paused off the wrist, paused while charging, or a reminder to turn bedtime mode on. The fields are specified in [sleep-minute-features.md](../engineering/sleep-minute-features.md).
+
+On the phone, the same sync pulls the minutes after the heart rate, from the start of the night the last pull reached, so a night is always estimated whole, and runs them through four steps:
+
+1. **Was the watch worn?** A minute on the charger, one the off-body sensor called off the wrist, a pulseless stretch while the heart rate was being recorded, and an hour as still as a table with no pulse anywhere in it (the van Hees accelerometer rule, which the published actigraphy packages use) are not worn. Such a minute can never be sleep, and a night with fewer than three worn hours is not written at all. A watch left on the table or the charger therefore produces nothing.
+2. **When was the night?** The arm angle finds the sleep period (the HDCZA method, validated against polysomnography), and the heart rate may shorten its end but never its start, because the heart rate keeps falling for an hour after falling asleep.
+3. **Which minutes were sleep?** Movement by the Cole-Kripke weights, the heart rate's volatility, whether the arm kept moving, and whether the wrist kept drifting by a degree or so without a movement count, which is how lying awake in bed looks, combined the way Walch and colleagues found raises wake detection on polysomnography-labelled nights, then the standard rescoring rules.
+4. **Which stage?** The same estimator as for a Garmin watch without stages, from the heart rate against its own baseline and its variability, with the wrist's inactivity rhythm as an extra prior.
+
+Each finished night with sleep also gives a resting heart rate: the lowest half-hour average of the heart rate during the night, written to Health Connect at the end of the night. A night still running gets none. It is a nocturnal value, so it sits a little below one measured sitting in a clinic. The app averages the resting heart rates of a calendar day, so a day that already holds one from elsewhere, such as the vendor's app, keeps that one. If the vendor's value arrives after ours, the next sync removes ours. This needs the Health Connect grants to read and write resting heart rate, and in the background the right to read other apps' data; without them nothing is written, and the watch card asks for the grant.
+
+One sleep session with estimated stages is written per night under a fixed id, so the later estimate replaces the earlier as the night fills in. A night whose window already holds a sleep session from anywhere else, the vendor's app through Health Connect or a session entered by hand, is left alone: those win over an estimate. The session's notes say it was estimated by OpenVitals from the watch app's heart rate and movement.
+
+The stages are a heuristic, not a sleep lab: read them as when heart rate was low and steady versus high and variable. The pipeline is evaluated offline against polysomnography-labelled nights (PhysioNet's sleep-accel dataset, 31 adults wearing an Apple Watch in a sleep lab); the thresholds change only with that evaluation's numbers in the commit message. As of 2026-10-08, per minute over the 31 nights: 90% of minutes scored right, 92% of sleep minutes found, 68% of wake minutes found (Cole-Kripke alone finds 56%), the night's start within 9 minutes and its end within 13 minutes on average, total sleep within 23 minutes, and REM told from non-REM 80% of the time; one night of the 31 went unfound because its recording was mostly empty. Naps are not written: one session per night.
+
+While the watch's device screen is open and the watch is worn, its status card shows the heart rate as it happens ("Now: 72 bpm"). The watch measures it for the phone only while someone looks, and nothing live is stored: the same readings arrive with the next sync. Not yet tried on a watch.
+
+Not yet: series beyond heart rate, steps and sleep. Recorded data from the vendor app, if it is installed, still reaches OpenVitals through Health Connect as before.
+
+Verified on 2026-10-07 with a Galaxy Watch8 (Wear OS on Android 16) and a GrapheneOS Pixel 6 Pro that never ran Galaxy Wearable: the watch accepted a plain bond from the phone's Bluetooth settings (it appears twice in the list, once per radio; either entry bonds both), the phone's cached service list then carried the OpenVitals UUID, and the status card got its answer. The bond is Android's, not the vendor app's, so the plan to onboard with the vendor app, install OpenVitals on the watch and then uninstall the vendor app rests on something that holds. Not yet verified: the bond and the watch service surviving a reboot, and Samsung's battery manager leaving a sideloaded service alone overnight. The watch app is installed over adb; see [Install the watch app on a Wear OS watch](../how-to/wear-os-sideload.md), which also covers skipping the vendor onboarding on the watches that allow adb before onboarding (the Galaxy Watch8 does not; it is onboarded once with Galaxy Wearable, which is uninstalled afterwards).
+
+## Experimental Status
+
+Watch support is developed and verified against a single Garmin model. It is offered in the same spirit as [Bluetooth LE sensors](ble-sensors.md): useful, honest about its limits, and not a substitute for the vendor's own app.
+
+- The protocol is not model-specific, and OpenVitals asks each watch what it can do rather than assuming. A watch that does not report find-my-watch gets no Find button; one without a settings tree gets no settings row.
+- Both Garmin transports sync and forward notifications: current multi-link watches and the older direct-GFDI characteristic pair. Live heart-rate and step streaming, and the newer FileSync listing, need the multi-link transport, so an older watch pairs and syncs but has no live readings. Pairing probes the watch and warns when neither transport can be recognized.
+- A file type OpenVitals does not understand is skipped rather than failing the sync.
+- Sync happens by hand, or on a schedule the user chose per watch. Nothing syncs until one of those two says so.
+
+## Pairing A Watch
+
+Settings, Watches shows the paired watches, or "No watch paired" with a Pair a watch button.
+
+1. OpenVitals asks for nearby-device Bluetooth permission where Android requires it, then scans. The watch must be awake and close to the phone. Watches already bonded with the phone appear in the list even when they advertise nothing useful.
+2. Picking a Garmin watch runs a short checklist: pairing with the watch, asking Android for access, and checking what the watch supports.
+3. Android shows its own pairing dialog. The code shown on the watch has to be confirmed.
+4. Android then asks separately whether OpenVitals may access this watch. This step is optional. Allowing it lets Android keep OpenVitals alive while the watch is nearby, so a sync that takes minutes is not interrupted. Declining still pairs the watch, and syncing then works while OpenVitals is open.
+
+The path taken decides what the device becomes. A device added through Settings, Watches is a watch; one added through the Bluetooth LE sensors flow is a live sensor, even when it is physically a smartwatch. The name no longer decides: a Garmin watch added as a sensor behaves exactly like a heart-rate strap.
+
+After pairing, a checklist offers the OS-level permissions a watch benefits from: notification access for forwarding, and exemption from battery optimization so a held link survives the night. Each row explains itself and opens the right system screen; all of them can be declined and granted later.
+
+Android's pairing (the bond) is what proves a device is the user's watch; the Garmin protocol has no check of its own. So OpenVitals connects to a Garmin watch only while that bond exists. If the watch was unpaired in Android's Bluetooth settings, a sync stops with a message that says to remove the watch and add it again.
+
+A watch can be renamed, switched off without unpairing, or removed. Removing it unpairs the watch and forgets which files were already copied, so a future pairing starts fresh. Data already written to Health Connect is kept. Removing the last Garmin watch also deletes the downloaded file copies and the per-minute sleep data, which only serve a paired watch, and the dialog offers to delete the watch-only history (stress, Body Battery, scores) that has no copy in Health Connect. `GarminLocalData` owns all three, and applies their retention at app start as well as inside a sync.
+
+A Garmin Edge bike computer is recognized as a bike computer rather than a watch. It gets a Live sensor section instead of the watch data screen, because broadcast mode is normally only on during a ride.
+
+## Syncing
+
+Tapping a paired Garmin watch opens its device screen, which has a Sync action. The watches list itself shows each watch's last sync time.
+
+The watch hands over the files it recorded since last time and OpenVitals imports them. Each file is saved on the phone before the watch is told it may archive it, and a file is only marked as synced once its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed. A watch that lists nothing on the first try is asked a second way, so a slow watch is not written off.
+
+The device screen shows whether the watch has ever been synced and when it last was. If the link drops mid-sync, whatever arrived is still imported, but the run is reported as interrupted so a later sync retries the unfinished work.
+
+The dashboard carries a watch tile showing the most recently synced watch with its battery, last sync time, and a sync button, so a sync does not require a trip through Settings. While live readings are streaming (see below), the tile shows the current heart rate and step count instead of the last sync time.
+
+### When A Watch Will Not Connect Or Sync
+
+Since 2.14.0 the link follows what Gadgetbridge does for watches that had trouble connecting or syncing (first reported on a Fenix 6):
+
+- It writes to each characteristic the way the characteristic asks, with a response when the watch offers one, instead of always writing without one.
+- A dial that Android's Bluetooth stack fails, such as GATT status 133, is retried after a short settle pause: up to three connection attempts in all. A watch that does not answer at all is not redialled.
+- A whole sync may run for up to 30 minutes, enough for a first sync of a watch holding months of activities. The per-stage timeouts still end a stalled step much sooner.
+- A watch that never sends its configuration still completes the handshake, from the capabilities record it pushes as FIT messages instead.
+
+The device screen has a **Large Bluetooth packets** switch, on by default and kept per watch. Larger packets make a sync much faster; turning the switch off skips the request and keeps Bluetooth's default packet size, for a watch that keeps dropping the link or never gets a sync going.
+
+### Automatic Sync
+
+"Automatic sync", on the device screen of a Garmin or Wear OS watch, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
+
+A scheduled sync runs while the app is closed. Health Connect then lets OpenVitals read other apps' records only with its "Access data in the background" grant. Without it the watch's data is still saved, but everything built from all apps' records, such as Body Energy and the history caches, waits until the app is opened. So switching Automatic sync on asks for that grant when it is missing, and the card keeps a line and an "Allow background access" button for as long as it is.
+
+A scheduled run does exactly what tapping Sync does, with three differences:
+
+- It is quiet. A run that could not reach the watch leaves no error on screen; the last sync time on the device screen and the watches list is what says whether the schedule is working. A watch out of range at 3am is not a fault to report.
+- It does not linger on the link afterwards. A manual sync holds the connection open a few extra seconds so the watch can run its own errands, notably fetching weather; a scheduled one hangs up as soon as the files are in, because that time costs radio on both sides.
+- It refuses rather than queues. If the radio is busy, an activity recording is in progress, or a sync is already running, the run steps aside and waits for the next one. It retries a couple of times on a short backoff first, since a watch that just walked out of range is usually back within minutes.
+
+The exact moment is Android's to choose, not the app's. The schedule is a floor, not an alarm: a run can arrive late, and the phone being in Doze, below its low-battery mark, or out of range of the watch all delay it. Granting the battery-optimization exemption the pairing checklist offers is what keeps overnight runs close to their schedule. The schedule survives a reboot and an app update without being re-armed.
+
+One thing does wait for the app to be opened. Body Energy is recomputed from Health Connect after a sync, and reading Health Connect in the background needs its own grant, so on a phone where that grant is missing a scheduled sync lands the data and leaves the recomputation to the next time the app is open. Nothing is lost either way.
+
+Nothing about this changes what is written or where. The same importer runs, the same watermarks apply, and syncing the same day twice still does not double anything.
+
+If "Stay connected" is also on, the held link is given up for the duration of the run and re-established afterwards, the same handover a manual sync uses.
+
+### Recorded Activities
+
+Activity files go through the same importer a hand-picked folder of FIT files uses, so imports are batched and a single bad file does not stop the rest. See [FIT files import](fit-files-import.md). The same path applies [elevation correction](elevation-correction.md), so a watch with a drifting barometer gets its altitude from imported tiles.
+
+Activities are written to Health Connect as exercise sessions with their routes and series, and appear on the normal activity screens alongside data from any other source. A file is skipped when the Health Connect write permission it needs is missing.
+
+### Wellness Data
+
+Wellness files are split by where the data belongs.
+
+Written to Health Connect, and therefore visible on the usual dashboard and detail screens:
+
+- Sleep sessions with stages, and naps.
+- Heart rate series and resting heart rate.
+- Heart rate variability: the nightly summary, and the five-minute values the watch records.
+- Respiratory rate.
+- VO2 max.
+- Blood oxygen: the Pulse Ox readings the watch records, and the value from a Health Snapshot recording.
+- Respiratory rate from a Health Snapshot recording.
+- Basal metabolic rate.
+- Steps, distance, and active calories through the day.
+- Body weight, when the watch relays readings from a paired Garmin scale.
+
+Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, functional threshold power, lactate threshold, hill and endurance scores, and the watch's own verdict on a night's sleep, restless moments included.
+
+#### Estimated sleep stages
+
+Some older watches, the Venu SQ for one, never record sleep stages. Garmin works those out on its servers, which OpenVitals never talks to. What such a watch does hand over is a heart rate and a movement count for every minute. OpenVitals keeps those minutes in its own storage for 45 days and estimates the night on the phone: when sleep began and ended, and a light, deep, REM and awake timeline.
+
+- One session per night, written to Health Connect once the estimator finds at least three hours of sleep. It is rewritten in place as the night's files arrive over later syncs, so a night synced at 3am and again at 8am is one session, not two.
+- The session's notes say the stages are estimated. They show when heart rate was low and steady and when it was high and variable, not what a sleep lab would see. The session starts at sleep onset, not bed time. Its end can be off by twenty or thirty minutes on a restless morning.
+- Naps are not estimated. A watch that records its own stages is left alone; its stages always win.
+
+Syncing the same day twice does not double anything. Files already imported are not downloaded again, Health Connect records carry a stable identifier so a record that does arrive twice updates in place, and watch-only measurements are keyed on the measurement and its instant.
+
+#### The step, distance and calorie counters
+
+These three are the awkward ones. The watch reports them as running daily
+totals, so a file only says where the counter stood, never what happened. They
+are accumulated across every file of a sync and differenced once at the end
+against a stored watermark, which is what lets an interval record say *when* the
+walking happened rather than drawing the day as one straight ramp from midnight.
+
+Two properties are load-bearing, and both were learned the hard way:
+
+- **Records never overlap** — not within a sync and not across two. A record's
+  end follows the data, so a gap in the counters makes it end where the gap
+  ends, past later slots on the 15-minute grid. A sync resuming inside one of
+  those slots therefore starts its first record at the point it resumed, not at
+  the slot's edge. This matters more than it sounds: Health Connect **discards
+  the overlapping span when it aggregates**, so two records sharing a minute
+  report less between them than either claims. A real day read 889 steps while
+  its own records summed to 1,007.
+- **A day differences from where the day before it ended**, per activity type,
+  not from zero — the watch does not roll its counters over at local midnight.
+
+A gap between the live step count and the synced total is normal and is not
+either of the above: the live reading is the wrist's current number, and the
+minutes since the watch last closed a monitoring file have not been handed over
+yet. They arrive on the next sync.
+
+## Watch Data Screen
+
+The Data action on a Garmin watch opens the watch-only measurements: the things the watch makes that Health Connect has no place for. Everything else goes to Health Connect and is not repeated here.
+
+Today:
+
+- Stress, with today's average.
+- Body Battery, with today's highest value. This also feeds the app's own Body Energy calibration; see [Body Energy](body-energy.md).
+- Intensity minutes, counting vigorous minutes double, against the 150-minute weekly target. The week starts on Monday.
+
+Last night:
+
+- Sleep score.
+- Time awake.
+- Times woken.
+- Restless moments.
+- Sleep need, compared with the usual nightly need when the watch reported one.
+
+Training:
+
+- Recovery time.
+- Training readiness.
+- Training load, showing the acute value with the chronic value beside it.
+- Functional threshold power, in watts.
+- Lactate threshold, in watts, with the heart rate it was reached at.
+- Hill score, with its strength and endurance parts.
+- Endurance score.
+
+A footer names the measurements this watch did not send, so an absent row reads as "your watch does not report this" rather than "the app lost it". Until a first sync the screen is empty and says so.
+
+## Notifications On The Watch
+
+Phone notifications can be forwarded to a paired Garmin watch that supports it. The feature is off by default and does nothing at all until it is switched on: no reading, no Bluetooth link, no background work.
+
+1. Open the watch, then Notifications, and turn on "Send notifications to the watch".
+2. OpenVitals shows a disclosure explaining exactly what it will read and where it goes, and asks for confirmation.
+3. It then opens Android's notification access screen. Access can only be granted there; OpenVitals cannot request it from inside the app.
+4. Coming back to OpenVitals, the switch turns itself on once access has been granted.
+
+### The App Blocklist
+
+"Apps to silence" lists the apps installed on the phone. Everything sends to the watch until an app is switched off, so the list is a blocklist rather than an allow-list.
+
+Some notifications never reach the watch regardless: ongoing and foreground-service notifications, group summaries, notifications an app marks as local to the phone, notifications with neither a title nor a body, minimum-importance channels, anything at all while the phone's own Do Not Disturb is on, and OpenVitals' own notifications.
+
+### Calls
+
+A ringing call is the one ongoing notification that is forwarded. It arrives as the dialer's own notification, so no phone permission is needed and nothing reads the call log. The watch shows it as an incoming call with the caller as the title. Once the call is answered, or when it was placed from the phone, it leaves the wrist; only ringing is shown. A dialer that uses Android's call-style notification hands over its answer and decline buttons, and the watch draws them in its fixed places. An older dialer's buttons arrive as ordinary labelled actions.
+
+### Acting From The Wrist
+
+Dismissing on the watch clears the notification from the phone. Where the posting app publishes them, a reply action and up to five of the app's own buttons are offered. Actions that would merely open a screen on the phone are not offered, because Android does not let a background app launch them; the button would report success and do nothing.
+
+A watch that does not recognise the posting app asks the phone what it is called, and the phone answers with the app's name. Left unanswered, such a notification never appears.
+
+### The Link
+
+While forwarding is on, the link to the watch is held open for as long as the watch is in range, which is how Garmin watches expect a phone to behave. If the watch goes out of range the link is re-established with a backoff, and anything that arrived while it was away is delivered when it returns.
+
+## Staying Connected
+
+Notification forwarding holds the link only while it has work. "Stay connected", on the watch's device screen, holds it always: whenever the watch is in range, the phone keeps the connection open, the way Garmin's own app behaves. Android's companion-device presence wakes OpenVitals when the watch comes back into range, so the link returns promptly rather than on a retry timer.
+
+On by default — a held link is what the features below ride on, and a watch that behaves as its own app would is the expected thing rather than the surprising one. It costs battery on both sides, so the switch is there; turning it off is remembered, and a later version's default will not undo that.
+
+### Live Readings
+
+With Stay connected on, a second switch streams the watch's live heart rate and step count to the phone. The current value appears on the watch's device screen and on the dashboard watch tile ("86 bpm now"). The values live in memory only and disappear when the link drops. Nothing live is ever stored; the same measurements arrive later through the normal sync, with the watch's own timestamps.
+
+Off by default, because an open stream spends the watch's battery.
+
+## Weather On The Watch
+
+The watch's weather glance asks the phone for weather, and OpenVitals answers from a weather app on the phone, not from the internet. Any app that broadcasts the Gadgetbridge generic-weather format works; [Breezy Weather](https://github.com/breezy-weather/breezy-weather) is the tested one (enable its Gadgetbridge broadcast and add OpenVitals to its recipients). The snapshot is considered fresh for six hours. Any app on the phone can send this broadcast, so the receiver caps what it reads: 512 KB after unzipping, 16 levels of nesting, 72 hours and 16 days of forecast. A payload past a cap is dropped.
+
+The location the watch shows is the weather app's location. OpenVitals also answers the watch's own position asks from the phone's last known location, which is what arms the glance in the first place.
+
+Known limitation: on the model verified against, the glance arms (it stops saying "Reconnect to phone") but does not always fetch.
+
+## Find My Phone
+
+Works in both directions. The Find action on the device screen makes the watch alert; the watch's own find-my-phone feature makes the phone ring at alarm volume, with a notification to stop it. The phone rings even when silenced, because a phone lost in a couch cushion is the whole point.
+
+## Music Controls On The Watch
+
+"Music controls on watch", on the watch's device screen, puts the phone's player on the watch's music controls. Off by default. The watch shows the player's name, the track, artist and album, and how far into the track playback is. From the wrist the wearer can play, pause, skip to the next or previous track, skip forward or back within one, and change the media volume.
+
+Android shows the phone's players only to an app with notification access, the same grant notification forwarding uses. Switching the feature on without it opens Android's settings, and the card says so while the grant is missing. The player followed is the one Android ranks foremost: the one that is playing, when any is. With no player running, a play button on the wrist acts as a headset button does and wakes the last one.
+
+Everything rides the held link, so it needs "Stay connected". The watch asks which commands the phone takes once per connection, so switching the feature reconnects the watch. Track details go to the watch over Bluetooth and nowhere else, and are never stored. A player's steady position reports are not forwarded: the watch runs its own clock, and only a change, a pause or a seek is sent.
+
+## CoMaps Guidance On The Watch
+
+"CoMaps guidance on watch", on the watch's device screen, puts the turn-by-turn guidance CoMaps is giving (see [CoMaps navigation context](comaps-navigation-context.md)) on the wrist. Off by default, and complete in itself: no recording has to be running, and the activity-recording CoMaps integration does not have to be on. Switching it on asks for CoMaps' own permission, and the card says so if that grant is declined or later revoked. Ride with a route set in CoMaps and nothing else switched on, and the turns still reach the watch; record a GPS activity at the same time and the wrist and the phone's turn strip show the same guidance.
+
+Garmin watches have no turn-by-turn channel a phone can drive, so the guidance travels as a notification: the next manoeuvre as the title ("Turn left", "Roundabout, exit 3", "Arrive at destination"), the distance to it as the subtitle, and the street, the distance left and the time left as the body. One notification is added when guidance starts and updated in place from then on, so the watch does not buzz at every fix; it is withdrawn the moment guidance stops — the route ended, the toggle went off, the watch was forgotten — so a finished route never lingers on the wrist.
+
+A new manoeuvre or street reaches the watch at once. A countdown that merely ticked down is refreshed at most every five seconds, and a reading that says nothing new is not sent at all. Distances and times are shown as CoMaps formatted them, so the wrist and the phone always agree on units. The notification rides the same link forwarded phone notifications use and needs nothing more than a paired Garmin watch: no notification access, no Stay connected.
+
+## Calendar On The Watch
+
+"Calendar on watch", on the watch's device screen, feeds the watch's calendar glance from the phone's calendar. Off by default; switching it on asks for Android's calendar permission.
+
+The watch asks for a window of events and names its own limits (how many events, how long each field may be), and the phone answers within them. Recurring events arrive as their occurrences, declined and cancelled meetings stay off the wrist, and all-day events land on the wearer's midnight. Events go to the watch over Bluetooth and nowhere else; they are never stored and there is no network to send them over.
+
+If the calendar permission is later revoked in system settings, the row says so, and the watch's asks are answered with an empty calendar rather than ignored.
+
+## GPS Ephemeris
+
+Ephemeris, a few days of predicted satellite orbits, is what turns a minutes-long cold GPS fix into a seconds-long one. Garmin's own app downloads it from Garmin silently; OpenVitals has no internet access and does not grow any for this. Instead, the user downloads the file, imports it on the watch's device screen, and the phone hands it over when the watch asks.
+
+The imported file is recognized by its contents (a constellation archive, an rxNetworks blob, or a Sony CPE blob; which one a watch wants is decided by its GPS chipset), and the URL the watch asked for is shown on the screen, since that URL is the only way to know which format to fetch. A stale file is refused rather than served: an out-of-date orbit prediction is worse for the watch than the almanac it already has.
+
+## Send A Point
+
+A Garmin watch that can store locations gets a "Send a point" row. The form takes a name and a position, and the watch keeps the point in its saved locations, where it can be picked as a navigation target. It is meant for a position found on the phone that is wanted on the wrist: a geocache, a trailhead, a parked car.
+
+The coordinates field reads what people actually paste:
+
+- decimal degrees, such as `48.8584, 2.2945`, with a point or a decimal comma;
+- degrees and decimal minutes, the geocaching format, such as `N 48° 51.504 E 002° 17.670`;
+- degrees, minutes, and seconds.
+
+South and west are a minus sign or a hemisphere letter, never both. Only N, S, E, and W are letters: `O` is west in Spanish and east in German, so it is refused. The field shows the position it read, or says what is wrong, before anything is sent.
+
+A maps app can hand a place over instead. OpenVitals appears as "Send to watch" for a `geo:` link and in the text share sheet, and reads `geo:` links, Google Maps, OpenStreetMap, and OsmAnd URLs, and bare coordinates in the text. A short link such as `maps.app.goo.gl` holds no position, and the app has no internet access to resolve it; the form opens with the name filled in and says the coordinates are missing. A shared place only fills the form. Nothing goes to the watch until Send is tapped.
+
+The point travels as a small FIT location file over a link opened for that one send. Each way it can fail has its own message: the watch already has the point, has no room, does not accept points, or stopped answering. A point with no name is named by its position.
+
+## Settings On The Watch
+
+A Garmin watch that reports a settings tree gets a "Settings on the watch" row, plus a direct Alarms action.
+
+None of these menus are built into OpenVitals. The watch sends its own menu — screens, rows, choices, and current values, already in the language the watch is set to — and the app renders what arrives. A screen OpenVitals has never seen still works, and nothing needs updating when the watch's firmware changes.
+
+Switches, option lists, times, and sub-screens can be changed, and every change applies to the watch itself and is read back to confirm it. Rows the phone cannot act on are shown rather than hidden, because seeing a greyed row says the watch has the setting and the app cannot reach it, which is true.
+
+When the watch cannot be reached, refuses a change, or does not answer, the screen says which of those happened instead of claiming the change worked.
+
+## Alarms Without A Settings Tree
+
+An older Garmin watch, such as the first Instinct, reports no settings tree, so none of its settings can be shown or changed. Alarms are the one exception: its Alarms action opens a list kept on the phone.
+
+The list holds up to ten alarms. Each has a time, the days it repeats on or none for a single ring, a sound or vibration choice, the backlight, and one of the watch's preset labels. Edits are saved on the phone at once. Nothing reaches the watch until "Send to watch" is tapped, and the screen says when the list has changes the watch does not have.
+
+A send travels as a small FIT settings file over a link opened for that one send, and it replaces every alarm on the watch. The watch's own alarms cannot be read, so an alarm set on the watch does not show in the list and is lost on the next send.
+
+## Find My Watch
+
+A watch that reports the capability gets a Find action. It makes the watch alert so it can be located, for about a minute by default, and the same button stops it early. If the watch never answers, the screen says so and suggests bringing it closer.
+
+## One Radio At A Time
+
+Sync, find, sending a point or the alarm list, settings on the watch, music controls, and notification forwarding all speak to the same watch over the same Bluetooth link, and only one of them can hold it.
+
+- A user-initiated action asks for the link and waits a few seconds for whatever holds it to let go. Notification forwarding, the usual holder, gives it up on its next check and resumes afterwards.
+- If the link cannot be taken in time, the action reports that the watch is busy and suggests trying again in a moment.
+- Sync, Alarms, Find, and sending a point are disabled while a sync, a find, or a send is already running.
+- A live activity recording blocks a watch sync, a point send, and an alarms send outright. The recording has to be finished or discarded first.
+
+Different devices do not contend with each other, so a Bluetooth LE sensor is unaffected by what a watch is doing.
+
+## Privacy
+
+Nothing leaves the phone. The watch is read over Bluetooth, the files are parsed on the device, and the results go to Health Connect or to OpenVitals' own local database.
+
+Notification text is read on the device, held in memory only while it is needed, and sent only to the paired watch. It is never written to a file or a database. Turning the feature off, or revoking notification access in Android settings, stops it immediately.
+
+Calendar events follow the same rule: read only while answering a watch that asked, held in memory only, sent only to the watch, never stored. Weather comes from a weather app on the phone and goes only to the watch; OpenVitals itself never talks to a weather service. What the phone is playing is read only while music controls are on for a paired watch, goes only to that watch, and is never stored.
+
+See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for the full boundary, including why the companion association is asked for and why it is optional.
+
+## Known Limitations
+
+- Verified end to end against one Garmin model. Other recent models are expected to work, but are untested.
+- Older single-link transport watches cannot sync.
+- There is no background sync. Every sync is one the user asked for.
+- The Connected and Not connected labels reflect whether the watch is switched on in OpenVitals, not whether a Bluetooth link is open right now.
+- WearOS watches sync heart rate and an estimated sleep session per night, by hand or on the automatic schedule. Steps and other series, notification forwarding, watch settings, find and sending a point are Garmin-only.
+- Music controls are confirmed on one Garmin model. A volume change made on the phone reaches the watch only with the next player change.
+- Sending the alarm list has not yet been confirmed on a watch. Whether an empty list clears the watch's alarms is unknown.
+- Sending a point has not yet been confirmed on a watch. Only one point is sent at a time, and points already on the watch cannot be listed, edited, or removed from the phone.
+- Health Snapshot values only exist if a Health Snapshot has been recorded on the watch.
+- Battery percentage is read during a sync and shown on the device screen and the dashboard tile; charging state is not read.
+- The weather glance on the verified model arms but does not always fetch; see Weather On The Watch.
