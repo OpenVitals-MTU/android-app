@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
 import tech.mmarca.openvitals.devices.garmin.GarminSendFileResult
 import tech.mmarca.openvitals.devices.garmin.GarminWaypoint
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
+import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
@@ -150,12 +151,10 @@ class WatchSendPointViewModelTest {
         // EXPLORE_SYNC alone is enough, as in Gadgetbridge.
         stateStore.recordCapabilities(explore.id, setOf(GarminCapability.SYNC, GarminCapability.EXPLORE_SYNC))
         repo.addDevice(
-            displayName = "Galaxy Watch",
-            address = "A8:D1:62:BE:3A:3B",
-            bluetoothName = "Galaxy Watch8",
-            capabilities = emptySet(),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.WEAROS,
+            displayName = "Strap",
+            address = "11:22:33:44:55:66",
+            bluetoothName = "TICKR",
+            capabilities = setOf(BleSensorCapability.HEART_RATE),
         )
 
         val state = viewModel().uiState.value

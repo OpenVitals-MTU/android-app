@@ -173,14 +173,6 @@ class GarminWatchActionsControllerTest {
 
     @Test
     fun `a find on a non-GFDI device is a no-op`() = runTest {
-        val wearos = repo.addDevice(
-            displayName = "Galaxy Watch",
-            address = "A8:D1:62:BE:3A:3B",
-            bluetoothName = "Galaxy Watch8",
-            capabilities = emptySet(),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.WEAROS,
-        )
         val sensor = repo.addDevice(
             displayName = "Strap",
             address = "11:22:33:44:55:66",
@@ -189,7 +181,6 @@ class GarminWatchActionsControllerTest {
         )
         val (controller, _) = harness()
 
-        assertNull(controller.toggleFind(wearos.id))
         assertNull(controller.toggleFind(sensor.id))
         assertNull(controller.state.value.findingDeviceId)
         assertNull(seenFindAddress)
@@ -266,17 +257,15 @@ class GarminWatchActionsControllerTest {
 
     @Test
     fun `a send to a device that is not a Garmin watch is a no-op`() = runTest {
-        val wearos = repo.addDevice(
-            displayName = "Galaxy Watch",
-            address = "A8:D1:62:BE:3A:3B",
-            bluetoothName = "Galaxy Watch8",
-            capabilities = emptySet(),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.WEAROS,
+        val sensor = repo.addDevice(
+            displayName = "Strap",
+            address = "11:22:33:44:55:66",
+            bluetoothName = "TICKR",
+            capabilities = setOf(BleSensorCapability.HEART_RATE),
         )
         val (controller, _) = harness()
 
-        assertNull(controller.sendPoint(wearos.id, point))
+        assertNull(controller.sendPoint(sensor.id, point))
         assertNull(controller.sendPoint("no such device", point))
         assertEquals(WatchFileSendUiState(), controller.pointState.value)
     }

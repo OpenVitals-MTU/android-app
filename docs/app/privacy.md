@@ -31,6 +31,8 @@ Every device feature is built around keeping that true:
 
 ## Paired Devices
 
+Watch and scale support is moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app that writes what the devices record to Health Connect; OpenVitals then reads it like any other source. The in-app Garmin watch and Xiaomi scale support described here is deprecated and will be removed in a coming release. While it lasts, this is what it does with your data.
+
 ### Garmin Watches
 
 A paired watch's recorded files are read over Bluetooth and imported on the device. Wellness series a watch records but Health Connect has no type for, such as stress and Body Battery, are stored in the app's own local database; the rest is written to Health Connect. Nothing about a watch is sent off the phone.

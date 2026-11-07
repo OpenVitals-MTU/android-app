@@ -17,7 +17,7 @@ Start here when you need to understand the app, a feature, or the implementation
 Recently added feature pages:
 
 - [Elevation correction](features/elevation-correction.md): imported routes take their altitude from SRTM tiles stored on the phone.
-- [Watches](features/watches.md): experimental Garmin and WearOS support, watch sync, watch-only metrics, notification forwarding, watch settings, and find-my-watch.
+- [Watches](features/watches.md): the deprecated in-app Garmin support (sync, watch-only metrics, notification forwarding, watch settings, find-my-watch) and the move to OpenWatch.
 - [Sync with another phone](features/device-sync.md): copying Health Connect records between two phones over Bluetooth.
 
 ## Contribute And Architecture

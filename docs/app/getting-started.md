@@ -54,6 +54,8 @@ Recording notifications, Apple Health import progress, and reminders use notific
 
 ## Pairing A Watch
 
+Install [OpenWatch](https://github.com/Hale-MTU/OpenWatch) to sync a Garmin or Wear OS watch or a Xiaomi S400 scale. It writes what they record to Health Connect, and OpenVitals shows it from there. The in-app pairing described below still works for Garmin watches, but it is deprecated and will be removed in a coming release.
+
 Settings, Watches pairs a Garmin watch over Bluetooth and copies what the watch recorded into OpenVitals.
 
 - Keep the watch awake and close to the phone while scanning.

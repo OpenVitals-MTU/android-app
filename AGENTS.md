@@ -42,11 +42,10 @@ The global Browse feature has been removed. Entries and sessions should be brows
 
 These features already show the intended direction.
 
-Beyond the metric screens, the app now carries three subsystems that are not metric features and do not follow the period-detail pattern:
+Beyond the metric screens, the app now carries a few subsystems that are not metric features and do not follow the period-detail pattern:
 
-- `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, notification forwarding, and the listener for a bathroom scale that only broadcasts (`devices/xiaomi`: woken by Android as a companion device, it holds a short foreground service for the two seconds the result is on the air). `features/watches` and `features/scales` are its UI.
+- `devices/` — the device layer, deprecated: watches and scales are moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect, and this layer goes once that move is complete. Keep it working, fix bugs, but add no feature to it and promote it nowhere. It holds the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, notification forwarding, and the listener for a bathroom scale that only broadcasts (`devices/xiaomi`: woken by Android as a companion device, it holds a short foreground service for the two seconds the result is on the air). `features/watches` and `features/scales` are its UI.
 - `features/devicesync/` — phone-to-phone Health Connect sync over Bluetooth Classic RFCOMM.
-- `wearlink/` — the `:wearlink` Gradle module: the phone-to-watch line protocol, framing and trust token, pure Kotlin, compiled into both `:app` and `:wear`. Protocol changes go there, never into a copy.
 - `domain/` — the `:domain` Gradle module: the app-local pure code (`domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report`, `domain/medical`, and `core/period`, `core/fit`, `core/geo`, `core/stats`, `core/export`, `core/privacy`), with the same package names as the app. It exists so its lint and tests run beside the app's. Nothing in it may import `data/`, `healthconnect/`, `features/` or `ui/`; `domain/query` and `domain/usecase` stay in `:app` because they do.
 - `data/migration/` — a one-time Flutter-to-Kotlin data importer that runs in two phases from `OpenVitalsApp.onCreate()`. Its ordering around `super.onCreate()` is load-bearing; read the architecture doc before touching startup.
 

@@ -6,29 +6,18 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.presentation.ScreenError
-import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsImport
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsKind
@@ -37,11 +26,6 @@ import tech.mmarca.openvitals.devices.garmin.GarminAgpsStore
 import tech.mmarca.openvitals.devices.garmin.GarminCapability
 import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
-import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
-import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
-import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
-import tech.mmarca.openvitals.devices.wearos.WearOsLinkSnapshot
-import tech.mmarca.openvitals.devices.wearos.WearOsLinkStore
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
@@ -93,13 +77,6 @@ data class WatchDeviceUiState(
     val agps: GarminAgpsState = GarminAgpsState(),
     /** The result of the last ephemeris import, until the next one. */
     @StringRes val agpsMessage: Int? = null,
-    /** Wear OS connection and app responsiveness state. */
-    val wearOsStatus: WearOsCompanionStatus =
-        WearOsCompanionStatus(),
-    /** True while a Wear OS status check / ping is in flight. */
-    val isCheckingWearOsStatus: Boolean = false,
-    /** Why the last Wear OS check failed. [ScreenError.PermissionDenied] gets a grant affordance. */
-    val wearOsError: ScreenError? = null,
 ) {
     /** Whether the watch declared [capability]. Unknown means show: a never-synced watch has no list. */
     fun supports(capability: GarminCapability): Boolean =
@@ -121,7 +98,6 @@ class WatchDeviceViewModel @Inject constructor(
     private val actionsController: GarminWatchActionsController,
     private val sensorCoordinator: BleSensorCoordinator,
     private val onboardGarminWatch: OnboardGarminWatchUseCase,
-    private val onboardWearOsWatch: OnboardWearOsWatchUseCase,
     private val notificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge,
     private val realtimeStore: tech.mmarca.openvitals.devices.garmin.GarminRealtimeStore,
     private val agpsStore: GarminAgpsStore,
@@ -135,8 +111,6 @@ class WatchDeviceViewModel @Inject constructor(
     private val garminLocalData: tech.mmarca.openvitals.devices.garmin.GarminLocalData,
     private val healthConnectManager: tech.mmarca.openvitals.healthconnect.HealthConnectManager,
     private val dispatchers: tech.mmarca.openvitals.core.performance.DispatcherProvider,
-    private val wearOsCompanionManager: WearOsCompanionManager,
-    private val wearOsLinkStore: WearOsLinkStore,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
@@ -182,43 +156,6 @@ class WatchDeviceViewModel @Inject constructor(
         .combine(agpsStore.agps) { state, agps -> state.copy(agps = agps) }
         .stateInViewModel(initial = WatchDeviceUiState())
 
-    /**
-     * A Wear OS watch's heart rate as it happens, null while none arrives.
-     * Streams only while the screen collects it, so the watch's sensor runs
-     * unbatched only while someone looks.
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val wearOsLiveHeartRateBpm: StateFlow<Int?> = deviceRepository.devicesFlow
-        .map { devices -> devices.firstOrNull { it.id == deviceId }?.takeIf { it.isWearosWatch } }
-        .distinctUntilChanged { old, new -> old?.address == new?.address && old?.bluetoothName == new?.bluetoothName }
-        .flatMapLatest { device ->
-            device?.let { wearOsCompanionManager.liveHeartRate(it.address, it.bluetoothName) } ?: flowOf(null)
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(LIVE_STOP_TIMEOUT_MS), null)
-
-    init {
-        // The first check runs once the device has loaded; later ones are by hand.
-        viewModelScope.launch {
-            if (uiState.first { it.device != null }.device?.isWearosWatch == true) checkWearOsStatus()
-        }
-        // A sync that ends in a typed failure updates the status row without another ping.
-        viewModelScope.launch {
-            wearOsLinkStore.snapshots.collect { snapshots ->
-                val snapshot = snapshots[deviceId] ?: return@collect
-                localState.update { state ->
-                    state.copy(
-                        wearOsStatus = state.wearOsStatus.copy(
-                            appStatus = snapshot.status,
-                            watchName = snapshot.watchName ?: state.wearOsStatus.watchName,
-                            bondLost = snapshot.bondLost,
-                            lastCheckedAt = snapshot.checkedAt,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-
     /** Takes in an ephemeris file. Its contents say what it is; the message says why not. */
     fun importAgps(uri: android.net.Uri) {
         viewModelScope.launch {
@@ -239,31 +176,6 @@ class WatchDeviceViewModel @Inject constructor(
     fun forgetAgps(kind: GarminAgpsKind) {
         agpsStore.forget(kind)
         localState.update { it.copy(agpsMessage = null) }
-    }
-
-    /** Checks whether the Wear OS watch is paired and its OpenVitals app answers. */
-    fun checkWearOsStatus() {
-        val device = uiState.value.device ?: return
-        if (!device.isWearosWatch || localState.value.isCheckingWearOsStatus) return
-        localState.update { it.copy(isCheckingWearOsStatus = true) }
-        viewModelScope.launch {
-            try {
-                val status = wearOsCompanionManager.checkWearOsWatchStatus(
-                    targetAddress = device.address,
-                    targetName = device.bluetoothName,
-                )
-                localState.update { it.copy(wearOsStatus = status, wearOsError = null) }
-                wearOsLinkStore.record(
-                    device.id,
-                    WearOsLinkSnapshot(status.appStatus, watchName = status.watchName, bondLost = status.bondLost, checkedAt = Instant.now()),
-                )
-            } catch (e: Exception) {
-                val error = e.toScreenError(logTag = TAG, logMessage = "Wear OS status check failed")
-                localState.update { it.copy(wearOsError = error) }
-            } finally {
-                localState.update { it.copy(isCheckingWearOsStatus = false) }
-            }
-        }
     }
 
     /** Companion mode. The bridge owns the pref, presence observation and the held link together. */
@@ -423,8 +335,8 @@ class WatchDeviceViewModel @Inject constructor(
             deviceRepository.devices.any { it.id == deviceId && it.isGarminGfdi }
 
     /**
-     * Removes the watch: registry row, Garmin state or a Wear OS watch's link token, and the
-     * OS-level bond or association, fire and forget.
+     * Removes the watch: registry row, Garmin state, and the OS-level bond or
+     * association, fire and forget.
      * With the last Garmin watch go its file copies and sleep minutes, and, when the user
      * ticked it, the watch-only history ([deleteWatchHistory]).
      */
@@ -446,11 +358,6 @@ class WatchDeviceViewModel @Inject constructor(
                     runCatching { garminLocalData.clearAfterLastWatchRemoved(deleteWatchHistory) }
                 }
             }
-        } else if (device.isWearosWatch) {
-            wearOsLinkStore.clear(deviceId, device.address)
-            housekeepingScope.launch {
-                runCatching { onboardWearOsWatch.forget(device.address) }
-            }
         }
     }
 
@@ -462,8 +369,3 @@ class WatchDeviceViewModel @Inject constructor(
         return state.asStateFlow()
     }
 }
-
-private const val TAG = "WatchDeviceViewModel"
-
-/** Keeps the live stream through a rotation; longer, and the watch's sensor runs for nothing. */
-private const val LIVE_STOP_TIMEOUT_MS = 5_000L

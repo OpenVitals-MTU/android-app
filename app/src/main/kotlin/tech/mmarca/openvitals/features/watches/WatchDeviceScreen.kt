@@ -113,7 +113,6 @@ fun WatchDeviceScreen(
     )
     // A sync right after a grant writes what it now may, and replaces the card's "not written" line. Not after a
     // refusal: that would hold the watch link for a run that ends where it began.
-    val syncGrantLauncher = rememberHealthConnectPermissionLauncher(onGranted = viewModel::syncNow)
 
     if (state.showMusicDisclosure) {
         NotificationAccessDisclosureDialog(
@@ -146,11 +145,6 @@ fun WatchDeviceScreen(
         contract = ActivityResultContracts.RequestPermission(),
     ) { viewModel.refreshCoMapsPermission() }
 
-    // Nearby devices (API 31+): without it the phone cannot see the bond or open the link.
-    val bluetoothPermission = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted -> if (granted) viewModel.checkWearOsStatus() }
-
     val ephemerisPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::importAgps) }
@@ -158,7 +152,7 @@ fun WatchDeviceScreen(
     var showRenameDialog by rememberSaveable { mutableStateOf(false) }
     var showRemoveDialog by rememberSaveable { mutableStateOf(false) }
 
-    // Only a Garmin GFDI device has sync, settings and find. WearOS speaks none of it.
+    // Only a Garmin GFDI device has sync, settings and find.
     val isGarmin = device.isGarminGfdi
     // A bike computer records rides, not wrist wellness; its Data view is hidden.
     val isBikeComputer = device.isBikeComputer
@@ -177,23 +171,6 @@ fun WatchDeviceScreen(
             isBikeComputer = isBikeComputer,
             onRename = { showRenameDialog = true },
         )
-
-        if (device.isWearosWatch) {
-            val liveHeartRateBpm by viewModel.wearOsLiveHeartRateBpm.collectAsStateWithLifecycle()
-            SectionHeader(stringResource(R.string.settings_watch_wearos_status_section))
-            WearOsStatusCard(
-                status = state.wearOsStatus,
-                error = state.wearOsError,
-                isChecking = state.isCheckingWearOsStatus,
-                onCheck = viewModel::checkWearOsStatus,
-                onGrantBluetooth = {
-                    bluetoothPermission.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
-                },
-                liveHeartRateBpm = liveHeartRateBpm,
-            )
-            SectionHeader(stringResource(R.string.settings_watch_wearos_sync_section))
-            WearOsSyncCard(device, state.sync, onSync = viewModel::syncNow, onAllowGrants = syncGrantLauncher.launch)
-        }
 
         if (isGarmin) {
             ActionsRow(
@@ -271,7 +248,7 @@ fun WatchDeviceScreen(
 
         SectionHeader(stringResource(R.string.settings_watch_section_device))
         // First: the schedule decides whether this screen is ever visited again.
-        if (isGarmin || device.isWearosWatch) {
+        if (isGarmin) {
             AutoSyncCard(
                 selected = state.autoSync,
                 backgroundReadMissing = state.backgroundReadMissing,
@@ -432,7 +409,6 @@ private fun StatusCard(
     isBikeComputer: Boolean,
     onRename: () -> Unit,
 ) {
-    // A WearOS watch never synced is named; synced, it reads like a Garmin, minus the file count.
     val statusLine = buildString {
         val syncedAt = device.lastSyncedAt
         if (!isGarmin && syncedAt == null) {

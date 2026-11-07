@@ -55,36 +55,11 @@ For the detailed feature inventory, see the [feature guide](https://docs.hale.ng
 
 ## Devices and integrations
 
-### Garmin watches
+### Watches and scales
 
-[Garmin support](https://docs.hale.ngo/openvitals/features/smartwatches/) is experimental. A paired watch talks to OpenVitals over Bluetooth, with no Garmin account required. OpenVitals itself has no `INTERNET` permission.
+Watch and scale support is moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app from the same project. It pairs Garmin and Wear OS watches and the Xiaomi S400 scale, and writes what they record to Health Connect, where OpenVitals reads it like any other source. Install OpenWatch to sync a watch or a scale.
 
-Supported synced data is written to Health Connect where OpenVitals has a matching mapping and Health Connect has a suitable record type. Garmin-only measurements such as Body Battery and watch stress stay in OpenVitals on the phone.
-
-<details>
-<summary>Current Garmin support</summary>
-
-- Sync recorded activity, sleep and wellness files over Bluetooth, manually or with optional periodic sync.
-- Both Garmin transport paths are supported, including older watches such as the Instinct 2X.
-- A dashboard watch tile shows the paired watch and provides sync controls.
-- Activities are written to Health Connect with routes and recorded series where available.
-- Sleep, heart rate, resting heart rate, HRV, Pulse Ox, respiratory rate, VO2 max, BMR, steps, distance, active calories and supported weight data are written to Health Connect where supported.
-- Body weight from a paired Garmin scale can be relayed through the watch integration.
-- Watch-only data includes stress, Body Battery, intensity minutes, sleep score, sleep need and restless moments, recovery time, Garmin training readiness, acute/chronic training load, functional threshold power, lactate threshold, and hill and endurance scores.
-- For watches that provide sleep but no stages, OpenVitals can estimate the stages on the phone.
-- An optional stay-connected mode keeps the Bluetooth link open and shows live heart rate and steps.
-- Forward phone notifications and ringing calls to the watch, with per-app blocking and supported notification actions.
-- Weather can come from a weather app on the phone; calendar and media controls are optional.
-- Find the watch from the phone, or ring the phone from the watch.
-- Read and change the watch's settings tree and alarms where supported. Older watches without a settings tree can use alarms kept on the phone and sent to the watch.
-- Send an imported GPS ephemeris file to the watch.
-- Send named coordinates to the watch's saved locations.
-
-</details>
-
-### Bathroom scale
-
-Experimental [support for the Xiaomi Body Composition Scale S400 and S400 Pro](https://docs.hale.ngo/openvitals/features/scales/). Every weigh-in is saved to Health Connect as it happens, with the app open or closed, decoded from the scale's own Bluetooth broadcast with the key from your Xiaomi account. Weight and heart rate are saved as measured; body fat, lean mass and body water are estimated on the phone. OpenVitals never connects to the scale and never contacts Xiaomi.
+OpenVitals still carries its own Garmin watch and Xiaomi scale integration for the people who rely on it today. That in-app support is deprecated and will be removed in a coming release. Nothing recorded is lost when it goes: it is all in Health Connect.
 
 ### Bluetooth sensors
 
@@ -95,12 +70,6 @@ A connected heart-rate sensor can also be used during strength training and for 
 ### CoMaps
 
 While [CoMaps](https://docs.hale.ngo/openvitals/features/comaps-navigation-context/) is navigating, OpenVitals can show its turn guidance on the offline activity map during a recording, and optionally save the guidance with the activity on-device.
-
-Guidance can also be sent to a paired Garmin watch on its own switch, independently of activity recording.
-
-### Wear OS watches
-
-A [Wear OS watch](https://docs.hale.ngo/openvitals/features/smartwatches/) running the OpenVitals Wear OS app records heart rate, steps and the height climbed minute by minute, and what a sleep estimate needs; off the wrist it rests the heart rate sensor. A sync from the phone, on a tap or on a schedule, copies the heart rate, the steps and the floors into Health Connect, with each minute's cadence and, once your weight is known, an estimate of the calories walking cost, and writes one estimated sleep session per night with the night's resting heart rate. A status card shows whether the watch is paired and the watch app answers, and the heart rate live while the screen is open. On the watch, three tiles show today's heart rate, steps and floors with the day's curve. No vendor app is needed on the phone once the watch is paired. The watch app is still in development, for testers: it is not on any store yet and is [installed over adb](https://docs.hale.ngo/openvitals/how-to/wear-os-sideload/).
 
 ### Sync with another phone
 
@@ -290,7 +259,7 @@ After launching the app:
 
 ## Architecture at a glance
 
-The repository has two Gradle modules. `:app` is the phone app; `:wear` is the Wear OS companion app, still in development, with its own CI gate.
+The repository has two Gradle modules. `:app` is the phone app; `:domain` holds the app-local pure code the app depends on.
 
 The phone app uses:
 
@@ -301,7 +270,7 @@ The phone app uses:
 - Room for derived caches and data Health Connect cannot represent. Health Connect remains the source of truth for record types it supports;
 - WorkManager for Apple Health imports, offline-map imports and the opt-in periodic Garmin watch-sync job.
 
-Watch and scale integration lives under `devices/`, including the Garmin protocol stack, shared Bluetooth radio handling, companion-device pairing, notification forwarding and the scale listener.
+The deprecated Garmin watch and Xiaomi scale integration lives under `devices/`, including the Garmin protocol stack, shared Bluetooth radio handling, companion-device pairing, notification forwarding and the scale listener. It is being retired in favour of [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect.
 
 Live Bluetooth LE sensor streaming during activity recording is separate under `sensors/ble/`.
 
@@ -312,11 +281,10 @@ See the [architecture documentation](docs/engineering/architecture.md) for the c
 ## Project layout
 
 - [`app/`](app): Android phone app module
-- [`wear/`](wear): Wear OS companion app module
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
 - [`app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/`](app/src/main/kotlin/tech/mmarca/openvitals/healthconnect): Health Connect readers, writers and the permission shell
-- [`app/src/main/kotlin/tech/mmarca/openvitals/devices/`](app/src/main/kotlin/tech/mmarca/openvitals/devices): Garmin, Wear OS and scale device layer
+- [`app/src/main/kotlin/tech/mmarca/openvitals/devices/`](app/src/main/kotlin/tech/mmarca/openvitals/devices): Garmin watch and Xiaomi scale device layer, deprecated in favour of OpenWatch
 - [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components

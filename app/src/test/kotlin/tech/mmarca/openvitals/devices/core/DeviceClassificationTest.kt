@@ -4,14 +4,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import tech.mmarca.openvitals.devices.garmin.GarminDeviceClassifier
-import tech.mmarca.openvitals.devices.wearos.WearOsDeviceClassifier
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 class DeviceClassificationTest {
 
-    private val classifiers = listOf(GarminDeviceClassifier(), WearOsDeviceClassifier())
+    private val classifiers = listOf(GarminDeviceClassifier())
 
     @Test
     fun `a Garmin watch family classifies as a Garmin watch`() {
@@ -54,25 +53,19 @@ class DeviceClassificationTest {
     }
 
     @Test
-    fun `the NAME decides, so a WearOS name is WearOS even with 0xFE1F`() {
-        // A device advertising the Garmin member service but named like a WearOS watch is WearOS.
+    fun `a non-Garmin smartwatch name stays a sensor, even with 0xFE1F`() {
+        // Another vendor's watch syncs through OpenWatch; here it is at most a live sensor.
         val verdict = classifyDevice(
             discovered(name = "Galaxy Watch", advertisesSyncService = true),
             classifiers,
         )
-        assertEquals(DeviceIntegration.WEAROS, verdict.integration)
+        assertNull(verdict.integration)
+        assertEquals(BleDeviceKind.SENSOR, verdict.kind)
     }
 
     @Test
     fun `an unnamed, unremarkable device → sensor`() {
         assertNull(classifyDevice(discovered(), classifiers).integration)
-    }
-
-    @Test
-    fun `a wearos-style smartwatch classifies as a wearos watch`() {
-        val verdict = classifyDevice(discovered("Galaxy Watch8 (89FZ)"), classifiers)
-        assertEquals(DeviceIntegration.WEAROS, verdict.integration)
-        assertEquals(BleDeviceKind.WATCH, verdict.kind)
     }
 
     @Test
@@ -90,8 +83,7 @@ class DeviceClassificationTest {
     }
 
     @Test
-    fun `order matters, Garmin's verdict beats the generic watch name match`() {
-        // A name that could match both classifiers: the first in the list wins.
+    fun `a vendor-prefixed Garmin watch name is still a Garmin watch`() {
         val verdict = classifyDevice(discovered("Garmin Forerunner 265S"), classifiers)
         assertEquals(DeviceIntegration.GARMIN, verdict.integration)
     }

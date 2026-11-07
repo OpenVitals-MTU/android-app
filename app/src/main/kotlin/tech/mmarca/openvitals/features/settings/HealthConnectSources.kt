@@ -3,8 +3,8 @@ package tech.mmarca.openvitals.features.settings
 import java.time.Instant
 
 /**
- * One app contributing to Health Connect. A diagnostic: a WearOS watch
- * shows up as its vendor app's package.
+ * One app contributing to Health Connect. A diagnostic: a watch synced by
+ * another app shows up as that app's package.
  */
 data class HealthConnectSource(
     val packageName: String,

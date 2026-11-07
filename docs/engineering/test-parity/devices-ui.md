@@ -318,9 +318,9 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | a Garmin Edge name → (garmin, bikeComputer) | PORTED | `an Edge classifies as a Garmin bike computer, not a watch` | - |
 | a prefixed Edge name → (garmin, bikeComputer) | PORTED | DeviceClassificationTest: `a prefixed Edge name → (garmin, bikeComputer)` | Now goes through `classifyDevice`, not just the name matcher |
 | a member-service-only advert (no distinguishing name) → sensor | PORTED | DeviceClassificationTest: `a member-service-only advert (no distinguishing name) → sensor` | - |
-| a WearOS smartwatch name → (wearos, watch) | PORTED | `a wearos-style smartwatch classifies as a wearos watch` | same "Galaxy Watch8 (89FZ)" fixture |
+| a WearOS smartwatch name → (wearos, watch) | REMOVED | — | Wear OS moved to OpenWatch; such a name is a plain sensor now |
 | a live heart-rate strap → a plain sensor | PORTED | `anything unclaimed falls through to a plain sensor` | "Polar H10" instead of "TICKR"; same identity assertion against `DeviceClassification.SENSOR` |
-| the NAME decides, so a WearOS name is WearOS even with 0xFE1F | PORTED | DeviceClassificationTest: `the NAME decides, so a WearOS name is WearOS even with 0xFE1F` | - |
+| the NAME decides, so a WearOS name is WearOS even with 0xFE1F | REWRITTEN | DeviceClassificationTest: `a non-Garmin smartwatch name stays a sensor, even with 0xFE1F` | Wear OS moved to OpenWatch; the name now yields no integration |
 | an unnamed, unremarkable device → sensor | PORTED | DeviceClassificationTest: `an unnamed, unremarkable device → sensor` | - |
 
 ## test/devices/core/registry/device_integration_test.dart
@@ -337,23 +337,21 @@ Kotlin counterpart: removed — `BleDeviceKind` / `DeviceIntegration` are gone; 
 | the integration survives a persistence round-trip | REMOVED | — | DeviceIntegration removed from the BLE registry |
 
 ## test/devices/wearos/onboard_wearos_watch_use_case_test.dart
-Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/wearos/OnboardWearOsWatchUseCaseTest.kt
+Kotlin counterpart: removed — Wear OS moved to OpenWatch
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| registers a (watch, wearos) device, no bond | PORTED | `registers a (watch, wearos) device, no bond` | same address/name fixture, same five assertions, same throwing bond stubs |
-| a declined association still onboards the watch | PORTED | `a declined association still onboards the watch` | - |
-| a thrown association is swallowed — the watch still registers | PORTED | `a thrown association is swallowed - the watch still registers` | - |
-| forget drops the companion association | PORTED | `forget drops the companion association` | - |
-
+| registers a (watch, wearos) device, no bond | REMOVED | — | Wear OS moved to OpenWatch |
+| a declined association still onboards the watch | REMOVED | — | Wear OS moved to OpenWatch |
+| a thrown association is swallowed — the watch still registers | REMOVED | — | Wear OS moved to OpenWatch |
+| forget drops the companion association | REMOVED | — | Wear OS moved to OpenWatch |
 ## test/devices/wearos/wearos_device_names_test.dart
-Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/wearos/WearOsDeviceNamesTest.kt
+Kotlin counterpart: removed — Wear OS moved to OpenWatch
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| isSmartwatchName > matches the Galaxy Watch (the test rig) | PORTED | `matches the Galaxy Watch, the test rig` | identical fixtures |
-| isSmartwatchName > matches other wrist smartwatch families | PORTED | `matches other wrist smartwatch families` | identical four names |
-| isSmartwatchName > does not match live sensors | PORTED | `does not match live sensors` | identical four names |
-| isSmartwatchName > is null- and blank-safe | PORTED | `is null- and blank-safe` | - |
-
+| isSmartwatchName > matches the Galaxy Watch (the test rig) | REMOVED | — | Wear OS moved to OpenWatch |
+| isSmartwatchName > matches other wrist smartwatch families | REMOVED | — | Wear OS moved to OpenWatch |
+| isSmartwatchName > does not match live sensors | REMOVED | — | Wear OS moved to OpenWatch |
+| isSmartwatchName > is null- and blank-safe | REMOVED | — | Wear OS moved to OpenWatch |
 ## test/devices/garmin/wellness/fit_metrics_sleep_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/wellness/FitMetricsSleepTest.kt
 | Flutter case | Status | Kotlin test | Note |

@@ -2,6 +2,8 @@
 
 This document is a functional inventory of the OpenVitals Android app. It is organized by what the user can view, what the user can insert/update/delete, and which settings are available.
 
+Watch and scale support is moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app from the same project that writes what the devices record to Health Connect. The Garmin watch and Xiaomi scale sections below describe what OpenVitals still does itself; that in-app support is deprecated and will be removed in a coming release.
+
 For the route, widget, package, and documentation mapping, see [`docs/features/feature-map.md`](docs/features/feature-map.md).
 
 ## View Data
@@ -224,6 +226,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Watch Data
 
+> **Deprecated.** Use [OpenWatch](https://github.com/Hale-MTU/OpenWatch) instead; this in-app support will be removed in a coming release.
+
 - View measurements that only a paired Garmin watch produces and Health Connect has no record type for.
 - View stress with today's average.
 - View Body Battery with today's highest value.
@@ -421,8 +425,9 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Watch Sync
 
+> **Deprecated.** Use [OpenWatch](https://github.com/Hale-MTU/OpenWatch) instead; this in-app support will be removed in a coming release.
+
 - Pair a Garmin watch and copy the activity, sleep, and wellness files it recorded, over Bluetooth only.
-- Register a WearOS or other recognized smartwatch; its data reaches the app through Health Connect.
 - Write watch-recorded activities to Health Connect as exercise sessions with routes and series.
 - Write watch sleep sessions and stages, heart rate, resting heart rate, heart rate variability, respiratory rate, VO2 max, basal metabolic rate, and intraday steps, distance, and active calories to Health Connect.
 - Store watch-only measurements locally where Health Connect has no record type for them.
@@ -447,6 +452,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - File syncs are always user-initiated; there is no background or scheduled watch sync.
 
 ### Scale Weigh-Ins
+
+> **Deprecated.** Use [OpenWatch](https://github.com/Hale-MTU/OpenWatch) instead; this in-app support will be removed in a coming release.
 
 - Hear a Xiaomi Body Composition Scale S400 and save each weigh-in as it happens, with the app open or closed, without connecting to the scale and without network access.
 - Let Android wake OpenVitals when someone steps on the scale (Android 12 and newer), so a weigh-in is saved with the app closed; a short silent notification shows while the result is read. Without that, and on older versions, weigh-ins are saved while the app is open.
@@ -555,6 +562,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Watch Settings
 
+> **Deprecated.** Use [OpenWatch](https://github.com/Hale-MTU/OpenWatch) instead; this in-app support will be removed in a coming release.
+
 - Pair a watch, and grant the nearby-device permission it needs.
 - Optionally allow Android to keep OpenVitals running while the watch is nearby, so a long sync is not interrupted.
 - Sync a paired watch, and open its watch-only data screen.
@@ -564,6 +573,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Rename a watch, switch it off without unpairing, or remove it.
 
 ### Scale Settings
+
+> **Deprecated.** Use [OpenWatch](https://github.com/Hale-MTU/OpenWatch) instead; this in-app support will be removed in a coming release.
 
 - Add a scale the way a watch is added: a card list, an add dialog, and a device view behind the card.
 - Find the scale through Android's companion-device dialog, which names it and lets Android wake OpenVitals for it, then paste its Bluetooth key.

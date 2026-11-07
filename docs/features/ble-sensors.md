@@ -8,7 +8,7 @@
 
 OpenVitals has experimental Bluetooth LE support for activity recording.
 
-Watches are managed separately, in Settings, Watches: a sensor streams while an activity is recorded, whereas a watch hands over files afterwards. See [Watches](watches.md).
+A sensor streams while an activity is recorded, whereas a watch hands over what it recorded afterwards. Syncing a watch is the job of [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect; the deprecated in-app Garmin sync is described in [Watches](watches.md).
 
 ## Supported Recording Signals
 

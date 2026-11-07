@@ -80,7 +80,7 @@ data class SleepEstimatorConfig(
      * rate alone, as fitted on the Garmin nights.
      */
     val lidsWeight: Float = 0f,
-    /** Divides the activity before the LIDS conversion: the Wear OS count is about a fifth of Garmin's. */
+    /** Divides the activity before the LIDS conversion, for a source whose count runs well below Garmin's. */
     val lidsActivityScale: Float = 1f,
 )
 

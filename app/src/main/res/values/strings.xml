@@ -3332,7 +3332,12 @@
 
     <!-- Watches settings section + list screen (features/watches) -->
     <string name="settings_watches_group_title">Watches</string>
-    <string name="settings_watches_group_body">Copy sleep, heart rate and activities recorded on your watch</string>
+    <string name="settings_watches_group_body">Garmin sync, deprecated: use OpenWatch instead</string>
+    <!-- Watches and Scales sections: device support is moving to OpenWatch (ui/components/OpenWatchDeprecationCard) -->
+    <string name="openwatch_deprecation_title">Moving to OpenWatch</string>
+    <string name="openwatch_deprecation_body">Watch and scale support is moving to OpenWatch, a separate app from the same project. It writes what your devices record to Health Connect, and OpenVitals shows it from there.\n\nThe watch and scale features here are deprecated and will be removed in a coming release. Nothing you recorded is lost: it stays in Health Connect.</string>
+    <string name="openwatch_deprecation_action">Get OpenWatch</string>
+    <string name="openwatch_url" translatable="false">https://github.com/Hale-MTU/OpenWatch</string>
     <string name="settings_watches_intro">Copies what your watch recorded into OpenVitals. Nothing is sent to the internet.</string>
     <string name="settings_watches_empty_title">No watch paired</string>
     <string name="settings_watches_empty_body">Pairing a watch lets OpenVitals copy what it recorded — sleep stages, resting heart rate, stress and Body Battery — without sending anything to the internet.</string>
@@ -4014,49 +4019,6 @@
         <item quantity="other">%1$d days imported</item>
     </plurals>
     <string name="cycle_journal_import_failed">Nothing imported: the file is not a journal export.</string>
-    <string name="settings_watch_wearos_status_section">Wear OS App Status</string>
-    <string name="settings_watch_wearos_bt_paired">Watch paired with this phone</string>
-    <string name="settings_watch_wearos_bt_not_paired">No paired Wear OS watch found</string>
-    <string name="settings_watch_wearos_app_running">OpenVitals Wear OS app is running on watch</string>
-    <string name="settings_watch_wearos_app_no_answer">No answer: the watch is off, out of range, or the OpenVitals app on it is not installed or not running.</string>
-    <string name="settings_watch_wearos_bt_permission">OpenVitals needs the Nearby devices permission to reach the watch.</string>
-    <string name="settings_watch_wearos_status_bluetooth_off">Bluetooth is off on this phone.</string>
-    <string name="settings_watch_wearos_status_bond_lost">The watch is not paired with this phone. Open Bluetooth settings and pair it; make the watch discoverable from its own Bluetooth settings first.</string>
-    <string name="settings_watch_wearos_status_pending">Waiting for you to allow this phone on the watch. Open OpenVitals on the watch and tap Allow.</string>
-    <string name="settings_watch_wearos_status_unauthorized_mismatch">The watch refused this phone: its key does not match. On the watch, open OpenVitals, forget this phone, then validate again.</string>
-    <string name="settings_watch_wearos_status_unauthorized_blocked">This phone is blocked on the watch. On the watch, open OpenVitals and unblock it.</string>
-    <string name="settings_watch_wearos_status_update_watch">The OpenVitals app on the watch is older than this one. Update the watch app.</string>
-    <string name="settings_watch_wearos_status_update_phone">The OpenVitals app on the watch is newer than this one. Update OpenVitals on the phone.</string>
-    <string name="settings_watch_wearos_status_protocol">The watch answered something OpenVitals could not read. Update both apps and try again.</string>
-    <string name="settings_watch_wearos_linked_to">Linked to %1$s</string>
-    <string name="settings_watch_wearos_fail_recording">An activity recording is in progress. Finish or discard it before syncing the watch.</string>
-    <string name="settings_watch_wearos_fail_partial">The watch stopped answering part-way. What arrived was saved; sync again to continue.</string>
-    <string name="settings_watch_wearos_fail_health_connect">Allow OpenVitals to write heart rate and sleep in Health Connect, then sync again.</string>
-    <string name="settings_watch_wearos_fail_generic">The watch could not be synced. Try again.</string>
-    <string name="settings_watch_wearos_check_app">Validate Wear OS App</string>
-    <string name="settings_watch_wearos_checking">Checking Wear OS app…</string>
-    <string name="settings_watch_wearos_sync_section">Watch Sync</string>
-    <string name="settings_watch_wearos_sync_body">The OpenVitals app on the watch records your heart rate and what a sleep estimate needs, and keeps a week of it. Sync copies the new heart rate into Health Connect and writes one estimated sleep session per night.</string>
-    <string name="settings_watch_wearos_sync_now">Sync watch</string>
-    <string name="settings_watch_wearos_syncing">Syncing watch…</string>
-    <string name="settings_watch_wearos_synced_none">Nothing new on the watch</string>
-    <string name="settings_watch_wearos_needs_weight">Walking calories not estimated: add your weight in Body profile or record one in Health Connect.</string>
-    <string name="settings_watch_wearos_needs_weight_read">Walking calories not estimated: add your weight in Body profile, or allow OpenVitals to read your weight in Health Connect.</string>
-    <string name="settings_watch_wearos_needs_steps_write">Steps not written: allow OpenVitals to write steps in Health Connect, then sync again.</string>
-    <string name="settings_watch_wearos_needs_calories_write">Walking calories not written: allow OpenVitals to write active calories and read workouts in Health Connect to estimate them from the next sync on.</string>
-    <string name="settings_watch_wearos_needs_resting_heart_rate">Resting heart rate not written: allow OpenVitals to read and write resting heart rate in Health Connect to estimate it from the next sync on.</string>
-    <plurals name="settings_watch_wearos_synced_samples">
-        <item quantity="one">%1$d heart rate sample synced</item>
-        <item quantity="other">%1$d heart rate samples synced</item>
-    </plurals>
-    <plurals name="settings_watch_wearos_synced_step_minutes">
-        <item quantity="one">Steps for %1$d minute</item>
-        <item quantity="other">Steps for %1$d minutes</item>
-    </plurals>
-    <plurals name="settings_watch_wearos_synced_nights">
-        <item quantity="one">%1$d night of sleep estimated</item>
-        <item quantity="other">%1$d nights of sleep estimated</item>
-    </plurals>
     <string name="scale_notification_channel">Scale weigh-ins</string>
     <string name="scale_notification_title">Reading your weigh-in</string>
     <string name="settings_scales_empty_title">No scale set up</string>
@@ -4084,7 +4046,7 @@
     <string name="settings_scales_key_help_action">How to get the key</string>
     <string name="settings_scales_supported_url" translatable="false">https://docs.hale.ngo/openvitals/features/scales/</string>
     <string name="settings_scales_group_title">Scales</string>
-    <string name="settings_scales_group_body">Save your weight from a Bluetooth scale as you step on it</string>
+    <string name="settings_scales_group_body">Xiaomi scale, deprecated: use OpenWatch instead</string>
     <string name="settings_scales_intro">OpenVitals saves each weigh-in from a Bluetooth scale as it happens, with the app open or closed. It never connects to the scale, and nothing is sent to the internet.</string>
     <string name="settings_scales_key_help">The scale encrypts what it sends. Pair it once in Xiaomi Home, read its Bluetooth key from your Xiaomi account with a token extractor tool, and paste the key here. It stays on this phone.</string>
     <string name="settings_scales_key_label">Bluetooth key</string>

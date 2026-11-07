@@ -27,7 +27,7 @@ A small amount of health data lives in the app's own database rather than in Hea
 
 The app does not need app-level internet access for normal health features. Offline map packs, imports, widgets, and Health Connect reads are handled locally.
 
-The connected-device features keep that boundary rather than widening it. A watch is read over Bluetooth, notifications are forwarded to the watch over Bluetooth, and sync with another phone deliberately uses Bluetooth Classic because any Wi-Fi or TCP socket on Android would require the internet permission the app does not declare.
+The connected-device features keep that boundary rather than widening it. A watch is read over Bluetooth, notifications are forwarded to the watch over Bluetooth, and sync with another phone deliberately uses Bluetooth Classic because any Wi-Fi or TCP socket on Android would require the internet permission the app does not declare. Watch and scale support is deprecated and moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect.
 
 ## Notification Access
 

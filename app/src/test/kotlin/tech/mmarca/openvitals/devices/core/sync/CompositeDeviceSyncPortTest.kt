@@ -13,9 +13,9 @@ import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 class CompositeDeviceSyncPortTest {
 
-    private class PortFor(private val integration: DeviceIntegration, val name: String) : DeviceSyncPort {
+    private class PortFor(private val claims: (BleSensorDevice) -> Boolean, val name: String) : DeviceSyncPort {
         var syncs = 0
-        override fun canSync(device: BleSensorDevice) = device.integration == integration
+        override fun canSync(device: BleSensorDevice) = claims(device)
         override suspend fun sync(
             device: BleSensorDevice,
             listenAfter: Duration,
@@ -26,9 +26,10 @@ class CompositeDeviceSyncPortTest {
         }
     }
 
-    private val garmin = PortFor(DeviceIntegration.GARMIN, "garmin")
-    private val wearOs = PortFor(DeviceIntegration.WEAROS, "wearos")
-    private val composite = CompositeDeviceSyncPort(setOf(garmin, wearOs))
+    private val garmin = PortFor({ it.integration == DeviceIntegration.GARMIN }, "garmin")
+    // A watch stored before the integration field existed: a legacy Garmin.
+    private val legacy = PortFor({ it.isWatch && it.integration == null }, "legacy")
+    private val composite = CompositeDeviceSyncPort(setOf(garmin, legacy))
 
     private fun watch(integration: DeviceIntegration?) = BleSensorDevice(
         id = "w",
@@ -45,10 +46,10 @@ class CompositeDeviceSyncPortTest {
 
     @Test
     fun `each device goes to the port that claims it`() = runTest {
-        assertEquals(DeviceSyncResult.Failed("wearos"), composite.sync(watch(DeviceIntegration.WEAROS), Duration.ZERO, null))
+        assertEquals(DeviceSyncResult.Failed("legacy"), composite.sync(watch(null), Duration.ZERO, null))
         assertEquals(DeviceSyncResult.Failed("garmin"), composite.sync(watch(DeviceIntegration.GARMIN), Duration.ZERO, null))
         assertEquals(1, garmin.syncs)
-        assertEquals(1, wearOs.syncs)
+        assertEquals(1, legacy.syncs)
     }
 
     @Test
@@ -57,6 +58,6 @@ class CompositeDeviceSyncPortTest {
 
         assertFalse(composite.canSync(sensor))
         assertTrue(composite.sync(sensor, Duration.ZERO, null) is DeviceSyncResult.Failed)
-        assertEquals(0, garmin.syncs + wearOs.syncs)
+        assertEquals(0, garmin.syncs + legacy.syncs)
     }
 }

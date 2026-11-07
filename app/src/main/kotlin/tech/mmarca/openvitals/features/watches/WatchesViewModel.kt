@@ -21,7 +21,6 @@ import tech.mmarca.openvitals.devices.garmin.GarminOnboardStep
 import tech.mmarca.openvitals.devices.garmin.GarminTransportVariant
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
 import tech.mmarca.openvitals.devices.core.pairing.WatchBondResult
-import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -69,7 +68,6 @@ class WatchesViewModel @Inject constructor(
     private val deviceRepository: BleDeviceRepository,
     private val sensorCoordinator: BleSensorCoordinator,
     private val onboardGarminWatch: OnboardGarminWatchUseCase,
-    private val onboardWearOsWatch: OnboardWearOsWatchUseCase,
     private val osPermissionsService: OsPermissionsService,
 ) : ViewModel() {
 
@@ -222,30 +220,6 @@ class WatchesViewModel @Inject constructor(
         }
         val displayName = state.addDisplayName.trim()
             .ifBlank { selected.name ?: selected.address }
-
-        // WearOS: no bond, no GFDI probe, just the optional association.
-        if (state.addingIntegration == DeviceIntegration.WEAROS) {
-            localState.update {
-                it.copy(isOnboarding = true, errorMessage = null, onboardNotice = null)
-            }
-            viewModelScope.launch {
-                val outcome = onboardWearOsWatch(selected, displayName = displayName)
-                localState.update {
-                    it.copy(
-                        isOnboarding = false,
-                        onboardStep = null,
-                        onboardNotice = if (outcome.associated) {
-                            null
-                        } else {
-                            WatchOnboardNotice.NO_COMPANION
-                        },
-                    )
-                }
-                closeAddFlow()
-                onDone(true)
-            }
-            return
-        }
 
         localState.update {
             it.copy(

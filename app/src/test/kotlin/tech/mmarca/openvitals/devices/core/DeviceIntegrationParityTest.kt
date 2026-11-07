@@ -30,7 +30,6 @@ class DeviceIntegrationParityTest {
     fun `an explicit Garmin watch is a Garmin watch`() {
         val w = watch(integration = DeviceIntegration.GARMIN)
         assertTrue(w.isGarminWatch)
-        assertFalse(w.isWearosWatch)
     }
 
     @Test
@@ -46,7 +45,6 @@ class DeviceIntegrationParityTest {
             addedAt = Instant.parse("2026-01-01T00:00:00Z"),
         )
         assertFalse(sensor.isGarminWatch)
-        assertFalse(sensor.isWearosWatch)
         assertFalse(sensor.isBikeComputer)
         assertFalse(sensor.isGarminGfdi)
         assertTrue(sensor.isLiveSensorCapable)
@@ -71,6 +69,5 @@ class DeviceIntegrationParityTest {
         assertTrue("can broadcast live", edge.isLiveSensorCapable)
         assertFalse(edge.isWatch)
         assertFalse(edge.isGarminWatch)
-        assertFalse(edge.isWearosWatch)
     }
 }

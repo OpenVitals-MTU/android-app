@@ -193,7 +193,7 @@ The manifest explicitly removes inherited network permissions from dependencies:
 
 The `android.hardware.wifi` feature is removed the same way.
 
-These removals preserve the local app's internet-free boundary, and every device feature added since is built to keep it: watch sync and notification forwarding run over Bluetooth to the watch, and phone-to-phone sync runs over Bluetooth Classic.
+These removals preserve the local app's internet-free boundary, and every device feature added since is built to keep it: the deprecated watch sync and notification forwarding run over Bluetooth to the watch, and phone-to-phone sync runs over Bluetooth Classic. Watches and scales are moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch); once the in-app support goes, so do the companion-device, notification-access and calendar permissions it needs.
 
 The app also queries the launcher for installed apps, which is what the watch-notification per-app list uses. It deliberately does not request `QUERY_ALL_PACKAGES`.
 

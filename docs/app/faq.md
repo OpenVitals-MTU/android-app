@@ -61,6 +61,12 @@ Notification permission is used for:
 
 Reminders are local and optional.
 
+## Can OpenVitals Sync My Watch Or Scale?
+
+Use [OpenWatch](https://github.com/Hale-MTU/OpenWatch) for that. It is a separate app from the same project: it pairs Garmin and Wear OS watches and the Xiaomi S400 scale, and writes what they record to Health Connect, where OpenVitals reads it like any other source.
+
+OpenVitals still has its own Garmin watch and Xiaomi scale support in Settings for the people who rely on it today. That in-app support is deprecated and will be removed in a coming release. Nothing you recorded is lost when it goes: it is all in Health Connect. The questions below describe the in-app support while it lasts.
+
 ## Why Does OpenVitals Ask For Notification Access?
 
 Notification access is a different, optional permission from notification permission, and it is used for one thing only: showing your phone's notifications on a paired watch.

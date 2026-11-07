@@ -41,10 +41,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.devices.garmin.GarminOnboardStep
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
-import tech.mmarca.openvitals.domain.model.DeviceIntegration
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.DeviceAvatar
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenWatchDeprecationCard
 import tech.mmarca.openvitals.ui.components.OsPermissionsDialog
 import tech.mmarca.openvitals.ui.components.formatDeviceTime
 import tech.mmarca.openvitals.ui.theme.Spacing
@@ -100,6 +100,9 @@ fun WatchesSettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.lg),
         )
+
+        // Deprecated section: the way forward is OpenWatch, said before anything can be paired.
+        OpenWatchDeprecationCard(modifier = Modifier.padding(horizontal = Spacing.lg))
 
         state.onboardNotice?.let { notice ->
             // Told once, after the sheet closes. Inline: this scaffold has no snackbar host.
@@ -322,10 +325,8 @@ private fun AddWatchDialog(
                         singleLine = true,
                         enabled = !state.isOnboarding,
                     )
-                    // A GFDI device picks no capabilities. WearOS has no bond or probe steps.
-                    if (state.addingIntegration != DeviceIntegration.WEAROS) {
-                        WatchPairSteps(step = state.onboardStep)
-                    }
+                    // A GFDI device picks no capabilities.
+                    WatchPairSteps(step = state.onboardStep)
                     state.errorMessage?.let { message ->
                         Text(
                             text = message,

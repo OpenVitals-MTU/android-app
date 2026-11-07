@@ -16,7 +16,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -36,12 +35,8 @@ import tech.mmarca.openvitals.devices.garmin.GarminGattReport
 import tech.mmarca.openvitals.devices.garmin.GarminTransportProbe
 import tech.mmarca.openvitals.devices.garmin.GarminTransportVariant
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
-import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
-import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
-import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
-import tech.mmarca.openvitals.devices.wearos.WearOsLinkStore
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -96,7 +91,6 @@ class WatchDeviceViewModelTest {
     private val garminLocalData = mockk<tech.mmarca.openvitals.devices.garmin.GarminLocalData>(relaxed = true)
     private val healthConnectManager = mockk<tech.mmarca.openvitals.healthconnect.HealthConnectManager>(relaxed = true)
     private val notificationBridge = mockk<tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge>(relaxed = true)
-    private val wearOsLinkStore = WearOsLinkStore(FakeSharedPreferences())
 
     /** The scheduler owns the stored interval and the WorkManager side, so it is one stub that remembers. */
     private lateinit var autoSyncScheduler: WatchAutoSyncScheduler
@@ -128,10 +122,7 @@ class WatchDeviceViewModelTest {
         integration = DeviceIntegration.GARMIN,
     )
 
-    private fun viewModel(
-        deviceId: String,
-        wearOsCompanionManager: WearOsCompanionManager = mockk(relaxed = true),
-    ) = WatchDeviceViewModel(
+    private fun viewModel(deviceId: String) = WatchDeviceViewModel(
         savedStateHandle = SavedStateHandle(mapOf(WATCH_DEVICE_ID_ARG to deviceId)),
         deviceRepository = repo,
         stateStore = stateStore,
@@ -155,7 +146,6 @@ class WatchDeviceViewModelTest {
         agpsStore = mockk<GarminAgpsStore>(relaxed = true).also {
             every { it.agps } returns MutableStateFlow(GarminAgpsState())
         },
-        onboardWearOsWatch = mockk<OnboardWearOsWatchUseCase>(relaxed = true),
         autoSyncScheduler = autoSyncScheduler,
         musicRelay = mockk(relaxed = true),
         notificationsGateway = notificationsGateway,
@@ -163,8 +153,6 @@ class WatchDeviceViewModelTest {
         healthConnectManager = healthConnectManager,
         // The cleanup after a removal runs on the default dispatcher. Here it runs at once.
         dispatchers = mainDispatcherRule.dispatcherProvider,
-        wearOsCompanionManager = wearOsCompanionManager,
-        wearOsLinkStore = wearOsLinkStore,
     )
 
     @Test
@@ -338,25 +326,6 @@ class WatchDeviceViewModelTest {
     }
 
     @Test
-    fun `forgetting a Wear OS watch drops its link token, so adding it again asks on the watch`() = runTest {
-        val watch = repo.addDevice(
-            displayName = "Galaxy Watch8",
-            address = "4A:F1:89:49:3C:85",
-            bluetoothName = "Galaxy Watch8 (89FZ)",
-            capabilities = emptySet(),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.WEAROS,
-        )
-        val token = wearOsLinkStore.tokenFor(watch.address, "A8:D1:62:BE:3A:3B")
-        val vm = viewModel(watch.id)
-
-        vm.removeDevice()
-
-        assertTrue(repo.devices.isEmpty())
-        assertNotEquals(token, wearOsLinkStore.tokenFor(watch.address, "A8:D1:62:BE:3A:3B"))
-    }
-
-    @Test
     fun `forgetting a sensor touches neither bond nor association`() = runTest {
         val sensor = repo.addDevice(
             displayName = "Chest strap",
@@ -396,29 +365,5 @@ class WatchDeviceViewModelTest {
 
         // A schedule outliving the watch would wake the radio for nothing.
         verify { autoSyncScheduler.forget(watch.id) }
-    }
-
-    @Test
-    fun `a missing Bluetooth permission on the Wear OS check is a grant affordance, checked once`() = runTest {
-        val watch = repo.addDevice(
-            displayName = "Galaxy Watch8",
-            address = "7F:12:34:56:78:9A",
-            bluetoothName = "Galaxy Watch8 (3A3B) LE",
-            capabilities = emptySet(),
-            kind = BleDeviceKind.WATCH,
-            integration = DeviceIntegration.WEAROS,
-        )
-        val manager = mockk<WearOsCompanionManager>()
-        coEvery { manager.checkWearOsWatchStatus(any(), any()) } throws SecurityException("BLUETOOTH_CONNECT")
-        val vm = viewModel(watch.id, manager)
-        backgroundScope.launch { vm.uiState.collect { } }
-        runCurrent()
-
-        assertEquals(ScreenError.PermissionDenied, vm.uiState.value.wearOsError)
-        assertFalse(vm.uiState.value.isCheckingWearOsStatus)
-        // A failed check leaves no timestamp; it must not retry on every emission.
-        coVerify(exactly = 1) {
-            manager.checkWearOsWatchStatus("7F:12:34:56:78:9A", "Galaxy Watch8 (3A3B) LE")
-        }
     }
 }

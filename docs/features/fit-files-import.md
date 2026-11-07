@@ -40,7 +40,7 @@ Progress, imported and failed counts, and any warning show on the FIT card for a
 
 FIT uses the same activity review screen as route import after the file is selected from Settings. Like TCX, FIT files do not need GPS route points; OpenVitals imports supported activity, course, or workout details and attaches a route only when usable route samples are present.
 
-Files a paired Garmin watch hands over go through this same importer. See [Watches](watches.md).
+Files a paired Garmin watch hands over through the deprecated in-app sync go through this same importer (see [Watches](watches.md)). A watch synced by [OpenWatch](https://github.com/Hale-MTU/OpenWatch) needs no import here: OpenWatch writes to Health Connect directly.
 
 ## Limits
 

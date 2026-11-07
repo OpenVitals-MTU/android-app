@@ -38,6 +38,7 @@ import tech.mmarca.openvitals.devices.xiaomi.ScaleListenerStatus
 import tech.mmarca.openvitals.ui.components.DeviceAvatar
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenWatchDeprecationCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.OsPermissionsDialog
 import tech.mmarca.openvitals.ui.components.formatDeviceTime
@@ -70,6 +71,9 @@ fun ScalesSettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.lg),
         )
+
+        // Deprecated section: the way forward is OpenWatch, said before anything can be added.
+        OpenWatchDeprecationCard(modifier = Modifier.padding(horizontal = Spacing.lg))
 
         val scale = state.scale
         if (scale == null) {

@@ -13,7 +13,7 @@ O que pode fazer
 * Importe exportações do Apple Health e ficheiros GPX, KML, KMZ, TCX, FIT e CSV
 * Crie um relatório de saúde em PDF para partilhar com o seu médico
 * Acompanhe o seu ciclo: menstruações, sintomas, temperatura basal, estimativa da próxima menstruação e lembretes da pílula
-* Sincronize relógios Garmin compatíveis diretamente por Bluetooth
+* Emparelhe um relógio ou uma balança com o OpenWatch, a nossa aplicação complementar; o OpenVitals mostra o que ele sincroniza
 * Copie dados entre dois telemóveis por Bluetooth, sem conta e sem rede
 * Ganhe distintivos por passos, distância, andares, treinos, hidratação, sono e atenção plena
 * Ative lembretes de bebidas, de atenção plena e do ciclo

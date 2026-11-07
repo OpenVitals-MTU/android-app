@@ -15,14 +15,14 @@ class BleDeviceKindTest {
         assertEquals("WATCH", BleDeviceKind.WATCH.storageName)
         assertEquals("BIKE_COMPUTER", BleDeviceKind.BIKE_COMPUTER.storageName)
         assertEquals("GARMIN", DeviceIntegration.GARMIN.storageName)
-        assertEquals("WEAROS", DeviceIntegration.WEAROS.storageName)
     }
 
     @Test
     fun `fromStorage resolves known names and rejects unknown ones`() {
         assertEquals(BleDeviceKind.WATCH, BleDeviceKind.fromStorage("WATCH"))
         assertNull(BleDeviceKind.fromStorage("HOLOGRAPH"))
-        assertEquals(DeviceIntegration.WEAROS, DeviceIntegration.fromStorage("WEAROS"))
+        // The Wear OS integration moved to OpenWatch; its stored name no longer parses.
+        assertNull(DeviceIntegration.fromStorage("WEAROS"))
         assertNull(DeviceIntegration.fromStorage(""))
     }
 
@@ -37,11 +37,9 @@ class BleDeviceKindTest {
         assertTrue(device.isLiveSensorCapable)
         // A sensor is neither kind of watch nor a bike computer, whatever its integration.
         assertFalse(device.isGarminWatch)
-        assertFalse(device.isWearosWatch)
         assertFalse(device.isBikeComputer)
         val stamped = device(integration = DeviceIntegration.GARMIN)
         assertFalse(stamped.isGarminWatch)
-        assertFalse(stamped.isWearosWatch)
         assertFalse(stamped.isBikeComputer)
     }
 
@@ -49,7 +47,6 @@ class BleDeviceKindTest {
     fun `an explicit Garmin watch is a Garmin watch`() {
         val watch = device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.GARMIN)
         assertTrue(watch.isGarminWatch)
-        assertFalse(watch.isWearosWatch)
         // A watch pulls FIT files over GFDI and streams nothing live.
         assertTrue(watch.isGarminGfdi)
         assertFalse(watch.isLiveSensorCapable)
@@ -62,19 +59,9 @@ class BleDeviceKindTest {
         assertTrue(watch.isWatch)
         assertTrue(watch.isGarminWatch)
         assertTrue(watch.isGarminGfdi)
-        assertFalse(watch.isWearosWatch)
         assertFalse(watch.isLiveSensorCapable)
     }
 
-    @Test
-    fun `a wearos watch is a watch but never on the Garmin sync path`() {
-        val watch = device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.WEAROS)
-        assertTrue(watch.isWatch)
-        assertTrue(watch.isWearosWatch)
-        assertFalse(watch.isGarminWatch)
-        assertFalse(watch.isGarminGfdi)
-        assertFalse(watch.isLiveSensorCapable)
-    }
 
     @Test
     fun `a bike computer syncs over GFDI and can still be a live sensor`() {
@@ -83,7 +70,6 @@ class BleDeviceKindTest {
         assertTrue(edge.isBikeComputer)
         assertTrue(edge.isGarminGfdi)
         assertFalse(edge.isGarminWatch)
-        assertFalse(edge.isWearosWatch)
         assertTrue(edge.isLiveSensorCapable)
     }
 

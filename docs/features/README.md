@@ -40,7 +40,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Recording of activity](activity-recording.md): GPS and repetition-oriented activity recording before saving to Health Connect.
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.
-- [Watches](watches.md): experimental Garmin and WearOS support, watch sync, watch-only metrics, notification forwarding, watch settings, and find-my-watch.
+- [Watches](watches.md): the deprecated in-app Garmin support (sync, watch-only metrics, notification forwarding, watch settings, find-my-watch) and the move to OpenWatch.
 - [GPX/KML/KMZ/TCX route import](route-file-import.md): route and indoor activity file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
 - [CSV import](csv-import.md): mapped import of body measurements, vitals, steps and nutrition from a CSV file, and the app's own workout export read back one workout a row.

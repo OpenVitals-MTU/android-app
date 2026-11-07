@@ -89,6 +89,8 @@ While you record an activity, OpenVitals uses location to build the route, and m
 
 ## Paired Garmin Watches
 
+In-app watch support is deprecated: watches are moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), a separate app with its own privacy policy, and this section will go when the in-app support does. While it lasts, this is what it does.
+
 A paired watch is reached over Bluetooth only. Nothing about a watch is sent off the phone.
 
 **Sync.** The watch's recorded files are read over Bluetooth and imported on the device. Series Health Connect has no type for, such as stress, Body Battery, and the watch's sleep and readiness scores, are stored in the app's own local database. The rest is written to Health Connect. A copy of each downloaded file is kept in the app's private storage for about 30 days. The copies, and the per-minute sleep data, age out when the app starts or a watch syncs, whichever comes first.
@@ -114,6 +116,8 @@ A paired watch is reached over Bluetooth only. Nothing about a watch is sent off
 **Weather.** Weather shown on the watch comes from a weather app on your phone that broadcasts it, such as Breezy Weather. OpenVitals never contacts a weather service. It passes the forecast on to the watch and keeps the latest one locally.
 
 ## Bathroom Scales
+
+In-app scale support is deprecated: scales are moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), and this section will go when the in-app support does. While it lasts, this is what it does.
 
 If you set up a Xiaomi Body Composition Scale S400, OpenVitals listens for the Bluetooth broadcasts the scale sends when someone steps on it. It never connects to the scale and sends nothing to it.
 

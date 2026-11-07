@@ -74,7 +74,7 @@ The same section holds the Metabolism card, which used to live behind caffeine s
 
 ## Watches
 
-The Watches section pairs and manages Garmin and WearOS watches, syncs what a watch recorded, and opens the watch-only data screen. See [Watches](watches.md).
+The Watches section pairs and manages Garmin watches, syncs what a watch recorded, and opens the watch-only data screen. It is deprecated: watch support is moving to [OpenWatch](https://github.com/Hale-MTU/OpenWatch), and the section opens with a notice saying so. See [Watches](watches.md).
 
 ## Sync With Another Phone
 

@@ -35,7 +35,7 @@ Large Apple Health imports run as explicit user-started background work with pro
 Records also reach Health Connect from three newer workflows, all user-started and all on device:
 
 - A CSV import from Settings, Data Importers, for point-in-time measurements such as weight, body composition, heart rate, and vitals.
-- A Garmin watch sync, which writes what the watch recorded and keeps watch-only series such as stress and Body Battery in OpenVitals' own local storage instead, because Health Connect has no type for them.
+- The deprecated in-app Garmin watch sync (watches are moving to OpenWatch, which writes to Health Connect itself), which writes what the watch recorded and keeps watch-only series such as stress and Body Battery in OpenVitals' own local storage instead, because Health Connect has no type for them.
 - A phone-to-phone sync over Bluetooth, which copies records between two phones running OpenVitals.
 
 All three deduplicate, so running them again does not create duplicate records.

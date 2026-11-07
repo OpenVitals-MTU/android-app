@@ -27,7 +27,6 @@ import tech.mmarca.openvitals.devices.garmin.GarminGattReport
 import tech.mmarca.openvitals.devices.garmin.GarminTransportProbe
 import tech.mmarca.openvitals.devices.garmin.GarminTransportVariant
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
-import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
 import tech.mmarca.openvitals.domain.model.OsPermissionCatalog
 import tech.mmarca.openvitals.domain.model.OsPermissionId
 import tech.mmarca.openvitals.domain.model.OsPermissionRow
@@ -153,7 +152,6 @@ class WatchesViewModelTest {
         deviceRepository = repo,
         sensorCoordinator = coordinator,
         onboardGarminWatch = OnboardGarminWatchUseCase(pairing, repo, probe),
-        onboardWearOsWatch = mockk<OnboardWearOsWatchUseCase>(relaxed = true),
         osPermissionsService = os,
     )
 

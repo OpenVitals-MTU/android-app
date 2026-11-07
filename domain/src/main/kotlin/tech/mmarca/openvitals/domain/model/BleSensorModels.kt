@@ -24,13 +24,13 @@ enum class BleDeviceKind(
 }
 
 /**
- * Which integration owns a [BleDeviceKind.WATCH]. Garmin speaks GFDI; WearOS
- * is a live heart-rate source whose data arrives via Health Connect. Null
- * for a sensor, and for a Garmin watch stored before this field existed.
+ * Which integration owns a [BleDeviceKind.WATCH]. Garmin speaks GFDI. Null
+ * for a sensor, and for a Garmin watch stored before this field existed. A
+ * stored value no entry matches (the Wear OS integration that moved to
+ * OpenWatch) parses as null, and the registry drops that entry.
  */
 enum class DeviceIntegration(val storageName: String) {
     GARMIN("GARMIN"),
-    WEAROS("WEAROS"),
     ;
 
     companion object {
@@ -80,18 +80,13 @@ data class BleSensorDevice(
     val isBikeComputer: Boolean
         get() = kind == BleDeviceKind.BIKE_COMPUTER
 
-    /** Driven over GFDI: a Garmin watch or bike computer, never WearOS. The file-sync concept. */
+    /** Driven over GFDI: a Garmin watch or bike computer. The file-sync concept. */
     val isGarminGfdi: Boolean
-        get() = (kind == BleDeviceKind.WATCH || kind == BleDeviceKind.BIKE_COMPUTER) &&
-            integration != DeviceIntegration.WEAROS
+        get() = kind == BleDeviceKind.WATCH || kind == BleDeviceKind.BIKE_COMPUTER
 
     /** A Garmin watch. For file-sync eligibility use [isGarminGfdi]. */
     val isGarminWatch: Boolean
-        get() = isWatch && integration != DeviceIntegration.WEAROS
-
-    /** A WearOS watch: live heart rate over BLE, recorded data via Health Connect. */
-    val isWearosWatch: Boolean
-        get() = isWatch && integration == DeviceIntegration.WEAROS
+        get() = isWatch
 
     /**
      * Can hold live capabilities and join a recording: a sensor, a bike
@@ -255,9 +250,4 @@ data class BleDiscoveredDevice(
      * which no advertisement carries.
      */
     val advertisesSyncService: Boolean = false,
-    /**
-     * Bonded devices only: the Classic service UUIDs the bond's SDP record
-     * lists, lowercase. An app listening on the device shows up here.
-     */
-    val classicServiceUuids: Set<String> = emptySet(),
 )

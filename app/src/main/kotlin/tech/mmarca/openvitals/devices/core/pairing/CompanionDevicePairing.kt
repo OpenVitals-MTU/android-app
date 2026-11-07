@@ -121,8 +121,8 @@ class CompanionDevicePairing @Inject constructor(
             return true
         }
         // A Garmin watch is reached over BLE, so filter by scan, not classic MAC.
-        // A Wear OS watch may be registered under its Classic bond address,
-        // which no BLE scan sees: without the Classic filter the dialog searches forever.
+        // A device registered under its Classic bond address, which no BLE scan
+        // sees, also needs the Classic filter or the dialog searches forever.
         val builder =
             AssociationRequest.Builder()
                 .addDeviceFilter(
