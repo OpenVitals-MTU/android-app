@@ -2657,7 +2657,7 @@
     <string name="settings_support_discussion_action">Join Zulip discussions</string>
     <string name="settings_support_action">Open Liberapay</string>
     <string name="settings_support_discussion_url" translatable="false">https://openvitals.zulipchat.com/</string>
-    <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
+    <string name="settings_support_url" translatable="false">https://liberapay.com/hale.mtu/donate</string>
     <string name="crash_report_email_chooser_title">Email OpenVitals report</string>
     <string name="crash_report_fallback_title">No email app found</string>
     <string name="crash_report_fallback_body">Copy the report or save it as a text file, then send it to %1$s later.</string>
