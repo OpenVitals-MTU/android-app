@@ -13,7 +13,7 @@ Create one Weblate component for the Android app UI:
 
 - Project: `OpenVitals`
 - Component: `Android app`
-- Repository: the GitHub `Hale-MTU/android-app` repository
+- Repository: the GitHub `Hale-MTU/OpenVitals` repository
 - VCS mode: `GitHub pull request`
 - File format: `Android String Resource`
 - File mask: `app/src/main/res/values-*/strings.xml`
