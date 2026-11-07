@@ -2149,7 +2149,7 @@
     <string name="openwatch_move_body">Garmin and Wear OS watches and the Xiaomi scale now sync through OpenWatch, a separate app from the same project. OpenVitals keeps the dashboard and reads everything OpenWatch writes to Health Connect, so the app is smaller and faster to open.\n\nTo keep syncing a watch or scale, install OpenWatch and pair it there. Nothing you recorded is lost: it stays in Health Connect.</string>
     <string name="openwatch_move_action_get">Get OpenWatch</string>
     <string name="openwatch_move_no_browser">No app on this phone can open the link. OpenWatch is at %1$s</string>
-    <string name="openwatch_url" translatable="false">https://github.com/OpenVitals-MTU/OpenWatch</string>
+    <string name="openwatch_url" translatable="false">https://github.com/Hale-MTU/OpenWatch</string>
     <string name="settings_debug_logs_title">Diagnostics logs</string>
     <string name="settings_debug_logs_body">Share or save OpenVitals logs as a text file. Every line is kept so Health Connect and sync issues can be traced; device addresses, identifiers, file locations, dates and error details are masked. Read it before you share it.</string>
     <string name="settings_debug_logs_share">Share logs</string>
@@ -2159,7 +2159,7 @@
     <string name="settings_debug_logs_saved">Debug logs saved</string>
     <string name="settings_debug_logs_save_failed">Could not save diagnostics logs</string>
     <string name="settings_privacy_policy_link">View privacy policy</string>
-    <string name="settings_privacy_policy_url" translatable="false">https://github.com/OpenVitals-MTU/android-app/blob/main/PRIVACY.md</string>
+    <string name="settings_privacy_policy_url" translatable="false">https://github.com/Hale-MTU/android-app/blob/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Require device unlock to open OpenVitals.</string>
     <string name="app_lock_locked_title">OpenVitals is locked</string>
@@ -2634,7 +2634,7 @@
     <string name="settings_offline_maps_import_notification_text_with_percent">%1$s • %2$d%%.</string>
     <string name="settings_offline_maps_help_prompt">Do you want to learn how to add offline maps? Go to:</string>
     <string name="settings_offline_maps_help_link">Open offline maps guide</string>
-    <string name="settings_offline_maps_help_url" translatable="false">https://docs.openvitals.health/how-to/offline-maps</string>
+    <string name="settings_offline_maps_help_url" translatable="false">https://docs.hale.ngo/openvitals/how-to/offline-maps/</string>
     <string name="settings_elevation_title">Elevation correction</string>
     <string name="settings_elevation_body">Replace the altitude in imported GPX, TCX, KML and FIT files, in watch activities, and in activities recorded on this phone with values from elevation tiles stored here.</string>
     <string name="settings_elevation_toggle_title">Correct altitude from tiles</string>
@@ -2649,7 +2649,7 @@
     <string name="settings_elevation_tile_import_error">Tile import failed: %1$s</string>
     <string name="settings_elevation_help_prompt">Do you want to learn where to get elevation tiles? Go to:</string>
     <string name="settings_elevation_help_link">Open elevation tiles guide</string>
-    <string name="settings_elevation_help_url" translatable="false">https://docs.openvitals.health/how-to/elevation-tiles</string>
+    <string name="settings_elevation_help_url" translatable="false">https://docs.hale.ngo/openvitals/how-to/elevation-tiles/</string>
     <string name="section_support">Support</string>
     <string name="settings_support_title">Support OpenVitals</string>
     <string name="settings_support_body">Report bugs, join community support discussions, or help fund ongoing development.</string>
@@ -2675,6 +2675,8 @@
     <string name="settings_privacy_on_device">Data stays on your device</string>
     <string name="settings_privacy_read_only">Read-only except entries you explicitly log</string>
     <string name="settings_app_version">Version %1$s (%2$d)</string>
+    <!-- The publisher under the version line; a name and an address, the same in every language. -->
+    <string name="settings_app_publisher" translatable="false">Hale · hale.ngo</string>
 
     <string name="detail_metrics">Metrics</string>
     <string name="detail_session_details">Session details</string>

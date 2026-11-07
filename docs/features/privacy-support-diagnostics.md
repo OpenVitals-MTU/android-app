@@ -27,7 +27,7 @@ A small amount of health data lives in the app's own database rather than in Hea
 
 The app does not need app-level internet access for normal health features. Offline map packs, imports, widgets, and Health Connect reads are handled locally.
 
-The connected-device features keep that boundary rather than widening it. Bluetooth LE sensors are read over Bluetooth, and sync with another phone deliberately uses Bluetooth Classic because any Wi-Fi or TCP socket on Android would require the internet permission the app does not declare. Watches and scales are the business of the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app, which writes what they record to Health Connect.
+The connected-device features keep that boundary rather than widening it. Bluetooth LE sensors are read over Bluetooth, and sync with another phone deliberately uses Bluetooth Classic because any Wi-Fi or TCP socket on Android would require the internet permission the app does not declare. Watches and scales are the business of the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app, which writes what they record to Health Connect.
 
 ## Diagnostics
 

@@ -9,7 +9,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 ## Current Snapshot
 
 - App namespace: `tech.mmarca.openvitals`
-- Project shape: two Gradle modules. The phone app is `:app`, under `app/`; `:domain` holds the app-local pure code the app depends on (see [Module `:domain`](#module-domain)). The rest of this document is about `:app` unless it says otherwise; package names are the same across `:app` and `:domain`. Watch and scale support is a separate app, [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch), which writes to Health Connect; the two share no code
+- Project shape: two Gradle modules. The phone app is `:app`, under `app/`; `:domain` holds the app-local pure code the app depends on (see [Module `:domain`](#module-domain)). The rest of this document is about `:app` unless it says otherwise; package names are the same across `:app` and `:domain`. Watch and scale support is a separate app, [OpenWatch](https://github.com/Hale-MTU/OpenWatch), which writes to Health Connect; the two share no code
 - Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, `di/PreferencesModule.kt`, and `di/RemindersModule.kt`
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)

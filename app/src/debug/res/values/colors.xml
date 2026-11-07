@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FBD6AC</color>
-    <color name="ic_launcher_foreground_accent">#C2410C</color>
+    <!-- A debug install keeps an orange disc, so it is never mistaken for the release app. -->
+    <color name="ic_launcher_disc">#C2410C</color>
+    <color name="ic_launcher_wave">#FBD6AC</color>
+    <color name="ic_launcher_dot">#FBD6AC</color>
 </resources>

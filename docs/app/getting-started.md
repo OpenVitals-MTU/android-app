@@ -54,7 +54,7 @@ Recording notifications, Apple Health import progress, and reminders use notific
 
 ## Watches And Scales
 
-OpenVitals does not pair watches or scales. Install the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app to sync a Garmin or Wear OS watch or a Xiaomi S400 scale; it writes what they record to Health Connect, and OpenVitals shows it from there.
+OpenVitals does not pair watches or scales. Install the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app to sync a Garmin or Wear OS watch or a Xiaomi S400 scale; it writes what they record to Health Connect, and OpenVitals shows it from there.
 
 ## Syncing With Another Phone
 

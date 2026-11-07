@@ -62,7 +62,7 @@ Reminders are local and optional.
 
 ## Can OpenVitals Sync My Watch Or Scale?
 
-Not by itself. Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) is the separate [OpenWatch](https://github.com/OpenVitals-MTU/OpenWatch) app. It writes what those devices record to Health Connect, and OpenVitals reads it from there like any other source. A watch that broadcasts its heart rate over Bluetooth LE can still be used as a sensor while recording an activity.
+Not by itself. Watch and scale support (Garmin and Wear OS watches, the Xiaomi S400 scale) is the separate [OpenWatch](https://github.com/Hale-MTU/OpenWatch) app. It writes what those devices record to Health Connect, and OpenVitals reads it from there like any other source. A watch that broadcasts its heart rate over Bluetooth LE can still be used as a sensor while recording an activity.
 
 ## Is OpenVitals A Medical App?
 
